@@ -9,13 +9,24 @@ cuentas y ninguna credencial de tienda sale de tu ordenador.
 
 ## Estado
 
-v1 completa: fases 1 a 5. Steam, metadatos de IGDB, deduplicación entre tiendas
-y backlog. Quedan especificadas y sin implementar la fase 6 (GOG), la 7 (Epic)
-y la 8 (precios con ITAD).
+Fases 1 a 6: Steam, GOG, metadatos de IGDB, deduplicación entre tiendas y
+backlog. Quedan especificadas y sin implementar la fase 7 (Epic) y la 8
+(precios con ITAD).
 
-Para usarla hacen falta dos claves tuyas: la de la API de Steam y una
-aplicación en el portal de Twitch para IGDB. La app te guía para sacarlas y las
-valida al momento. Nada de eso sale de tu ordenador.
+Puedes empezar solo con Steam, que es la única tienda con una vía oficial: hace
+falta tu clave de la API. GOG se conecta en su propia página de login, dentro de
+la app; tu contraseña no pasa por aquí. Como GOG no permite registrar
+aplicaciones de terceros, hay que darle además el par de cliente de GOG Galaxy,
+que es público y el mismo para todo el mundo: se te pide para que no vaya
+escrito dentro del programa.
+
+Los metadatos de IGDB son opcionales. Sin ellos la biblioteca funciona igual,
+con las fichas hechas a partir del título de la tienda —incluida la
+deduplicación entre tiendas—, y el día que configures IGDB esas fichas se
+enriquecen en su sitio sin perder el estado que hayas escrito encima.
+
+Ninguna de esas credenciales sale de tu ordenador: viven en el keyring del
+sistema, o en un fichero cifrado si tu escritorio no tiene uno.
 
 El plan completo, con las decisiones tomadas y sus alternativas descartadas,
 está en
@@ -32,6 +43,14 @@ bun install
 bun run tauri dev
 ```
 
+Si en Wayland la ventana muere al arrancar con `Error 71 (Protocol error)
+dispatching to Wayland display`, es el renderizador dmabuf de WebKitGTK, no la
+app:
+
+```sh
+WEBKIT_DISABLE_DMABUF_RENDERER=1 bun run tauri dev
+```
+
 Comprobaciones, las mismas que ejecuta CI:
 
 ```sh
@@ -45,7 +64,7 @@ bunx tsc --noEmit && bun run lint && bun test
 | --- | --- |
 | `crates/domain` | Entidades y reglas. Sin red, sin base de datos, sin Tauri. CI lo verifica. |
 | `crates/storage` | SQLite y migraciones. Todo el SQL del proyecto está aquí. |
-| `crates/connectors` | Tiendas, solo autenticación y listado. Nunca descargas. |
+| `crates/connectors` | Tiendas (Steam, GOG), solo autenticación y listado. Nunca descargas. |
 | `crates/metadata` | Proveedores de metadatos (IGDB). |
 | `crates/secrets` | Keyring nativo del sistema operativo. |
 | `src-tauri` | Shell de la app y comandos: orquestan, no deciden. |
