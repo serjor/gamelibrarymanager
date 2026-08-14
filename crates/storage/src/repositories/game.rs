@@ -14,8 +14,8 @@ impl GameRepository<'_> {
         sqlx::query(
             "INSERT INTO game
                  (id, canonical_title, sort_title, igdb_id, cover_url, summary,
-                  released_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                  released_at, genres, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT (id) DO UPDATE SET
                  canonical_title = excluded.canonical_title,
                  sort_title      = excluded.sort_title,
@@ -23,6 +23,7 @@ impl GameRepository<'_> {
                  cover_url       = excluded.cover_url,
                  summary         = excluded.summary,
                  released_at     = excluded.released_at,
+                 genres          = excluded.genres,
                  updated_at      = excluded.updated_at,
                  deleted_at      = NULL",
         )
@@ -33,6 +34,7 @@ impl GameRepository<'_> {
         .bind(&game.cover_url)
         .bind(&game.summary)
         .bind(game.released_at)
+        .bind(serde_json::to_string(&game.genres).unwrap_or_else(|_| "[]".to_owned()))
         .bind(now)
         .execute(self.0.pool())
         .await?;
@@ -41,7 +43,7 @@ impl GameRepository<'_> {
 
     pub async fn find(&self, id: GameId) -> Result<Option<Game>> {
         sqlx::query(
-            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at
+            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
              FROM game WHERE id = ? AND deleted_at IS NULL",
         )
         .bind(game_id_to_text(id))
@@ -54,7 +56,7 @@ impl GameRepository<'_> {
 
     pub async fn find_by_igdb(&self, igdb_id: i64) -> Result<Option<Game>> {
         sqlx::query(
-            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at
+            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
              FROM game WHERE igdb_id = ? AND deleted_at IS NULL",
         )
         .bind(igdb_id)
@@ -67,7 +69,7 @@ impl GameRepository<'_> {
 
     pub async fn all(&self) -> Result<Vec<Game>> {
         sqlx::query(
-            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at
+            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
              FROM game WHERE deleted_at IS NULL ORDER BY sort_title",
         )
         .fetch_all(self.0.pool())
@@ -87,5 +89,6 @@ fn hydrate(row: &SqliteRow) -> Result<Game> {
         cover_url: row.get("cover_url"),
         summary: row.get("summary"),
         released_at: row.get("released_at"),
+        genres: serde_json::from_str(&row.get::<String, _>("genres")).unwrap_or_default(),
     })
 }

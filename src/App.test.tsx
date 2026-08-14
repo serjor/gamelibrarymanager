@@ -1,6 +1,6 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import type { Account, AppInfo, LibrarySummary, ReviewItem } from "./lib/api";
+import type { Account, AppInfo, LibraryRow, LibrarySummary, ReviewItem } from "./lib/api";
 
 const state = {
   info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true } as AppInfo,
@@ -8,7 +8,13 @@ const state = {
   hasIgdb: true,
   summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
   queue: [] as ReviewItem[],
+  rows: [] as LibraryRow[],
 };
+
+// El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
+mock.module("@tauri-apps/api/event", () => ({
+  listen: () => Promise.resolve(() => {}),
+}));
 
 mock.module("./lib/api", () => ({
   api: {
@@ -24,6 +30,9 @@ mock.module("./lib/api", () => ({
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
     reviewWithoutMetadata: () => Promise.resolve(),
+    library: () => Promise.resolve(state.rows),
+    cancelSync: () => Promise.resolve(),
+    setUserState: () => Promise.resolve(),
   },
   errorMessage: (cause: unknown) => String(cause),
 }));
@@ -44,6 +53,7 @@ describe("App", () => {
     state.hasIgdb = true;
     state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
     state.queue = [];
+    state.rows = [];
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {
@@ -72,6 +82,31 @@ describe("App", () => {
     expect(screen.getByText(/12 por revisar/)).toBeDefined();
   });
 
+  it("la biblioteca pinta las fichas con sus tiendas", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = [
+      {
+        game_id: "22222222-2222-7222-8222-222222222222",
+        title: "Disco Elysium",
+        sort_title: "disco elysium",
+        cover_url: null,
+        release_year: 2019,
+        genres: ["RPG"],
+        owned_stores: ["steam", "gog"],
+        wishlist_stores: [],
+        playtime_minutes: 1240,
+        status: null,
+        rating: null,
+        notes: null,
+      },
+    ];
+    render(<App />);
+    // La tarjeta es un botón: su nombre accesible es lo que oye quien no ve la
+    // portada, y lleva el título y las tiendas.
+    const tarjeta = await screen.findByRole("button", { name: /Disco Elysium/ });
+    expect(tarjeta.textContent).toContain("steam · gog");
+  });
+
   it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {
     state.accounts = [cuentaSteam];
     state.queue = [
@@ -86,8 +121,8 @@ describe("App", () => {
       },
     ];
     render(<App />);
-    expect(await screen.findByText("Por revisar (1)")).toBeDefined();
-    expect(screen.getByText(/Disco Elysium: The Final Cut/)).toBeDefined();
+    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+    expect(await screen.findByText(/Disco Elysium: The Final Cut/)).toBeDefined();
     expect(screen.getByText(/crear ficha con el título de la tienda/)).toBeDefined();
   });
 });

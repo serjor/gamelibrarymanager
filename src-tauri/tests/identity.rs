@@ -189,6 +189,7 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
         cover_url: None,
         summary: None,
         released_at: None,
+        genres: Vec::new(),
     };
     GameRepository(&db).upsert(&elegido).await.expect("ficha");
     GameLinkRepository(&db)

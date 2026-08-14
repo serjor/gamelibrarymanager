@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import {
   api,
   errorMessage,
   type Account,
   type AppInfo,
+  type LibraryRow,
   type LibrarySummary,
   type ReviewItem,
+  type SyncProgress,
   type SyncReport,
 } from "./lib/api";
 import { SteamSetup } from "./features/onboarding/SteamSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
+import { Library } from "./features/library/Library";
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
@@ -19,6 +23,9 @@ export function App() {
   const [hasIgdb, setHasIgdb] = useState(false);
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
+  const [rows, setRows] = useState<LibraryRow[]>([]);
+  const [progress, setProgress] = useState<SyncProgress | null>(null);
+  const [tab, setTab] = useState<"library" | "review">("library");
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,17 +39,19 @@ export function App() {
       setInfo(nextInfo);
       if (!nextInfo.unlocked) return;
 
-      const [nextAccounts, nextIgdb, nextSummary, nextQueue] = await Promise.all([
+      const [nextAccounts, nextIgdb, nextSummary, nextQueue, nextRows] = await Promise.all([
         api.listAccounts(),
         api.hasIgdbCredentials(),
         api.librarySummary(),
         api.reviewQueue(),
+        api.library(),
       ]);
       if (!alive()) return;
       setAccounts(nextAccounts);
       setHasIgdb(nextIgdb);
       setSummary(nextSummary);
       setQueue(nextQueue);
+      setRows(nextRows);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -63,6 +72,17 @@ export function App() {
     };
   }, [load]);
 
+  // El progreso llega por eventos desde Rust: la ventana no se queda muda
+  // mientras se sincronizan mil juegos.
+  useEffect(() => {
+    const unlisten = listen<SyncProgress>("sync:progress", (event) =>
+      setProgress(event.payload),
+    );
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, []);
+
   const run = async (label: string, action: () => Promise<unknown>) => {
     setBusy(label);
     setError(null);
@@ -74,6 +94,7 @@ export function App() {
       setError(errorMessage(cause));
     } finally {
       setBusy(null);
+      setProgress(null);
     }
   };
 
@@ -119,6 +140,11 @@ export function App() {
           <button onClick={() => void run("sync", api.syncNow)} disabled={busy !== null}>
             {busy === "sync" ? "Sincronizando…" : "Sincronizar"}
           </button>
+          {busy === "sync" && (
+            <button className="link" onClick={() => void api.cancelSync()}>
+              cancelar
+            </button>
+          )}
           <button
             onClick={() => void run("identity", api.resolveIdentities)}
             disabled={busy !== null}
@@ -156,13 +182,34 @@ export function App() {
         </ul>
       )}
 
+      {progress && (
+        <p className="hint">
+          {progress.store}: {progress.stage} ({progress.done + 1} de {progress.total})
+        </p>
+      )}
+
       {error && <p role="alert">{error}</p>}
 
-      <ReviewQueue items={queue} onResolved={refresh} />
+      <nav className="tabs">
+        <button
+          className={tab === "library" ? "tab active" : "tab"}
+          onClick={() => setTab("library")}
+        >
+          Biblioteca
+        </button>
+        <button
+          className={tab === "review" ? "tab active" : "tab"}
+          onClick={() => setTab("review")}
+        >
+          Por revisar{queue.length > 0 && ` (${queue.length})`}
+        </button>
+      </nav>
 
-      <p className="hint">
-        La rejilla con portadas y el backlog llegan en la fase 5.
-      </p>
+      {tab === "library" ? (
+        <Library rows={rows} onSaved={refresh} />
+      ) : (
+        <ReviewQueue items={queue} onResolved={refresh} />
+      )}
     </main>
   );
 }

@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use connectors::SteamConnector;
 use domain::{StoreAccount, StoreConnector, StoreId};
@@ -29,6 +30,8 @@ pub struct AppState {
     secrets: RwLock<Option<Arc<dyn SecretStore>>>,
     pub backend: Backend,
     secrets_path: PathBuf,
+    /// Bandera de cancelación de la sincronización en curso.
+    cancel_sync: AtomicBool,
 }
 
 impl AppState {
@@ -55,6 +58,7 @@ impl AppState {
             secrets: RwLock::new(secrets),
             backend,
             secrets_path,
+            cancel_sync: AtomicBool::new(false),
         }
     }
 
@@ -71,6 +75,22 @@ impl AppState {
             .await
             .clone()
             .ok_or(secrets::SecretsError::Unavailable)
+    }
+
+    pub fn begin_sync(&self) {
+        self.cancel_sync.store(false, Ordering::Relaxed);
+    }
+
+    pub fn cancel_sync(&self) {
+        self.cancel_sync.store(true, Ordering::Relaxed);
+    }
+
+    pub fn end_sync(&self) {
+        self.cancel_sync.store(false, Ordering::Relaxed);
+    }
+
+    pub fn sync_cancelled(&self) -> bool {
+        self.cancel_sync.load(Ordering::Relaxed)
     }
 
     pub async fn is_unlocked(&self) -> bool {

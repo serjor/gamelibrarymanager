@@ -26,6 +26,7 @@ export interface SyncReport {
   wishlist: number;
   removed: number;
   failures: SyncFailure[];
+  cancelled: boolean;
 }
 
 export interface LibrarySummary {
@@ -46,6 +47,30 @@ export interface ReviewItem {
   store: string;
   title: string;
   candidates: ScoredCandidate[];
+}
+
+export type PlayStatus = "backlog" | "playing" | "finished" | "abandoned";
+
+export interface LibraryRow {
+  game_id: string;
+  title: string;
+  sort_title: string;
+  cover_url: string | null;
+  release_year: number | null;
+  genres: string[];
+  owned_stores: string[];
+  wishlist_stores: string[];
+  playtime_minutes: number;
+  status: PlayStatus | null;
+  rating: number | null;
+  notes: string | null;
+}
+
+export interface SyncProgress {
+  store: string;
+  stage: string;
+  done: number;
+  total: number;
 }
 
 export interface IdentityReport {
@@ -72,6 +97,14 @@ export const api = {
     invoke<void>("review_confirm", { storeEntryId, igdbId }),
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
+  library: () => invoke<LibraryRow[]>("library"),
+  cancelSync: () => invoke<void>("cancel_sync"),
+  setUserState: (
+    gameId: string,
+    status: PlayStatus | null,
+    rating: number | null,
+    notes: string | null,
+  ) => invoke<void>("set_user_state", { gameId, status, rating, notes }),
 };
 
 /** Los errores cruzan el puente como texto plano; aquí se normalizan. */

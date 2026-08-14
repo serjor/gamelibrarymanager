@@ -31,6 +31,13 @@ struct RawGame {
     alternative_names: Vec<AlternativeName>,
     #[serde(default)]
     cover: Option<Cover>,
+    #[serde(default)]
+    genres: Vec<Genre>,
+}
+
+#[derive(Deserialize)]
+struct Genre {
+    name: String,
 }
 
 #[derive(Deserialize)]
@@ -96,6 +103,7 @@ pub fn parse_game(body: &str) -> Result<Option<GameMetadata>> {
         released_at: game
             .first_release_date
             .and_then(|ts| OffsetDateTime::from_unix_timestamp(ts).ok()),
+        genres: game.genres.into_iter().map(|genre| genre.name).collect(),
     }))
 }
 

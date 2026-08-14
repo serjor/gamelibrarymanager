@@ -138,7 +138,7 @@ impl IgdbClient {
         igdb_id: i64,
     ) -> Result<Option<GameMetadata>> {
         let query = format!(
-            "fields id, name, summary, first_release_date, cover.image_id; \
+            "fields id, name, summary, first_release_date, cover.image_id, genres.name; \
              where id = {igdb_id}; limit 1;"
         );
         let body = self.post("games", credentials, token, query).await?;
@@ -183,4 +183,5 @@ pub struct GameMetadata {
     pub summary: Option<String>,
     pub cover_url: Option<String>,
     pub released_at: Option<OffsetDateTime>,
+    pub genres: Vec<String>,
 }

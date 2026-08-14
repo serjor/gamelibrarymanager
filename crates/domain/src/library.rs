@@ -47,6 +47,7 @@ pub struct Game {
     pub cover_url: Option<String>,
     pub summary: Option<String>,
     pub released_at: Option<OffsetDateTime>,
+    pub genres: Vec<String>,
 }
 
 /// Cómo se decidió un enlace. `Manual` es la palabra del usuario y el

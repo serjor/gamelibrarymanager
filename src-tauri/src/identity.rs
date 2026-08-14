@@ -120,6 +120,7 @@ async fn ensure_game(
             cover_url: meta.cover_url,
             summary: meta.summary,
             released_at: meta.released_at,
+            genres: meta.genres,
         },
         // IGDB conoce el identificador pero no devuelve la ficha: mejor una
         // ficha con el título de la tienda que ninguna.
@@ -141,5 +142,6 @@ pub fn local_game(entry: &StoreEntry) -> Game {
         cover_url: None,
         summary: None,
         released_at: None,
+        genres: Vec::new(),
     }
 }

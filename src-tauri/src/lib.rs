@@ -9,7 +9,7 @@ mod sync;
 pub mod testing {
     pub use crate::identity::{IdentityReport, resolve};
     pub use crate::state::credential_key;
-    pub use crate::sync::{SyncReport, sync_account};
+    pub use crate::sync::{Silent, SyncReport, sync_account, sync_all};
 }
 
 use state::AppState;
@@ -42,6 +42,9 @@ pub fn run() {
             commands::review_queue,
             commands::review_confirm,
             commands::review_without_metadata,
+            commands::cancel_sync,
+            commands::library,
+            commands::set_user_state,
         ])
         .run(tauri::generate_context!())
         .expect("error al arrancar la aplicación");

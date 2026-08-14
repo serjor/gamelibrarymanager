@@ -145,6 +145,10 @@ async fn la_ficha_trae_portada_construida_desde_el_image_id() {
         Some("https://images.igdb.com/igdb/image/upload/t_cover_big/co1x2y.jpg")
     );
     assert!(game.summary.is_some());
+    assert_eq!(
+        game.genres,
+        vec!["Role-playing (RPG)".to_owned(), "Adventure".to_owned()]
+    );
 }
 
 #[tokio::test]

@@ -82,6 +82,7 @@ async fn reemparejar_no_toca_el_estado_del_usuario() {
             cover_url: None,
             summary: None,
             released_at: None,
+            genres: Vec::new(),
         })
         .await
         .expect("alta de ficha");
@@ -167,6 +168,7 @@ async fn el_emparejamiento_automatico_no_pisa_una_correccion_manual() {
                 cover_url: None,
                 summary: None,
                 released_at: None,
+                genres: Vec::new(),
             })
             .await
             .expect("alta de ficha");

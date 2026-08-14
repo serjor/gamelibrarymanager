@@ -2,23 +2,23 @@
 //! lógica vive en los crates de dominio y adaptadores.
 
 use domain::{
-    AuthContext, EntryKind, GameLink, LinkMethod, ScoredCandidate, StoreAccount, StoreAccountId,
-    StoreEntryId, StoreId,
+    AuthContext, EntryKind, GameId, GameLink, LinkMethod, PlayStatus, ScoredCandidate,
+    StoreAccount, StoreAccountId, StoreEntryId, StoreId, UserState,
 };
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use serde::Serialize;
 use storage::repositories::{
-    GameLinkRepository, GameRepository, MatchCandidateRepository, StoreAccountRepository,
-    StoreEntryRepository,
+    GameLinkRepository, GameRepository, LibraryRepository, LibraryRow, MatchCandidateRepository,
+    StoreAccountRepository, StoreEntryRepository, UserStateRepository,
 };
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::error::AppError;
 use crate::identity::{self, IdentityReport};
 use crate::state::{AppState, IGDB_CREDENTIALS, IGDB_TOKEN, credential_key};
-use crate::sync::{self, SyncReport};
+use crate::sync::{self, ProgressSink, SyncProgress, SyncReport};
 
 #[derive(Serialize)]
 pub struct AppInfo {
@@ -111,9 +111,76 @@ pub struct AccountView {
     pub last_sync_at: Option<i64>,
 }
 
+/// Emite el progreso a la ventana y consulta la bandera de cancelación.
+struct WindowProgress<'a> {
+    app: AppHandle,
+    state: &'a AppState,
+}
+
+impl ProgressSink for WindowProgress<'_> {
+    fn report(&self, progress: SyncProgress) {
+        // Si la ventana ya no está, el progreso da igual: no es motivo para
+        // abortar una sincronización que por lo demás va bien.
+        let _ = self.app.emit("sync:progress", progress);
+    }
+
+    fn cancelled(&self) -> bool {
+        self.state.sync_cancelled()
+    }
+}
+
+/// La sincronización corre en el runtime de Tauri y va emitiendo progreso, así
+/// que la ventana sigue respondiendo mientras dura.
 #[tauri::command]
-pub async fn sync_now(state: State<'_, AppState>) -> Result<SyncReport, AppError> {
-    sync::sync_all(&state).await
+pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<SyncReport, AppError> {
+    state.begin_sync();
+    let progress = WindowProgress {
+        app: app.clone(),
+        state: &state,
+    };
+    let report = sync::sync_all(&state, &progress).await;
+    state.end_sync();
+    report
+}
+
+#[tauri::command]
+pub fn cancel_sync(state: State<'_, AppState>) {
+    state.cancel_sync();
+}
+
+/// La biblioteca entera en una consulta. Con mil juegos, hacer una consulta por
+/// juego para saber en qué tiendas está es lo que hace que la rejilla dé
+/// tirones.
+#[tauri::command]
+pub async fn library(state: State<'_, AppState>) -> Result<Vec<LibraryRow>, AppError> {
+    Ok(LibraryRepository(&state.db).all().await?)
+}
+
+/// Lo único que escribe el usuario. Ninguna sincronización posterior lo toca.
+#[tauri::command]
+pub async fn set_user_state(
+    state: State<'_, AppState>,
+    game_id: String,
+    status: Option<PlayStatus>,
+    rating: Option<u8>,
+    notes: Option<String>,
+) -> Result<(), AppError> {
+    let game_id = Uuid::parse_str(&game_id)
+        .map(GameId::from_uuid)
+        .map_err(|_| AppError::Message("identificador de juego inválido".to_owned()))?;
+
+    let previous = UserStateRepository(&state.db).find(game_id).await?;
+    UserStateRepository(&state.db)
+        .save(&UserState {
+            game_id,
+            status,
+            rating,
+            notes,
+            started_at: previous.as_ref().and_then(|p| p.started_at),
+            finished_at: previous.as_ref().and_then(|p| p.finished_at),
+        })
+        .await?;
+    Ok(())
 }
 
 #[derive(Serialize)]
@@ -248,6 +315,7 @@ pub async fn review_confirm(
                     cover_url: meta.cover_url,
                     summary: meta.summary,
                     released_at: meta.released_at,
+                    genres: meta.genres,
                 },
                 None => identity::local_game(&entry),
             };

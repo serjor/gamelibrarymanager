@@ -18,6 +18,33 @@ use time::OffsetDateTime;
 use crate::error::AppError;
 use crate::state::{AppState, credential_key};
 
+/// Qué está pasando durante una sincronización. La UI lo recibe por eventos en
+/// lugar de esperar callada a que termine.
+#[derive(Debug, Clone, Serialize)]
+pub struct SyncProgress {
+    pub store: String,
+    pub stage: &'static str,
+    pub done: usize,
+    pub total: usize,
+}
+
+/// Recibe el progreso. Un trait en vez del `AppHandle` de Tauri para que el
+/// caso de uso se pueda probar sin arrancar la aplicación.
+pub trait ProgressSink: Send + Sync {
+    fn report(&self, progress: SyncProgress);
+    /// La sincronización se para en el siguiente punto seguro, nunca a mitad de
+    /// una escritura.
+    fn cancelled(&self) -> bool {
+        false
+    }
+}
+
+/// Para cuando a nadie le interesa el progreso: los tests, por ejemplo.
+pub struct Silent;
+impl ProgressSink for Silent {
+    fn report(&self, _progress: SyncProgress) {}
+}
+
 #[derive(Debug, Default, Serialize)]
 pub struct SyncReport {
     pub owned: usize,
@@ -26,6 +53,8 @@ pub struct SyncReport {
     /// Cuentas que han fallado, con el motivo. Una tienda caída no puede
     /// impedir que las demás se sincronicen.
     pub failures: Vec<SyncFailure>,
+    /// El usuario paró a mitad. Lo ya volcado se queda: es idempotente.
+    pub cancelled: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -35,12 +64,26 @@ pub struct SyncFailure {
     pub reason: String,
 }
 
-pub async fn sync_all(state: &AppState) -> Result<SyncReport, AppError> {
+pub async fn sync_all(
+    state: &AppState,
+    progress: &dyn ProgressSink,
+) -> Result<SyncReport, AppError> {
     let accounts = StoreAccountRepository(&state.db).active().await?;
     let secrets = state.secrets().await?;
     let mut report = SyncReport::default();
+    let total = accounts.len();
 
-    for account in accounts {
+    for (index, account) in accounts.into_iter().enumerate() {
+        if progress.cancelled() {
+            report.cancelled = true;
+            break;
+        }
+        progress.report(SyncProgress {
+            store: account.store.as_str().to_owned(),
+            stage: "biblioteca",
+            done: index,
+            total,
+        });
         let result = match state.connectors.get(&account.store) {
             Some(connector) => {
                 sync_account(
