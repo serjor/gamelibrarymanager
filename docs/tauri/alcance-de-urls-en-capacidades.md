@@ -18,13 +18,28 @@ la reescribe de ninguna forma. Un patrón tiene que casar carácter a carácter.
 
 Por eso:
 
-- Se enumeran las direcciones concretas del asistente, **no** se usa
+- Se enumeran las direcciones concretas, **no** se usa
   `opener:allow-default-urls`, que abre de par en par todo `http://` y
   `https://`.
 - Cada patrón se escribe igual que la constante de la interfaz que lo va a usar.
-- Añadir un enlace nuevo a la interfaz obliga a añadir su patrón, y el test
-  [`capacidades`](../../src-tauri/tests/capacidades.rs) lo comprueba en las dos
-  direcciones: que no falte ninguno y que no sobre ninguno.
+- El comodín vale en la **ruta**, nunca en el **host**: `https://www.gog.com/game/*`
+  acota, `https://*.gog.com` no acota nada.
+
+Hay dos clases de dirección y se comprueban distinto, porque no se pueden
+comprobar igual:
+
+| Origen | Ejemplo | Cómo se comprueba |
+| --- | --- | --- |
+| Constante de la interfaz | la página de la clave de Steam | El test la rastrea en `src/` y exige que algún patrón la permita |
+| Construida con datos | la ficha de un juego en su tienda | No hay literal que rastrear: el test usa ejemplos reales |
+
+El test [`capacidades`](../../src-tauri/tests/capacidades.rs) **no** comprueba
+que no sobren patrones, aunque sería lo simétrico. Rastrear los conectores para
+averiguarlo no sirve: sus literales son sobre todo endpoints que el programa
+*llama* —`https://api.gog.com`— y no páginas que el usuario *abre*, y desde
+fuera son indistinguibles. Permitir uno por error sería peor que el problema que
+se quería resolver. Lo que sí se exige, y es lo que de verdad protege del
+alcance regalado, es que ningún patrón lleve comodín en el host.
 
 Además, el `catch` de un `openUrl` **incluye la causa**. Tragársela convierte un
 permiso mal puesto en un misterio.
@@ -54,10 +69,19 @@ permiso mal puesto en un misterio.
   "allow": [
     { "url": "https://steamcommunity.com/dev/apikey" },
     { "url": "https://steamid.io" },
-    { "url": "https://dev.twitch.tv/console/apps" },
-    { "url": "https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py" }
+    { "url": "https://www.igdb.com/games/*" },
+    { "url": "https://store.steampowered.com/app/*" }
   ]
 }
+```
+
+Y la constante se escribe entera, para que el test pueda encontrarla:
+
+```tsx
+// Concatenar una constante deja `https://www.igdb.com/games/` en el código,
+// que es lo que el test rastrea.
+const IGDB_GAME_URL = "https://www.igdb.com/games/";
+abrir(IGDB_GAME_URL + candidate.slug);
 ```
 
 ```tsx
@@ -93,6 +117,12 @@ Equivale a `allow-default-urls`: alcance regalado a cambio de ahorrarse cuatro
 líneas.
 
 ```tsx
+// Interpolar la dirección entera no deja ninguna constante que rastrear: el
+// test no puede comprobarla y el fallo vuelve a ser invisible.
+abrir(`https://www.igdb.com/games/${candidate.slug}`);
+```
+
+```tsx
 // Se come el motivo y deja al usuario —y a quien lo depure— sin nada.
 openUrl(url).catch(() => setError(`No he podido abrir ${url}`));
 ```
@@ -103,8 +133,12 @@ openUrl(url).catch(() => setError(`No he podido abrir ${url}`));
   — las cuatro direcciones del asistente, con el porqué en el campo `comment`.
 - [`src-tauri/tests/capacidades.rs`](../../src-tauri/tests/capacidades.rs) — saca
   las constantes `https://` de `src/features/` y comprueba que cada una está
-  permitida, y que ningún patrón sobra. Las lee del código en vez de mantener
-  una lista aparte, que es lo que se queda viejo justo cuando importa.
+  permitida. Las lee del código en vez de mantener una lista aparte, que es lo
+  que se queda viejo justo cuando importa. Las direcciones construidas con datos
+  van con ejemplos, y un tercer test prohíbe el comodín en el host.
+- [`src/features/review/ReviewQueue.tsx`](../../src/features/review/ReviewQueue.tsx)
+  — `IGDB_GAME_URL` es la constante que hace rastreable un enlace que se arma
+  con el slug de cada candidato.
 - [`src/features/onboarding/SteamSetup.tsx`](../../src/features/onboarding/SteamSetup.tsx),
   [`IgdbSetup.tsx`](../../src/features/onboarding/IgdbSetup.tsx) y
   [`GogSetup.tsx`](../../src/features/onboarding/GogSetup.tsx) — las constantes
