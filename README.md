@@ -9,8 +9,16 @@ cuentas y ninguna credencial de tienda sale de tu ordenador.
 
 ## Estado
 
-Fase 1 de 8 (andamiaje). El plan completo, con las decisiones tomadas y sus
-alternativas descartadas, está en
+v1 completa: fases 1 a 5. Steam, metadatos de IGDB, deduplicación entre tiendas
+y backlog. Quedan especificadas y sin implementar la fase 6 (GOG), la 7 (Epic)
+y la 8 (precios con ITAD).
+
+Para usarla hacen falta dos claves tuyas: la de la API de Steam y una
+aplicación en el portal de Twitch para IGDB. La app te guía para sacarlas y las
+valida al momento. Nada de eso sale de tu ordenador.
+
+El plan completo, con las decisiones tomadas y sus alternativas descartadas,
+está en
 [`.agents/plans/0001-game-library-manager/plan.html`](.agents/plans/0001-game-library-manager/plan.html).
 
 ## Desarrollo
@@ -42,6 +50,15 @@ bunx tsc --noEmit && bun run lint && bun test
 | `crates/secrets` | Keyring nativo del sistema operativo. |
 | `src-tauri` | Shell de la app y comandos: orquestan, no deciden. |
 | `src` | UI en React, organizada por feature. |
+
+### Por qué es una app de escritorio y no una web
+
+Steam es la única de las tres tiendas con una vía oficial para leer tu
+biblioteca. GOG y Epic no tienen API pública, y su autenticación solo es
+defendible ejecutándose en tu máquina: un servidor que guardase esos tokens
+incumpliría sus términos de uso, sería un objetivo de ataque y un solo bloqueo
+de IP dejaría sin servicio a todos los usuarios a la vez. Por eso Playnite,
+Heroic y Lutris son aplicaciones de escritorio, y por eso esta también.
 
 ## Licencia
 
