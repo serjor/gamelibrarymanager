@@ -1,5 +1,8 @@
-//! La consulta de biblioteca: una sola, aunque haya mil juegos repartidos entre
-//! varias tiendas.
+//! La consulta de biblioteca: que junte bien lo que cuelga de una ficha
+//! —tiendas, horas, estado, géneros— aunque venga de varias tiendas.
+//!
+//! Que sea **una sola** consulta se prueba aparte, en `una_sola_consulta.rs`,
+//! porque contar sentencias necesita un binario para él solo.
 
 use domain::{
     EntryKind, Game, GameId, GameLink, LinkMethod, PlayStatus, StoreAccount, StoreAccountId,
@@ -128,48 +131,4 @@ async fn una_ficha_con_dos_tiendas_suma_horas_y_lista_ambas() {
     assert_eq!(row.rating, Some(10));
     assert_eq!(row.genres, vec!["RPG".to_owned(), "Aventura".to_owned()]);
     assert_eq!(row.release_year, Some(2019));
-}
-
-#[tokio::test]
-async fn mil_juegos_salen_en_una_consulta_y_deprisa() {
-    let db = Database::in_memory().await.expect("base");
-    let steam = cuenta(&db, StoreId::Steam).await;
-
-    let mut entradas = Vec::with_capacity(1000);
-    let mut enlaces = Vec::with_capacity(1000);
-    for i in 0..1000 {
-        let ficha = juego(&format!("Juego {i:04}"), &["Shooter"]);
-        GameRepository(&db).upsert(&ficha).await.expect("ficha");
-        let entrada = entrada(steam, StoreId::Steam, &i.to_string(), EntryKind::Owned, i);
-        enlaces.push(GameLink {
-            game_id: ficha.id,
-            store_entry_id: entrada.id,
-            confidence: 1.0,
-            method: LinkMethod::Auto,
-        });
-        entradas.push(entrada);
-    }
-    StoreEntryRepository(&db)
-        .upsert_many(&entradas)
-        .await
-        .expect("entradas");
-    GameLinkRepository(&db)
-        .rebuild_auto(&enlaces)
-        .await
-        .expect("enlaces");
-
-    let started = std::time::Instant::now();
-    let rows = LibraryRepository(&db).all().await.expect("biblioteca");
-    let elapsed = started.elapsed();
-
-    assert_eq!(rows.len(), 1000);
-    assert!(
-        rows[0].sort_title < rows[999].sort_title,
-        "vienen ordenados"
-    );
-    // Si esto se dispara, la culpa es de haber metido una consulta por juego.
-    assert!(
-        elapsed < std::time::Duration::from_millis(500),
-        "mil juegos tardaron {elapsed:?}"
-    );
 }
