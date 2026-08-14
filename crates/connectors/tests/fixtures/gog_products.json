@@ -2,11 +2,23 @@
   {
     "id": 1495134320,
     "title": "The Witcher 3: Wild Hunt - Complete Edition",
-    "slug": "the_witcher_3_wild_hunt_game_of_the_year_edition_game"
+    "slug": "the_witcher_3_wild_hunt_game_of_the_year_edition_game",
+    "images": {
+      "logo": "//images-4.gog-statics.com/e9f552bf91b3f928e3c7582f3a6c10205b037c621b48d139677621ceec31cf2b_glx_logo.jpg"
+    },
+    "links": {
+      "product_card": "https://www.gog.com/game/the_witcher_3_wild_hunt_game_of_the_year_edition_game"
+    }
   },
   {
     "id": 1207658930,
     "title": "The Witcher 2: Assassins of Kings Enhanced Edition",
-    "slug": "the_witcher_2"
+    "slug": "the_witcher_2",
+    "images": {
+      "logo": "//images-1.gog-statics.com/8355e657a19311b158a3553a154e109199d6991c7791a20c3305af1f84d15ed7_glx_logo.jpg"
+    },
+    "links": {
+      "product_card": "https://www.gog.com/game/the_witcher_2"
+    }
   }
 ]

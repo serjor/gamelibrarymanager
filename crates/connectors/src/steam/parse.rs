@@ -75,6 +75,8 @@ pub fn parse_owned(
                 .unwrap_or_else(|| format!("Steam {}", game.appid)),
             playtime_minutes: Some(game.playtime_forever),
             acquired_at: None,
+            cover_url: Some(cover_url(game.appid)),
+            store_url: Some(store_url(game.appid)),
             raw: serde_json::json!({
                 "appid": game.appid,
                 "playtime_forever": game.playtime_forever,
@@ -109,9 +111,23 @@ pub fn parse_wishlist(
             acquired_at: item
                 .date_added
                 .and_then(|ts| OffsetDateTime::from_unix_timestamp(ts).ok()),
+            cover_url: Some(cover_url(item.appid)),
+            store_url: Some(store_url(item.appid)),
             raw: serde_json::json!({ "appid": item.appid, "date_added": item.date_added }),
         })
         .collect())
+}
+
+/// La cápsula del juego. Se deduce del appid y no cuesta ni una petición: Steam
+/// la sirve siempre en esa dirección, y es la imagen por la que cualquiera
+/// reconoce un juego de su biblioteca.
+fn cover_url(app_id: i64) -> String {
+    format!("https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/header.jpg")
+}
+
+/// Su página en la tienda, para poder ir a comprobar de qué juego se trata.
+fn store_url(app_id: i64) -> String {
+    format!("https://store.steampowered.com/app/{app_id}")
 }
 
 /// Nombre de la cuenta, para poder enseñar algo más humano que un steamid.

@@ -163,6 +163,21 @@ async fn lee_la_biblioteca_paginada_y_descarta_lo_ajeno() {
         "The Witcher 2: Assassins of Kings Enhanced Edition"
     );
     assert!(entries[0].acquired_at.is_some(), "owned_since se conserva");
+
+    // La portada y la página de la tienda son lo que permite comparar contra la
+    // ficha de IGDB al revisar un emparejamiento dudoso.
+    assert_eq!(
+        entries[0].store_url.as_deref(),
+        Some("https://www.gog.com/game/the_witcher_3_wild_hunt_game_of_the_year_edition_game")
+    );
+    assert!(
+        entries[0]
+            .cover_url
+            .as_deref()
+            .is_some_and(|url| url.starts_with("https://images-4.gog-statics.com/")),
+        "GOG sirve la imagen sin esquema y hay que completarla: {:?}",
+        entries[0].cover_url
+    );
 }
 
 #[tokio::test]

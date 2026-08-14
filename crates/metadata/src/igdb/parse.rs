@@ -24,6 +24,8 @@ struct RawGame {
     id: i64,
     name: String,
     #[serde(default)]
+    slug: Option<String>,
+    #[serde(default)]
     summary: Option<String>,
     #[serde(default)]
     first_release_date: Option<i64>,
@@ -80,8 +82,20 @@ pub fn parse_candidates(body: &str) -> Result<Vec<Candidate>> {
                 .map(|alt| alt.name)
                 .collect(),
             release_year: game.first_release_date.and_then(year_of),
+            // En la cola de revisión la portada es una miniatura para
+            // distinguir de un vistazo, no una carátula: basta la talla chica.
+            cover_url: game.cover.map(|cover| cover_url(&cover, "t_cover_small")),
+            slug: game.slug,
         })
         .collect())
+}
+
+/// IGDB sirve las portadas por plantilla, y la talla va en la propia dirección.
+fn cover_url(cover: &Cover, size: &str) -> String {
+    format!(
+        "https://images.igdb.com/igdb/image/upload/{size}/{}.jpg",
+        cover.image_id
+    )
 }
 
 pub fn parse_game(body: &str) -> Result<Option<GameMetadata>> {
@@ -92,14 +106,9 @@ pub fn parse_game(body: &str) -> Result<Option<GameMetadata>> {
         igdb_id: game.id,
         name: game.name,
         summary: game.summary,
-        // IGDB sirve las portadas por plantilla; t_cover_big es el tamaño que
-        // se ve bien en una rejilla sin disparar el peso.
-        cover_url: game.cover.map(|cover| {
-            format!(
-                "https://images.igdb.com/igdb/image/upload/t_cover_big/{}.jpg",
-                cover.image_id
-            )
-        }),
+        // t_cover_big es el tamaño que se ve bien en la rejilla de la
+        // biblioteca sin disparar el peso.
+        cover_url: game.cover.map(|cover| cover_url(&cover, "t_cover_big")),
         released_at: game
             .first_release_date
             .and_then(|ts| OffsetDateTime::from_unix_timestamp(ts).ok()),

@@ -121,9 +121,13 @@ impl IgdbClient {
     ) -> Result<Vec<Candidate>> {
         // Las comillas del título romperían la consulta de IGDB.
         let sanitized = title.replace('"', " ");
+        // La portada se pide aquí, en la misma petición que ya se gastaba: la
+        // cola de revisión la necesita para que el usuario distinga entre
+        // candidatos que empatan, y volver a preguntar por ella juego a juego
+        // se comería la cuota de 4 peticiones por segundo.
         let query = format!(
             "search \"{sanitized}\"; \
-             fields id, name, alternative_names.name, first_release_date; \
+             fields id, name, slug, alternative_names.name, first_release_date, cover.image_id; \
              limit 10;"
         );
         let body = self.post("games", credentials, token, query).await?;

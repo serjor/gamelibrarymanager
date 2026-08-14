@@ -35,13 +35,31 @@ pub struct Candidate {
     pub alternative_names: Vec<String>,
     #[serde(default)]
     pub release_year: Option<i32>,
+    #[serde(default)]
+    pub cover_url: Option<String>,
+    /// Identificador con el que IGDB publica su ficha. Sirve para ir a mirarla.
+    #[serde(default)]
+    pub slug: Option<String>,
 }
 
+/// Un candidato ya puntuado, con lo justo para que una persona lo distinga de
+/// otro sin salir de la aplicación.
+///
+/// El año y la portada no los usa el algoritmo: viajan hasta aquí porque cuando
+/// dos candidatos empatan —y empatan a menudo, porque IGDB tiene fichas
+/// duplicadas y ediciones que se normalizan igual— lo único que separa una de
+/// otra a simple vista es la carátula y la fecha.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScoredCandidate {
     pub igdb_id: i64,
     pub name: String,
     pub score: f64,
+    #[serde(default)]
+    pub release_year: Option<i32>,
+    #[serde(default)]
+    pub cover_url: Option<String>,
+    #[serde(default)]
+    pub slug: Option<String>,
 }
 
 /// Qué hacer con una entrada de tienda.
@@ -80,6 +98,9 @@ pub fn decide_by_title(
             igdb_id: candidate.igdb_id,
             name: candidate.name.clone(),
             score: best_score(&needle, candidate),
+            release_year: candidate.release_year,
+            cover_url: candidate.cover_url.clone(),
+            slug: candidate.slug.clone(),
         })
         .collect();
 

@@ -42,6 +42,7 @@ pub fn run() {
             commands::resolve_identities,
             commands::review_queue,
             commands::review_confirm,
+            commands::review_confirm_many,
             commands::review_without_metadata,
             commands::cancel_operation,
             commands::library,

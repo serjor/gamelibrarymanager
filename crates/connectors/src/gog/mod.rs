@@ -210,21 +210,21 @@ impl GogConnector {
 
     /// Títulos por lotes. Sin esto la biblioteca de GOG llegaría como una lista
     /// de números, y el emparejamiento por título no tendría con qué trabajar.
-    async fn titles(
+    async fn productos(
         &self,
         ids: &[String],
         access_token: &str,
-    ) -> std::collections::HashMap<String, String> {
-        let mut titles = std::collections::HashMap::new();
+    ) -> std::collections::HashMap<String, parse::ProductInfo> {
+        let mut productos = std::collections::HashMap::new();
         for chunk in ids.chunks(50) {
             let url = format!("{}/products?ids={}", self.api_base, chunk.join(","));
             // Un lote que falle deja sus juegos con nombre provisional, pero no
             // tumba la sincronización entera.
             if let Ok(body) = self.get(&url, access_token).await {
-                titles.extend(parse_products(&body));
+                productos.extend(parse_products(&body));
             }
         }
-        titles
+        productos
     }
 }
 
@@ -322,8 +322,8 @@ impl StoreConnector for GogConnector {
         }
 
         let ids: Vec<String> = releases.iter().map(|r| r.external_id.clone()).collect();
-        let titles = self.titles(&ids, &credential.access_token).await;
-        Ok(parse::to_entries(&releases, &titles, account_id))
+        let productos = self.productos(&ids, &credential.access_token).await;
+        Ok(parse::to_entries(&releases, &productos, account_id))
     }
 
     /// GOG no expone la lista de deseados a un token de Galaxy: la única vía es

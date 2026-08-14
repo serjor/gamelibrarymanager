@@ -10,6 +10,12 @@
 //! cual, sin normalizar y sin barra final.
 //!
 //! Ninguna de las dos cosas la veía la suite. Ahora sí.
+//!
+//! El segundo test no comprueba que no sobren patrones, aunque sería lo
+//! simétrico: hay direcciones —la ficha de un juego en su tienda— que se
+//! construyen con datos y no aparecen literales en ninguna parte, y una de
+//! ellas la manda GOG en su propia respuesta. Lo que sí se puede exigir, y es
+//! lo que de verdad protege, es que ningún patrón abra un host entero.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -40,10 +46,16 @@ fn patrones_permitidos() -> Vec<String> {
         .collect()
 }
 
-/// Las direcciones que la interfaz llega a pasarle a `openUrl`.
+/// Las direcciones constantes que la interfaz llega a pasarle a `openUrl`.
 ///
 /// Se leen del propio código en vez de mantener una lista aparte: una lista
 /// aparte se queda vieja justo cuando importa, que es al añadir un enlace nuevo.
+///
+/// Solo se mira `src/`. Rastrear también los conectores sería tentador, pero
+/// sus literales son sobre todo endpoints que el programa **llama**, no páginas
+/// que el usuario **abre**, y desde fuera no se distinguen: `https://api.gog.com`
+/// no debe estar permitida y aparecería igual. Las direcciones que sí se abren y
+/// no son constantes se cubren en el test de más abajo, con ejemplos.
 fn urls_de_la_interfaz() -> BTreeSet<String> {
     let mut urls = BTreeSet::new();
     recorrer(&raiz().join("../src/features"), &mut urls);
@@ -111,16 +123,50 @@ fn todos_los_enlaces_de_la_interfaz_estan_permitidos() {
 }
 
 #[test]
-fn no_se_permiten_direcciones_que_ya_nadie_usa() {
-    // Un permiso que sobra es alcance regalado. Si un enlace desaparece de la
-    // interfaz, su patrón tiene que desaparecer de la capacidad.
-    let urls = urls_de_la_interfaz();
-    for patron in patrones_permitidos() {
-        let compilado = glob::Pattern::new(&patron).expect("patrón glob válido");
+fn las_paginas_de_una_copia_y_de_una_ficha_estan_permitidas() {
+    // Estas no son constantes: la de Steam la construye el conector con el
+    // appid, la de GOG la manda la propia tienda en su respuesta y la de IGDB
+    // sale del slug del candidato. No hay literal que rastrear, así que se
+    // comprueban con ejemplos reales —los mismos que salen en las fixtures—.
+    let ejemplos = [
+        "https://store.steampowered.com/app/292030",
+        "https://www.gog.com/game/the_witcher_2",
+        "https://www.igdb.com/games/the-witcher-3-wild-hunt",
+    ];
+
+    let patrones: Vec<glob::Pattern> = patrones_permitidos()
+        .iter()
+        .map(|p| glob::Pattern::new(p).expect("patrón glob válido"))
+        .collect();
+
+    for url in ejemplos {
         assert!(
-            urls.iter().any(|url| compilado.matches(url)),
-            "capabilities/default.json permite {patron} y ya no hay ningún \
-             enlace en la interfaz que lo necesite"
+            patrones.iter().any(|patron| patron.matches(url)),
+            "la cola de revisión abre direcciones como {url} y ningún patrón de \
+             capabilities/default.json lo permite"
+        );
+    }
+}
+
+#[test]
+fn ningun_patron_abre_un_host_entero() {
+    // Un permiso que sobra es alcance regalado, y la forma de regalarlo de
+    // verdad es un comodín en el host: `https://*` es `allow-default-urls` con
+    // otro nombre, y `https://*.algo.com` abre cualquier subdominio que alguien
+    // registre. En la ruta el comodín sí hace falta, porque hay direcciones que
+    // se construyen con el identificador de cada juego.
+    for patron in patrones_permitidos() {
+        let host = patron
+            .strip_prefix("https://")
+            .unwrap_or_else(|| panic!("{patron} tiene que ser https"))
+            .split('/')
+            .next()
+            .unwrap_or_default();
+
+        assert!(
+            !host.contains('*') && !host.contains('?'),
+            "capabilities/default.json permite {patron}: el host no puede llevar \
+             comodín, o el alcance deja de acotar nada"
         );
     }
 }

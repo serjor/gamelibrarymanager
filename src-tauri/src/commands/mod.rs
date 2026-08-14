@@ -297,7 +297,32 @@ pub struct ReviewItem {
     pub store_entry_id: String,
     pub store: &'static str,
     pub title: String,
+    /// Lo que enseña la tienda de esta copia. Es la otra mitad de la
+    /// comparación: sin ella el usuario decide entre candidatos de IGDB a
+    /// ciegas, sin ver contra qué los está comparando.
+    pub cover_url: Option<String>,
+    pub store_url: Option<String>,
     pub candidates: Vec<ScoredCandidate>,
+    /// Los dos mejores candidatos puntúan igual.
+    ///
+    /// Es con diferencia el motivo más común de acabar en esta cola, y no
+    /// significa que el emparejamiento dude entre dos juegos distintos: IGDB
+    /// tiene fichas duplicadas y las ediciones de un mismo juego se normalizan
+    /// al mismo título. Se marca para poder agruparlas y resolverlas de una
+    /// tacada en vez de una por una.
+    pub tie: bool,
+}
+
+/// Cuándo se consideran empatados dos candidatos. El mismo margen que usa el
+/// dominio para negarse a decidir, para que la cola agrupe exactamente lo que
+/// el emparejamiento rechazó por ambiguo.
+fn is_tie(candidates: &[ScoredCandidate]) -> bool {
+    match (candidates.first(), candidates.get(1)) {
+        (Some(best), Some(second)) => {
+            best.score - second.score < domain::matching::AMBIGUITY_MARGIN
+        }
+        _ => false,
+    }
 }
 
 /// La cola de revisión: lo que el emparejamiento automático no se atrevió a
@@ -309,14 +334,37 @@ pub async fn review_queue(state: State<'_, AppState>) -> Result<Vec<ReviewItem>,
 
     let mut queue = Vec::with_capacity(entries.len());
     for entry in entries {
+        let found = candidates.for_entry(entry.id).await?;
         queue.push(ReviewItem {
             store_entry_id: entry.id.as_uuid().to_string(),
             store: entry.store.as_str(),
             title: entry.title.clone(),
-            candidates: candidates.for_entry(entry.id).await?,
+            cover_url: entry.cover_url.clone(),
+            store_url: entry.store_url.clone(),
+            tie: is_tie(&found),
+            candidates: found,
         });
     }
     Ok(queue)
+}
+
+/// Confirma varios emparejamientos de una vez.
+///
+/// No es el emparejamiento automático por la puerta de atrás: cada par lo ha
+/// elegido el usuario mirándolo, y queda como enlace `manual`, que ningún
+/// algoritmo volverá a tocar. Lo único que ahorra es repetir el mismo gesto
+/// ciento cincuenta veces.
+#[tauri::command]
+pub async fn review_confirm_many(
+    state: State<'_, AppState>,
+    decisions: Vec<(String, i64)>,
+) -> Result<usize, AppError> {
+    let mut hechos = 0;
+    for (store_entry_id, igdb_id) in decisions {
+        confirm_one(&state, &store_entry_id, igdb_id).await?;
+        hechos += 1;
+    }
+    Ok(hechos)
 }
 
 /// El usuario elige una ficha. Queda como enlace manual, y ningún
@@ -327,7 +375,14 @@ pub async fn review_confirm(
     store_entry_id: String,
     igdb_id: i64,
 ) -> Result<(), AppError> {
-    let entry_id = parse_entry_id(&store_entry_id)?;
+    confirm_one(&state, &store_entry_id, igdb_id).await
+}
+
+/// El cuerpo que comparten confirmar uno y confirmar muchos. Que sea el mismo
+/// es lo que garantiza que el lote no tome ningún atajo respecto al de uno en
+/// uno: crea la misma ficha y escribe el mismo enlace `manual`.
+async fn confirm_one(state: &AppState, store_entry_id: &str, igdb_id: i64) -> Result<(), AppError> {
+    let entry_id = parse_entry_id(store_entry_id)?;
     let entry = StoreEntryRepository(&state.db)
         .find(entry_id)
         .await?
@@ -337,7 +392,7 @@ pub async fn review_confirm(
     let game_id = match games.find_by_igdb(igdb_id).await? {
         Some(existing) => existing.id,
         None => {
-            let (credentials, token) = igdb_session(&state).await?;
+            let (credentials, token) = igdb_session(state).await?;
             let meta = state.igdb.game(&credentials, &token, igdb_id).await?;
             let game = match meta {
                 Some(meta) => domain::Game {
@@ -357,7 +412,7 @@ pub async fn review_confirm(
         }
     };
 
-    link_manually(&state, entry_id, game_id).await
+    link_manually(state, entry_id, game_id).await
 }
 
 /// «Este juego no está en IGDB»: se le crea una ficha con el título de la

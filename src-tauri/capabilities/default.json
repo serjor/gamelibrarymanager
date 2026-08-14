@@ -12,7 +12,10 @@
         { "url": "https://steamcommunity.com/dev/apikey" },
         { "url": "https://steamid.io" },
         { "url": "https://dev.twitch.tv/console/apps" },
-        { "url": "https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py" }
+        { "url": "https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py" },
+        { "url": "https://www.igdb.com/games/*" },
+        { "url": "https://store.steampowered.com/app/*" },
+        { "url": "https://www.gog.com/game/*" }
       ]
     }
   ]

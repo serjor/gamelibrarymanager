@@ -31,6 +31,7 @@ mock.module("./lib/api", () => ({
     connectGog: () => Promise.resolve("id"),
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
+    reviewConfirmMany: () => Promise.resolve(0),
     reviewWithoutMetadata: () => Promise.resolve(),
     library: () => Promise.resolve(state.rows),
     cancelOperation: () => Promise.resolve(),
@@ -168,9 +169,26 @@ describe("App", () => {
         store_entry_id: "11111111-1111-7111-8111-111111111111",
         store: "gog",
         title: "Disco Elysium - The Final Cut",
+        cover_url: null,
+        store_url: null,
+        tie: false,
         candidates: [
-          { igdb_id: 132727, name: "Disco Elysium: The Final Cut", score: 0.97 },
-          { igdb_id: 115653, name: "Disco Elysium", score: 0.93 },
+          {
+            igdb_id: 132727,
+            name: "Disco Elysium: The Final Cut",
+            score: 0.97,
+            release_year: 2021,
+            cover_url: null,
+            slug: null,
+          },
+          {
+            igdb_id: 115653,
+            name: "Disco Elysium",
+            score: 0.93,
+            release_year: 2019,
+            cover_url: null,
+            slug: null,
+          },
         ],
       },
     ];
@@ -178,5 +196,73 @@ describe("App", () => {
     (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
     expect(await screen.findByText(/Disco Elysium: The Final Cut/)).toBeDefined();
     expect(screen.getByText(/crear ficha con el título de la tienda/)).toBeDefined();
+  });
+
+  it("los empates van agrupados y aparte del resto", async () => {
+    // Es el motivo más común de acabar en la cola: IGDB repite fichas y las
+    // ediciones se normalizan al mismo título. Agruparlos es lo que hace la
+    // revisión llevadera sin tocar el umbral.
+    state.accounts = [cuentaSteam];
+    state.queue = [
+      {
+        store_entry_id: "11111111-1111-7111-8111-111111111111",
+        store: "steam",
+        title: "LIMBO",
+        cover_url: null,
+        store_url: null,
+        tie: true,
+        candidates: [
+          { igdb_id: 1, name: "Limbo", score: 1, release_year: 2010, cover_url: null, slug: "limbo" },
+          { igdb_id: 2, name: "Limbo", score: 1, release_year: 2011, cover_url: null, slug: null },
+        ],
+      },
+      {
+        store_entry_id: "22222222-2222-7222-8222-222222222222",
+        store: "gog",
+        title: "Otro juego",
+        cover_url: null,
+        store_url: null,
+        tie: false,
+        candidates: [
+          { igdb_id: 3, name: "Otro juego", score: 0.95, release_year: 2015, cover_url: null, slug: null },
+        ],
+      },
+    ];
+    render(<App />);
+    (await screen.findByRole("button", { name: /Por revisar \(2\)/ })).click();
+    expect(await screen.findByText(/Empates \(1\)/)).toBeDefined();
+    expect(screen.getByText(/El resto \(1\)/)).toBeDefined();
+    // El año es lo que distingue dos fichas que se llaman igual.
+    expect(screen.getByText(/2010/)).toBeDefined();
+    // Y para las que ni así, el enlace a la ficha de IGDB. Solo aparece cuando
+    // IGDB publicó un slug: sin él no hay página a la que ir.
+    expect(screen.getByRole("button", { name: "Ver Limbo en IGDB" })).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /en IGDB$/ })).toHaveLength(1);
+  });
+
+  it("elegir candidatos ofrece confirmarlos en lote", async () => {
+    state.accounts = [cuentaSteam];
+    state.queue = [
+      {
+        store_entry_id: "11111111-1111-7111-8111-111111111111",
+        store: "steam",
+        title: "LIMBO",
+        cover_url: null,
+        store_url: null,
+        tie: true,
+        candidates: [
+          { igdb_id: 1, name: "Limbo", score: 1, release_year: 2010, cover_url: null, slug: "limbo" },
+          { igdb_id: 2, name: "Limbo", score: 1, release_year: 2011, cover_url: null, slug: null },
+        ],
+      },
+    ];
+    render(<App />);
+    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+    // Sin nada elegido no hay botón de lote: nada que confirmar.
+    expect(screen.queryByRole("button", { name: /Confirmar 1 emparejamiento/ })).toBeNull();
+    (await screen.findByRole("button", { name: /Limbo · 2010/ })).click();
+    expect(
+      await screen.findByRole("button", { name: /Confirmar 1 emparejamiento/ }),
+    ).toBeDefined();
   });
 });

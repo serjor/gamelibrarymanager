@@ -65,13 +65,39 @@ const PLATFORM_GOG: &str = "gog";
 struct Product {
     id: serde_json::Value,
     title: Option<String>,
+    #[serde(default)]
+    images: ProductImages,
+    #[serde(default)]
+    links: ProductLinks,
 }
 
-/// Títulos de `api.gog.com/products?ids=…`, indexados por identificador.
+#[derive(Debug, Default, Deserialize)]
+struct ProductImages {
+    #[serde(default)]
+    logo: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ProductLinks {
+    #[serde(default)]
+    product_card: Option<String>,
+}
+
+/// Lo que GOG sabe de un producto y aquí se aprovecha: su nombre, su carátula y
+/// su página. Los dos últimos no los usa el emparejamiento; son para que el
+/// usuario compare cuando tenga que decidir a mano.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProductInfo {
+    pub title: Option<String>,
+    pub cover_url: Option<String>,
+    pub store_url: Option<String>,
+}
+
+/// Datos de `api.gog.com/products?ids=…`, indexados por identificador.
 ///
 /// `id` llega como número, pero el resto del sistema trata `store_app_id` como
 /// texto: se normaliza aquí y no en cada sitio que lo consulte.
-pub fn parse_products(body: &str) -> HashMap<String, String> {
+pub fn parse_products(body: &str) -> HashMap<String, ProductInfo> {
     let products: Vec<Product> = serde_json::from_str(body).unwrap_or_default();
     products
         .into_iter()
@@ -81,9 +107,25 @@ pub fn parse_products(body: &str) -> HashMap<String, String> {
                 serde_json::Value::String(s) => s,
                 _ => return None,
             };
-            product.title.map(|title| (id, title))
+            Some((
+                id,
+                ProductInfo {
+                    title: product.title,
+                    cover_url: product.images.logo.map(|url| con_esquema(&url)),
+                    store_url: product.links.product_card,
+                },
+            ))
         })
         .collect()
+}
+
+/// GOG sirve las imágenes sin esquema (`//images-4.gog-statics.com/…`). Así
+/// tal cual, el webview las resolvería contra `tauri://` y no cargaría ninguna.
+fn con_esquema(url: &str) -> String {
+    match url.strip_prefix("//") {
+        Some(resto) => format!("https://{resto}"),
+        None => url.to_owned(),
+    }
 }
 
 /// Nombre de la cuenta, de `users.gog.com/users/{id}`.
@@ -105,32 +147,36 @@ pub fn parse_username(body: &str) -> Option<String> {
 /// enseñarla con un nombre provisional que IGDB corregirá después.
 pub fn to_entries(
     releases: &[Release],
-    titles: &HashMap<String, String>,
+    productos: &HashMap<String, ProductInfo>,
     account_id: StoreAccountId,
 ) -> Vec<StoreEntry> {
     releases
         .iter()
-        .map(|release| StoreEntry {
-            id: StoreEntryId::new(),
-            account_id,
-            store: StoreId::Gog,
-            store_app_id: release.external_id.clone(),
-            kind: EntryKind::Owned,
-            title: titles
-                .get(&release.external_id)
-                .cloned()
-                .unwrap_or_else(|| format!("GOG {}", release.external_id)),
-            // GOG no publica tiempo de juego en la biblioteca: lo lleva un
-            // servicio aparte que solo responde por sesiones de Galaxy.
-            playtime_minutes: None,
-            acquired_at: release
-                .owned_since
-                .and_then(|seconds| OffsetDateTime::from_unix_timestamp(seconds).ok()),
-            raw: serde_json::json!({
-                "platform_id": release.platform_id,
-                "external_id": release.external_id,
-                "owned_since": release.owned_since,
-            }),
+        .map(|release| {
+            let producto = productos.get(&release.external_id);
+            StoreEntry {
+                id: StoreEntryId::new(),
+                account_id,
+                store: StoreId::Gog,
+                store_app_id: release.external_id.clone(),
+                kind: EntryKind::Owned,
+                title: producto
+                    .and_then(|p| p.title.clone())
+                    .unwrap_or_else(|| format!("GOG {}", release.external_id)),
+                cover_url: producto.and_then(|p| p.cover_url.clone()),
+                store_url: producto.and_then(|p| p.store_url.clone()),
+                // GOG no publica tiempo de juego en la biblioteca: lo lleva un
+                // servicio aparte que solo responde por sesiones de Galaxy.
+                playtime_minutes: None,
+                acquired_at: release
+                    .owned_since
+                    .and_then(|seconds| OffsetDateTime::from_unix_timestamp(seconds).ok()),
+                raw: serde_json::json!({
+                    "platform_id": release.platform_id,
+                    "external_id": release.external_id,
+                    "owned_since": release.owned_since,
+                }),
+            }
         })
         .collect()
 }
@@ -165,10 +211,38 @@ mod tests {
 
     #[test]
     fn el_identificador_numerico_se_lee_como_texto() {
-        let titles = parse_products(r#"[{"id":1207658930,"title":"The Witcher 2"}]"#);
+        let productos = parse_products(r#"[{"id":1207658930,"title":"The Witcher 2"}]"#);
         assert_eq!(
-            titles.get("1207658930").map(String::as_str),
+            productos.get("1207658930").and_then(|p| p.title.as_deref()),
             Some("The Witcher 2")
         );
+    }
+
+    #[test]
+    fn la_imagen_sin_esquema_se_completa() {
+        // GOG las sirve como `//images-4.gog-statics.com/…`. Tal cual, el
+        // webview las resolvería contra `tauri://` y no cargaría ninguna.
+        let productos = parse_products(
+            r#"[{"id":1,"title":"X",
+                 "images":{"logo":"//images-4.gog-statics.com/abc_glx_logo.jpg"},
+                 "links":{"product_card":"https://www.gog.com/game/x"}}]"#,
+        );
+        let producto = productos.get("1").expect("el producto");
+        assert_eq!(
+            producto.cover_url.as_deref(),
+            Some("https://images-4.gog-statics.com/abc_glx_logo.jpg")
+        );
+        assert_eq!(
+            producto.store_url.as_deref(),
+            Some("https://www.gog.com/game/x")
+        );
+    }
+
+    #[test]
+    fn un_producto_sin_imagenes_ni_enlaces_no_rompe() {
+        let productos = parse_products(r#"[{"id":1,"title":"X"}]"#);
+        let producto = productos.get("1").expect("el producto");
+        assert_eq!(producto.cover_url, None);
+        assert_eq!(producto.store_url, None);
     }
 }

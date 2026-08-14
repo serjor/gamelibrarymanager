@@ -55,6 +55,8 @@ fn entrada(
         title: "da igual".to_owned(),
         playtime_minutes: Some(playtime),
         acquired_at: None,
+        cover_url: None,
+        store_url: None,
         raw: serde_json::json!({}),
     }
 }

@@ -25,13 +25,17 @@ impl MatchCandidateRepository<'_> {
 
         for candidate in candidates {
             sqlx::query(
-                "INSERT INTO match_candidate (store_entry_id, igdb_id, name, score, updated_at)
-                 VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO match_candidate
+                     (store_entry_id, igdb_id, name, score, release_year, cover_url, slug, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             )
             .bind(entry_id_to_text(entry_id))
             .bind(candidate.igdb_id)
             .bind(&candidate.name)
             .bind(candidate.score)
+            .bind(candidate.release_year)
+            .bind(&candidate.cover_url)
+            .bind(&candidate.slug)
             .bind(now)
             .execute(&mut *tx)
             .await?;
@@ -43,8 +47,8 @@ impl MatchCandidateRepository<'_> {
 
     pub async fn for_entry(&self, entry_id: StoreEntryId) -> Result<Vec<ScoredCandidate>> {
         Ok(sqlx::query(
-            "SELECT igdb_id, name, score FROM match_candidate
-             WHERE store_entry_id = ? ORDER BY score DESC",
+            "SELECT igdb_id, name, score, release_year, cover_url, slug FROM match_candidate
+             WHERE store_entry_id = ? ORDER BY score DESC, igdb_id",
         )
         .bind(entry_id_to_text(entry_id))
         .fetch_all(self.0.pool())
@@ -54,6 +58,9 @@ impl MatchCandidateRepository<'_> {
             igdb_id: row.get("igdb_id"),
             name: row.get("name"),
             score: row.get("score"),
+            release_year: row.get::<Option<i64>, _>("release_year").map(|y| y as i32),
+            cover_url: row.get("cover_url"),
+            slug: row.get("slug"),
         })
         .collect())
     }

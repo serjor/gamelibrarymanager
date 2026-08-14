@@ -40,13 +40,22 @@ export interface ScoredCandidate {
   igdb_id: number;
   name: string;
   score: number;
+  release_year: number | null;
+  cover_url: string | null;
+  /** Identificador de la ficha en IGDB, para poder ir a mirarla. */
+  slug: string | null;
 }
 
 export interface ReviewItem {
   store_entry_id: string;
   store: string;
   title: string;
+  /** Lo que enseña la tienda de esta copia, para comparar contra IGDB. */
+  cover_url: string | null;
+  store_url: string | null;
   candidates: ScoredCandidate[];
+  /** Los dos mejores puntúan igual: casi siempre son la misma ficha repetida. */
+  tie: boolean;
 }
 
 export type PlayStatus = "backlog" | "playing" | "finished" | "abandoned";
@@ -99,6 +108,9 @@ export const api = {
   reviewQueue: () => invoke<ReviewItem[]>("review_queue"),
   reviewConfirm: (storeEntryId: string, igdbId: number) =>
     invoke<void>("review_confirm", { storeEntryId, igdbId }),
+  /** Confirma varios a la vez. Cada par lo ha elegido el usuario. */
+  reviewConfirmMany: (decisions: [string, number][]) =>
+    invoke<number>("review_confirm_many", { decisions }),
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
   library: () => invoke<LibraryRow[]>("library"),

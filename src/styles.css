@@ -112,8 +112,95 @@ button.link {
 .candidates {
   display: flex;
   flex-wrap: wrap;
+  /* `stretch` iguala la altura de toda la fila: si no, cada tarjeta mide lo que
+     mida su contenido y compararlas cuesta más de lo que debería. */
+  align-items: stretch;
   gap: 0.4rem;
   margin: 0.4rem 0;
+}
+
+.candidates > li {
+  display: flex;
+}
+
+/* El hueco de una portada que no existe. IGDB tiene fichas sin carátula, y
+   varias de ellas son justo las duplicadas que hay que distinguir. */
+.cover-missing {
+  width: 45px;
+  height: 60px;
+  flex: none;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border: 1px dashed var(--line);
+}
+
+.cover-missing.wide {
+  width: 96px;
+  height: 45px;
+}
+
+/* La portada y el año son lo único que separa dos candidatos que empatan, así
+   que el candidato es una tarjeta y no una línea de texto. */
+.candidate {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+}
+
+.candidate img {
+  border-radius: 3px;
+  object-fit: cover;
+  flex: none;
+}
+
+.candidate.chosen {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+.candidate-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.candidate {
+  height: 100%;
+}
+
+/* Lo que dice la tienda, arriba y con su carátula: es contra lo que se compara
+   cada candidato de IGDB, así que tiene que verse a la vez que ellos. */
+.origen {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Steam sirve una cápsula apaisada y GOG un logo también apaisado, pero con
+   proporciones distintas: se recortan a la misma caja para que el título de
+   cada fila empiece siempre a la misma altura. */
+.origen img {
+  border-radius: 3px;
+  object-fit: cover;
+  flex: none;
+}
+
+.origen p {
+  margin: 0;
+}
+
+/* La barra de confirmación sigue a la vista mientras se recorre una cola de
+   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa.
+   `Canvas` es el color de fondo del sistema y sigue al `color-scheme`, así que
+   tapa lo que pasa por debajo en claro y en oscuro sin declarar dos paletas. */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: Canvas;
+  padding: 0.5rem 0;
 }
 
 main {

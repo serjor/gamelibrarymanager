@@ -80,6 +80,8 @@ fn los_candidatos_de_la_cola_llegan_ordenados_y_acotados() {
             name: format!("Juego {i}"),
             alternative_names: vec![],
             release_year: None,
+            cover_url: None,
+            slug: None,
         })
         .collect();
 
@@ -125,12 +127,16 @@ fn un_original_y_su_remaster_nunca_se_fusionan_solos() {
             name: "Dark Souls".to_owned(),
             alternative_names: vec![],
             release_year: Some(2011),
+            cover_url: None,
+            slug: None,
         },
         Candidate {
             igdb_id: 11133,
             name: "Dark Souls: Remastered".to_owned(),
             alternative_names: vec![],
             release_year: Some(2018),
+            cover_url: None,
+            slug: None,
         },
     ];
 
@@ -152,6 +158,8 @@ fn un_ano_incompatible_manda_a_revision_aunque_el_titulo_sea_identico() {
         name: "Doom".to_owned(),
         alternative_names: vec![],
         release_year: Some(1993),
+        cover_url: None,
+        slug: None,
     }];
 
     assert!(matches!(
@@ -167,6 +175,8 @@ fn los_nombres_alternativos_cuentan() {
         name: "NieR: Automata".to_owned(),
         alternative_names: vec!["ニーア オートマタ".to_owned(), "Nier Automata".to_owned()],
         release_year: Some(2017),
+        cover_url: None,
+        slug: None,
     }];
 
     assert!(matches!(

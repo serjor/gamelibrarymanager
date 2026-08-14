@@ -33,6 +33,11 @@ pub struct StoreEntry {
     pub title: String,
     pub playtime_minutes: Option<i64>,
     pub acquired_at: Option<OffsetDateTime>,
+    /// Portada y página de la copia **en su tienda**. No las usa el
+    /// emparejamiento: existen para que el usuario pueda comparar lo que dice la
+    /// tienda con lo que propone IGDB antes de aceptar un enlace dudoso.
+    pub cover_url: Option<String>,
+    pub store_url: Option<String>,
     pub raw: serde_json::Value,
 }
 

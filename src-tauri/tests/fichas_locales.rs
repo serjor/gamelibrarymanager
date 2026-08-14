@@ -58,6 +58,8 @@ async fn copia(db: &Database, store: StoreId, app_id: &str, title: &str) -> Stor
         title: title.to_owned(),
         playtime_minutes: None,
         acquired_at: None,
+        cover_url: None,
+        store_url: None,
         raw: serde_json::Value::Null,
     };
     StoreEntryRepository(db)

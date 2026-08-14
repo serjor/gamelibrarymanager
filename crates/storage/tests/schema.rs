@@ -37,6 +37,8 @@ fn entry(account_id: StoreAccountId, store: StoreId, app_id: &str) -> StoreEntry
         title: "Disco Elysium".to_owned(),
         playtime_minutes: Some(1200),
         acquired_at: None,
+        cover_url: None,
+        store_url: None,
         raw: serde_json::json!({ "appid": app_id }),
     }
 }

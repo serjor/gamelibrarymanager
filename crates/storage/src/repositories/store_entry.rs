@@ -22,12 +22,14 @@ impl StoreEntryRepository<'_> {
             sqlx::query(
                 "INSERT INTO store_entry
                      (id, account_id, store, store_app_id, kind, title, playtime_minutes,
-                      acquired_at, raw, first_seen_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                      acquired_at, cover_url, store_url, raw, first_seen_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT (account_id, store_app_id, kind) DO UPDATE SET
                      title            = excluded.title,
                      playtime_minutes = excluded.playtime_minutes,
                      acquired_at      = excluded.acquired_at,
+                     cover_url        = excluded.cover_url,
+                     store_url        = excluded.store_url,
                      raw              = excluded.raw,
                      updated_at       = excluded.updated_at,
                      deleted_at       = NULL",
@@ -40,6 +42,8 @@ impl StoreEntryRepository<'_> {
             .bind(&entry.title)
             .bind(entry.playtime_minutes)
             .bind(entry.acquired_at)
+            .bind(&entry.cover_url)
+            .bind(&entry.store_url)
             .bind(entry.raw.to_string())
             .bind(now)
             .bind(now)
@@ -80,7 +84,7 @@ impl StoreEntryRepository<'_> {
     pub async fn active(&self, kind: EntryKind) -> Result<Vec<StoreEntry>> {
         sqlx::query(
             "SELECT id, account_id, store, store_app_id, kind, title, playtime_minutes,
-                    acquired_at, raw
+                    acquired_at, cover_url, store_url, raw
              FROM store_entry
              WHERE kind = ? AND deleted_at IS NULL
              ORDER BY title",
@@ -98,7 +102,7 @@ impl StoreEntryRepository<'_> {
     pub async fn unlinked(&self) -> Result<Vec<StoreEntry>> {
         sqlx::query(
             "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,
-                    e.playtime_minutes, e.acquired_at, e.raw
+                    e.playtime_minutes, e.acquired_at, e.cover_url, e.store_url, e.raw
              FROM store_entry e
              WHERE e.deleted_at IS NULL
                AND NOT EXISTS (SELECT 1 FROM game_link l WHERE l.store_entry_id = e.id)
@@ -120,7 +124,7 @@ impl StoreEntryRepository<'_> {
     pub async fn pending_metadata(&self) -> Result<Vec<StoreEntry>> {
         sqlx::query(
             "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,
-                    e.playtime_minutes, e.acquired_at, e.raw
+                    e.playtime_minutes, e.acquired_at, e.cover_url, e.store_url, e.raw
              FROM store_entry e
              JOIN game_link l ON l.store_entry_id = e.id
              JOIN game g ON g.id = l.game_id
@@ -140,7 +144,7 @@ impl StoreEntryRepository<'_> {
     pub async fn find(&self, id: StoreEntryId) -> Result<Option<StoreEntry>> {
         sqlx::query(
             "SELECT id, account_id, store, store_app_id, kind, title, playtime_minutes,
-                    acquired_at, raw
+                    acquired_at, cover_url, store_url, raw
              FROM store_entry WHERE id = ?",
         )
         .bind(entry_id_to_text(id))
@@ -163,6 +167,8 @@ fn hydrate(row: &SqliteRow) -> Result<StoreEntry> {
         title: row.get("title"),
         playtime_minutes: row.get("playtime_minutes"),
         acquired_at: row.get("acquired_at"),
+        cover_url: row.get("cover_url"),
+        store_url: row.get("store_url"),
         raw: serde_json::from_str(&raw).unwrap_or(serde_json::Value::Null),
     })
 }
