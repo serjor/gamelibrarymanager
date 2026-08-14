@@ -35,9 +35,29 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
       <h2>Metadatos: IGDB</h2>
       <p className="hint">
         Hace falta una aplicación tuya en el portal de Twitch. Es gratis para uso
-        no comercial, y sin esto la biblioteca es una lista de nombres sin
-        portadas ni deduplicación entre tiendas.
+        no comercial. Sin esto la biblioteca funciona igual, pero las fichas se
+        quedan con el título de la tienda y sin portada.
       </p>
+      {/* El formulario de Twitch pide tres cosas que no son evidentes, y
+          equivocarse en la tercera te deja sin secret y sin saber por qué. */}
+      <p className="hint">
+        Al registrarla, el portal te pedirá:
+      </p>
+      <ul className="hint">
+        <li>
+          <strong>OAuth Redirect URL</strong>: pon <code>http://localhost</code>.
+          Es obligatorio en su formulario, pero aquí no se usa nunca: esta
+          aplicación pide el token con tus credenciales, sin ninguna redirección.
+        </li>
+        <li>
+          <strong>Client Type</strong>: <strong>Confidential</strong>. Una
+          aplicación pública no llega a darte Client Secret.
+        </li>
+        <li>
+          <strong>Name</strong>: es único en todo Twitch, así que puede que
+          tengas que probar varios.
+        </li>
+      </ul>
 
       <label htmlFor="client-id">Client ID</label>
       <input
@@ -63,7 +83,9 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
         type="button"
         className="link"
         onClick={() => {
-          openUrl(CONSOLE_URL).catch(() => setError(`No he podido abrir ${CONSOLE_URL}`));
+          openUrl(CONSOLE_URL).catch((cause: unknown) =>
+            setError(`No he podido abrir ${CONSOLE_URL}: ${errorMessage(cause)}`),
+          );
         }}
       >
         Registrar mi aplicación en dev.twitch.tv

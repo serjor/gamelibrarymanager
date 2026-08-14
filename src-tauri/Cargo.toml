@@ -31,6 +31,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
+# Para comprobar los patrones de alcance de la capacidad con la misma
+# implementación que usa tauri-plugin-opener en tiempo de ejecución.
+glob = "0.3"
 wiremock = "0.6"
 tempfile = "3"
 serde_json.workspace = true

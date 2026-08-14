@@ -19,8 +19,11 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
 
   const openLink = (url: string) => {
     // Si el navegador no se abre, el usuario se queda mirando un enlace muerto
-    // sin saber por qué: mejor decirlo y dejar la URL a la vista.
-    openUrl(url).catch(() => setError(`No he podido abrir ${url}`));
+    // sin saber por qué: mejor decirlo y dejar la URL a la vista. Con el motivo,
+    // además: tragárselo convirtió un permiso mal puesto en un misterio.
+    openUrl(url).catch((cause: unknown) =>
+      setError(`No he podido abrir ${url}: ${errorMessage(cause)}`),
+    );
   };
 
   const submit = async (event: React.FormEvent) => {

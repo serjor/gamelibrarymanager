@@ -75,8 +75,8 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
         type="button"
         className="link"
         onClick={() => {
-          openUrl(GOGDL_AUTH_URL).catch(() =>
-            setError(`No he podido abrir ${GOGDL_AUTH_URL}`),
+          openUrl(GOGDL_AUTH_URL).catch((cause: unknown) =>
+            setError(`No he podido abrir ${GOGDL_AUTH_URL}: ${errorMessage(cause)}`),
           );
         }}
       >

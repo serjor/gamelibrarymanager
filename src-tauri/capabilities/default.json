@@ -5,6 +5,15 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:allow-open-url"
+    {
+      "identifier": "opener:allow-open-url",
+      "comment": "`allow-open-url` habilita el comando pero no da alcance a ninguna dirección: sin esta lista, abrir cualquier enlace falla. Se enumeran las cuatro páginas del asistente en vez de usar `allow-default-urls`, que abriría de par en par todo http y https. Los patrones se comparan con la cadena tal cual la pasa la interfaz, sin normalizar, así que tienen que coincidir carácter a carácter con las constantes de src/features/onboarding/ (un `https://steamid.io/*` no vale para `https://steamid.io`). El test `capacidades` lo comprueba.",
+      "allow": [
+        { "url": "https://steamcommunity.com/dev/apikey" },
+        { "url": "https://steamid.io" },
+        { "url": "https://dev.twitch.tv/console/apps" },
+        { "url": "https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py" }
+      ]
+    }
   ]
 }
