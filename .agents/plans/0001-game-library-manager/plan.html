@@ -74,7 +74,7 @@ strong{font-weight:600}
 
 <h2>Gap</h2>
 <ul>
-<li><strong>Ejecutar código propio</strong> — ahora: no hay proyecto; después: <code>npm run tauri dev</code> levanta la app en los tres escritorios; mueve: raíz del repo, <code>src-tauri/</code>, <code>src/</code>.</li>
+<li><strong>Ejecutar código propio</strong> — ahora: no hay proyecto; después: <code>bun run tauri dev</code> levanta la app en los tres escritorios; mueve: raíz del repo, <code>src-tauri/</code>, <code>src/</code>.</li>
 <li><strong>Persistir sin perder</strong> — ahora: nada; después: SQLite versionado por migraciones, con la verdad de la tienda separada de la ficha canónica y del estado del usuario; mueve: <code>crates/storage</code>, <code>migrations/</code>.</li>
 <li><strong>Leer una tienda</strong> — ahora: nada; después: un <code>StoreConnector</code> con Steam implementado, y el contrato lo bastante estrecho para que GOG y Epic entren sin tocar el dominio; mueve: <code>crates/domain/src/ports.rs</code>, <code>crates/connectors</code>.</li>
 <li><strong>Un juego, una ficha</strong> — ahora: nada; después: dos entradas de tienda del mismo juego apuntan a un único <code>game</code>, y lo dudoso va a revisión manual en vez de fusionarse; mueve: <code>crates/domain/src/matching.rs</code>, <code>crates/metadata</code>.</li>
@@ -103,11 +103,11 @@ strong{font-weight:600}
 <tr><td><code>Cargo.toml</code> (workspace)</td><td>Miembros: <code>src-tauri</code>, <code>crates/domain</code>, <code>crates/storage</code>, <code>crates/connectors</code>, <code>crates/metadata</code>, <code>crates/secrets</code></td></tr>
 <tr><td><code>crates/domain</code></td><td>Entidades y puertos. Sin <code>reqwest</code>, sin <code>sqlx</code>, sin <code>tauri</code> en sus dependencias: es la regla que hace cumplir el resto</td></tr>
 <tr><td><code>src-tauri/src/commands/</code></td><td>Comandos expuestos a la UI; solo orquestan casos de uso, sin lógica</td></tr>
-<tr><td><code>src/</code></td><td>React 19 + TS estricto + Vite, organizado por feature, no por tipo de fichero</td></tr>
-<tr><td><code>.github/workflows/ci.yml</code></td><td><code>fmt</code>, <code>clippy -D warnings</code>, <code>cargo test</code>, <code>tsc --noEmit</code>, <code>eslint</code>, build en ubuntu/windows/macos</td></tr>
+<tr><td><code>src/</code></td><td>React 19 + TS estricto + Vite, con Bun como gestor de paquetes y runner. Organizado por feature, no por tipo de fichero</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td><code>oven-sh/setup-bun</code>, luego <code>fmt</code>, <code>clippy -D warnings</code>, <code>cargo test</code>, <code>tsc --noEmit</code>, <code>eslint</code>, <code>bun test</code>, build en ubuntu/windows/macos</td></tr>
 <tr><td><code>LICENSE</code>, <code>NOTICE</code></td><td>GPLv3 y el fichero donde se anota todo código de terceros portado</td></tr>
 </table>
-<p><strong>Done when:</strong> <code>npm run tauri dev</code> abre una ventana con una pantalla vacía en Linux; CI en verde en los tres sistemas; <code>cargo tree -p domain</code> no muestra ninguna dependencia de red ni de base de datos.</p>
+<p><strong>Done when:</strong> <code>bun run tauri dev</code> abre una ventana con una pantalla vacía en Linux; CI en verde en los tres sistemas; <code>cargo tree -p domain</code> no muestra ninguna dependencia de red ni de base de datos.</p>
 
 <h3>Fase 2 — Modelo de datos</h3>
 <p><em>Goal:</em> el esquema separa lo que dice la tienda, lo que deduce la app y lo que escribe el usuario.</p>
@@ -220,12 +220,12 @@ pub trait StoreConnector: Send + Sync {
 <li>Dominio y emparejamiento: tests puros con fixtures, incluido el corpus de 50 títulos como test de regresión.</li>
 <li>Conectores: respuestas HTTP grabadas en <code>crates/connectors/tests/fixtures/</code>. Ningún test toca la red.</li>
 <li>Storage: cada migración se aplica y revierte en un SQLite temporal.</li>
-<li>UI: Vitest sobre la lógica de filtrado y estado.</li>
+<li>UI: <code>bun test</code> con <code>happy-dom</code> sobre la lógica de filtrado y estado. El runner de Bun basta aquí y ahorra una dependencia; si aparece una necesidad de Vitest que Bun no cubra, se cambia solo esta línea.</li>
 <li>Manual antes de cerrar cada fase de conector: cuenta real, sincronización completa, segunda sincronización sin duplicados, y arranque sin red.</li>
 </ul>
 <pre><code>cargo fmt --check &amp;&amp; cargo clippy --all-targets -- -D warnings &amp;&amp; cargo test --workspace
-npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test
-npm run tauri dev</code></pre>
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run tauri dev</code></pre>
 
 <h2>Unknowns</h2>
 <table>
@@ -247,6 +247,7 @@ npm run tauri dev</code></pre>
 <li>No fusionar automáticamente por debajo del umbral, y no sobrescribir jamás un <code>game_link</code> manual.</li>
 <li>No llamar a las APIs reales desde los tests.</li>
 <li>Al portar código de legendary o Heroic, conservar sus cabeceras de copyright y anotarlo en <code>NOTICE</code>.</li>
+<li>No usar npm, yarn ni pnpm: el gestor es Bun. Se versiona <code>bun.lock</code> y no debe existir ningún <code>package-lock.json</code>; <code>beforeDevCommand</code> y <code>beforeBuildCommand</code> de <code>tauri.conf.json</code> invocan <code>bun</code>.</li>
 <li>No adelantar fases: la 6, 7 y 8 están especificadas, no aprobadas para implementar con la v1.</li>
 </ul>
 
