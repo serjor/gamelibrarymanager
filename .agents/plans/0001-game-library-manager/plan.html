@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAN — Gestor de biblioteca de juegos</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e2e4e8;--acc:#0b57d0;--warn:#b3261e;--sub:#f6f7f9}
+@media(prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e6;--mut:#9aa0a6;--line:#2e3138;--acc:#8ab4f8;--warn:#f2857b;--sub:#1e2127}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 ui-sans-serif,system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+h1{font-size:1.5rem;margin:0 0 .3rem;line-height:1.25}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:2.4rem 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.5rem 0 .4rem}
+p,li{margin:.35rem 0}
+ul,ol{padding-left:1.15rem}
+code{background:var(--sub);padding:.1rem .3rem;border-radius:3px;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--sub);border-left:2px solid var(--acc);padding:.7rem .9rem;border-radius:4px;overflow-x:auto;line-height:1.35;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:.42rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--sub);font-weight:600}
+em{color:var(--mut);font-style:normal}
+strong{font-weight:600}
+.m{color:var(--mut);font-size:13px;margin:0 0 1rem}
+.x{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<h1>Biblioteca unificada de juegos — app de escritorio local-first</h1>
+<p class="m">serjor/gamelibrarymanager · claude/game-library-manager-cy6d15 · 2026-08-14 · tamaño: L</p>
+
+<h2>Goal</h2>
+<p>Al cerrar la v1 el usuario abre una app de escritorio en Linux, Windows o macOS, introduce su propia API key de Steam y ve su biblioteca completa —incluida la que tiene el perfil en privado— con metadatos de IGDB, sin duplicados, y marca el estado de cada juego. Todo vive en un SQLite en su máquina: no hay servidor, ni cuentas, ni credenciales de terceros custodiadas por nadie. GOG, Epic y precios quedan especificados como fases 6 a 8 sobre la misma arquitectura de conectores.</p>
+
+<h2>Scope</h2>
+<h3>In</h3>
+<ul>
+<li>App Tauri 2 (Rust + React/TS) para los tres objetivos de escritorio.</li>
+<li>Núcleo de dominio en Rust sin IO; conectores de tienda y proveedores de metadatos como puertos.</li>
+<li>Conector Steam de solo lectura: biblioteca, deseados y tiempo jugado, con clave del propio usuario.</li>
+<li>Metadatos IGDB y motor de identidad: una ficha canónica por juego, aunque esté en varias tiendas.</li>
+<li>UI de biblioteca, ficha, filtros y estados de backlog.</li>
+<li>Esquema SQLite preparado para sincronizar más adelante: UUIDv7, <code>updated_at</code>, borrado lógico.</li>
+<li>Asistente de onboarding que guía la obtención y validación de cada clave.</li>
+<li>Fases 6 a 8 especificadas y no implementadas: GOG, Epic, precios ITAD.</li>
+</ul>
+<h3>Out</h3>
+<ul class="x">
+<li>Web, PWA, servidor, cuentas de usuario y sincronización. El esquema los prepara; el plan no los construye.</li>
+<li>Android e iOS. Ni Tauri mobile ni PWA entran aquí.</li>
+<li>Lanzar, instalar, descargar o parchear juegos. Nada de Wine, Proton, legendary ni gogdl.</li>
+<li>PSN, Xbox, Nintendo, EA, Ubisoft, Battle.net, Amazon, emuladores y ROMs.</li>
+<li>Logros, social, compartir bibliotecas, estadísticas públicas.</li>
+<li>Cualquier servicio propio que firme llamadas con tus credenciales.</li>
+<li>Firma de binarios, notarización y auto-actualización.</li>
+</ul>
+
+<h2>Restricciones</h2>
+<p>Greenfield: el repositorio está vacío, sin un solo commit. Lo que sustituye al estado del código es el estado de las APIs ajenas, verificado el 2026-08-14.</p>
+<table>
+<tr><th>Asunto</th><th>Fuente</th><th>Realidad</th></tr>
+<tr><td>Repositorio</td><td><code>git log</code></td><td>Sin commits. Rama <code>claude/game-library-manager-cy6d15</code> sin historia. No hay convención previa que respetar.</td></tr>
+<tr><td>Biblioteca Steam</td><td><code>IPlayerService/GetOwnedGames/v1</code></td><td>Perfiles privados no soportados <em>salvo</em> que la API key usada pertenezca al mismo steamid consultado. Esto es lo que hace viable el escritorio: con clave propia no hace falta abrir el perfil.</td></tr>
+<tr><td>Deseados Steam</td><td><code>IWishlistService/GetWishlist/v1</code></td><td>Existe y acepta <code>steamid</code>. El antiguo endpoint de <code>store.steampowered.com</code> ya no es el camino.</td></tr>
+<tr><td>ToS de Steam</td><td>steamcommunity.com/dev/apiterms</td><td>Prohibido interceptar o almacenar la contraseña del usuario. En escritorio no hace falta OpenID: basta steamid + clave propia.</td></tr>
+<tr><td>GOG</td><td>gogapidocs (no oficial)</td><td>Sin API pública. <code>auth.gog.com/auth</code> con <code>client_id=46899977096215655</code> y redirección a <code>embed.gog.com/on_login_success?origin=client</code>; token en <code>auth.gog.com/token</code>; propiedad en <code>embed.gog.com/user/data/games</code> y <code>embed.gog.com/account/getFilteredProducts</code>; detalle en <code>api.gog.com/products</code>. La documentación es un volcado de 2018.</td></tr>
+<tr><td>Epic</td><td>dev.epicgames.com, legendary</td><td>No hay API de biblioteca. EOS Ecom/entitlements sirve para <em>tu</em> juego, no para la biblioteca del usuario. La implementación de referencia es legendary, movida a una organización en abril de 2026 y activa. GPLv3.</td></tr>
+<tr><td>IGDB</td><td>api-docs.igdb.com, foros Twitch</td><td>OAuth client credentials de Twitch. El acuerdo de desarrollador <strong>prohíbe</strong> empotrar el secreto en apps de escritorio o móvil: o proxy propio o clave del usuario. Límite de 4 peticiones/segundo. <code>external_games</code> mapea appid de Steam a juego IGDB.</td></tr>
+<tr><td>ITAD</td><td>docs.isthereanydeal.com</td><td>API key para endpoints públicos; OAuth 2.0 para waitlist y colección del usuario. Precios actuales, mínimos históricos y bundles.</td></tr>
+<tr><td>Tauri</td><td>v2.tauri.app</td><td>2.10.1 (marzo 2026), escritorio en producción. <code>tauri-plugin-stronghold</code> está desaconsejado y desaparece en v3: el almacén de secretos es el keyring nativo.</td></tr>
+</table>
+
+<h2>Gap</h2>
+<ul>
+<li><strong>Ejecutar código propio</strong> — ahora: no hay proyecto; después: <code>npm run tauri dev</code> levanta la app en los tres escritorios; mueve: raíz del repo, <code>src-tauri/</code>, <code>src/</code>.</li>
+<li><strong>Persistir sin perder</strong> — ahora: nada; después: SQLite versionado por migraciones, con la verdad de la tienda separada de la ficha canónica y del estado del usuario; mueve: <code>crates/storage</code>, <code>migrations/</code>.</li>
+<li><strong>Leer una tienda</strong> — ahora: nada; después: un <code>StoreConnector</code> con Steam implementado, y el contrato lo bastante estrecho para que GOG y Epic entren sin tocar el dominio; mueve: <code>crates/domain/src/ports.rs</code>, <code>crates/connectors</code>.</li>
+<li><strong>Un juego, una ficha</strong> — ahora: nada; después: dos entradas de tienda del mismo juego apuntan a un único <code>game</code>, y lo dudoso va a revisión manual en vez de fusionarse; mueve: <code>crates/domain/src/matching.rs</code>, <code>crates/metadata</code>.</li>
+<li><strong>Gestionar, no solo mirar</strong> — ahora: nada; después: estado, nota y valoración por juego, que ninguna sincronización posterior puede pisar; mueve: <code>crates/storage</code>, <code>src/features/library</code>.</li>
+</ul>
+
+<h2>Decisions</h2>
+<table>
+<tr><th>Pregunta</th><th>Decisión</th><th>Por qué / rechazado</th></tr>
+<tr><td>¿Web primero?</td><td>No. Escritorio primero, web fuera de alcance.</td><td>GOG y Epic no tienen API pública; su auth solo es defendible ejecutándose en la máquina del usuario, y el navegador ni siquiera puede llamarlas (sin CORS). Rechazado el modelo servidor: tokens de tienda ajenos custodiados por ti, ToS de Epic y GOG incumplidos, y un bloqueo de IP tumbando a todos los usuarios a la vez.</td></tr>
+<tr><td>¿Framework?</td><td>Tauri 2 + React/TS.</td><td>Rust hace las peticiones fuera del webview y guarda tokens en el keychain del SO; la UI React se reaprovecha el día que haya PWA. Rechazado Electron (~150MB y almacenamiento de secretos más débil), Flutter y Avalonia (no comparten nada con una futura web).</td></tr>
+<tr><td>¿Conectores propios o binarios de la comunidad?</td><td>Propios, solo auth y listado.</td><td>Sin instalación de juegos, cada conector es login + biblioteca + deseados. Rechazado empaquetar legendary/gogdl: arrastra runtime de Python y una superficie enorme (descargas, parches, Wine) que no se usa.</td></tr>
+<tr><td>¿Claves de API?</td><td>BYOK: cada usuario aporta las suyas.</td><td>IGDB prohíbe el secreto empotrado y la clave propia de Steam es además la que desbloquea la biblioteca privada. Rechazado el proxy propio: reintroduce servidor, factura y cuota compartida agotable.</td></tr>
+<tr><td>¿Sincronización?</td><td>Fuera de v1, esquema preparado.</td><td>UUIDv7, <code>updated_at</code> y borrado lógico cuestan poco ahora y convierten el sync futuro en una fase en vez de una reescritura de la capa de datos.</td></tr>
+<tr><td>¿Alcance de v1?</td><td>Cierra en la fase 5 (Steam + metadatos + backlog).</td><td>Valida el motor de emparejamiento contra una sola tienda antes de meterle dos más. Rechazado entregar las ocho fases de golpe: ningún punto intermedio de valor.</td></tr>
+<tr><td>¿Licencia?</td><td>GPLv3.</td><td>La misma que Heroic y legendary, lo que permite portar su código de auth —la parte más volátil del proyecto— conservando cabeceras de copyright.</td></tr>
+<tr><td>¿Multiusuario?</td><td>Mono-usuario, sin auth propia, modelo de datos preparado.</td><td>Self-host personal ahora, abrible después. Rechazado cuentas en v1: media fase de trabajo antes de tener valor.</td></tr>
+</table>
+
+<h2>Plan</h2>
+
+<h3>Fase 1 — Andamiaje y arquitectura</h3>
+<p><em>Goal:</em> la app arranca en los tres escritorios y las fronteras del código ya están puestas.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>Cargo.toml</code> (workspace)</td><td>Miembros: <code>src-tauri</code>, <code>crates/domain</code>, <code>crates/storage</code>, <code>crates/connectors</code>, <code>crates/metadata</code>, <code>crates/secrets</code></td></tr>
+<tr><td><code>crates/domain</code></td><td>Entidades y puertos. Sin <code>reqwest</code>, sin <code>sqlx</code>, sin <code>tauri</code> en sus dependencias: es la regla que hace cumplir el resto</td></tr>
+<tr><td><code>src-tauri/src/commands/</code></td><td>Comandos expuestos a la UI; solo orquestan casos de uso, sin lógica</td></tr>
+<tr><td><code>src/</code></td><td>React 19 + TS estricto + Vite, organizado por feature, no por tipo de fichero</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td><code>fmt</code>, <code>clippy -D warnings</code>, <code>cargo test</code>, <code>tsc --noEmit</code>, <code>eslint</code>, build en ubuntu/windows/macos</td></tr>
+<tr><td><code>LICENSE</code>, <code>NOTICE</code></td><td>GPLv3 y el fichero donde se anota todo código de terceros portado</td></tr>
+</table>
+<p><strong>Done when:</strong> <code>npm run tauri dev</code> abre una ventana con una pantalla vacía en Linux; CI en verde en los tres sistemas; <code>cargo tree -p domain</code> no muestra ninguna dependencia de red ni de base de datos.</p>
+
+<h3>Fase 2 — Modelo de datos</h3>
+<p><em>Goal:</em> el esquema separa lo que dice la tienda, lo que deduce la app y lo que escribe el usuario.</p>
+<p>Cuatro capas, y la separación es lo que impide los dos desastres clásicos: que una re-sincronización borre las notas del usuario, y que re-emparejar destruya el dato original de la tienda.</p>
+<pre>
+ store_entry   verdad de la tienda, solo alta y actualización, nunca se edita a mano
+      |  N
+      v
+ game_link     confianza + método (auto|manual), reversible
+      |  N          &lt;- re-emparejar reescribe SOLO esta tabla, y nunca las filas manual
+      v
+ game          ficha canónica + metadatos IGDB
+      |  1
+      v
+ user_state    estado, nota, valoración   &lt;- ninguna sincronización la toca jamás
+</pre>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>migrations/0001_initial.sql</code></td><td>Las cinco tablas: <code>store_account</code>, <code>store_entry</code>, <code>game</code>, <code>game_link</code>, <code>user_state</code></td></tr>
+<tr><td><code>crates/storage/src/repositories/</code></td><td>Un repositorio por agregado. Todo el SQL vive aquí y en ningún otro sitio</td></tr>
+</table>
+<pre><code>store_entry(id uuid7 pk, account_id, store, store_app_id, kind owned|wishlist,
+            title, playtime_minutes, acquired_at, raw json,
+            first_seen_at, updated_at, deleted_at)
+  unique(account_id, store_app_id, kind)
+game_link(game_id, store_entry_id, confidence real, method text, updated_at)
+user_state(game_id pk, status, rating, notes, started_at, finished_at, updated_at)</code></pre>
+<p><strong>Done when:</strong> las migraciones aplican y revierten sobre una base vacía; un test inserta dos <code>store_entry</code> de tiendas distintas enlazadas al mismo <code>game</code> y verifica que borrar y reconstruir los enlaces deja <code>user_state</code> intacto.</p>
+
+<h3>Fase 3 — Conector Steam</h3>
+<p><em>Goal:</em> la biblioteca y los deseados reales del usuario aterrizan en <code>store_entry</code>.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>crates/domain/src/ports.rs</code></td><td>El contrato que GOG y Epic implementarán después sin tocar el dominio</td></tr>
+<tr><td><code>crates/connectors/src/steam/</code></td><td><code>GetOwnedGames</code> con <code>include_appinfo=1</code> e <code>include_played_free_games=1</code>, y <code>GetWishlist</code></td></tr>
+<tr><td><code>crates/secrets/</code></td><td>Keyring nativo del SO, con fallback a fichero cifrado si no hay secret-service</td></tr>
+<tr><td><code>src/features/onboarding/</code></td><td>Asistente: enlace directo a la página de clave de Steam, campo, y validación inmediata contra la API</td></tr>
+</table>
+<pre><code>#[async_trait]
+pub trait StoreConnector: Send + Sync {
+    fn id(&amp;self) -&gt; StoreId;
+    async fn authenticate(&amp;self, ctx: &amp;AuthContext) -&gt; Result&lt;StoreSession, ConnectorError&gt;;
+    async fn owned(&amp;self, s: &amp;StoreSession) -&gt; Result&lt;Vec&lt;StoreEntry&gt;, ConnectorError&gt;;
+    async fn wishlist(&amp;self, s: &amp;StoreSession) -&gt; Result&lt;Vec&lt;StoreEntry&gt;, ConnectorError&gt;;
+}</code></pre>
+<p><strong>Done when:</strong> con una clave real, la sincronización deja N filas en <code>store_entry</code> coincidiendo con el recuento de la cuenta; ejecutarla dos veces no duplica nada ni cambia <code>first_seen_at</code>; la clave no aparece ni en el SQLite ni en los logs.</p>
+
+<h3>Fase 4 — Metadatos e identidad</h3>
+<p><em>Goal:</em> el núcleo del producto. Una ficha por juego, y lo dudoso a revisión en vez de fusionado.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>crates/metadata/src/igdb/</code></td><td>Token de Twitch, limitador de 4 req/s y caché local permanente por <code>igdb_id</code></td></tr>
+<tr><td><code>crates/domain/src/matching.rs</code></td><td>Normalización de títulos y puntuación de candidatos. Puro, sin IO, testeable con fixtures</td></tr>
+<tr><td><code>src/features/review/</code></td><td>Cola de emparejamientos dudosos: confirmar, corregir o marcar como juego sin ficha</td></tr>
+</table>
+<ol>
+<li><strong>Identificador externo</strong>: appid de Steam contra <code>external_games</code>. Es exacto; si hay resultado, confianza 1.0 y no se pregunta nada.</li>
+<li><strong>Título normalizado</strong>: minúsculas, sin puntuación, romanos a arábigos, y fuera los sufijos de edición (<em>Game of the Year</em>, <em>Definitive</em>, <em>Remastered</em> se conserva porque sí es otro juego). Se compara contra nombres y <code>alternative_names</code>.</li>
+<li><strong>Umbral</strong>: candidato único por encima del umbral y año compatible, se enlaza como <code>auto</code>. Todo lo demás va a la cola. Un duplicado visible molesta; una fusión errónea hace perder datos del usuario.</li>
+</ol>
+<p><strong>Done when:</strong> sobre un corpus de 50 títulos reales con su emparejamiento esperado, precisión &ge;95% y <strong>cero</strong> falsos positivos automáticos; re-ejecutar el emparejamiento no altera ningún <code>game_link</code> con <code>method='manual'</code>.</p>
+
+<h3>Fase 5 — Biblioteca y backlog · <em>fin de la v1</em></h3>
+<p><em>Goal:</em> la app sirve para usarla a diario.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/features/library/</code></td><td>Rejilla virtualizada con portada, búsqueda, filtro por tienda, estado y género</td></tr>
+<tr><td><code>src/features/game/</code></td><td>Ficha: metadatos, en qué tiendas se posee, tiempo jugado, estado, valoración y notas</td></tr>
+<tr><td><code>src-tauri/src/commands/sync.rs</code></td><td>Sincronización con progreso, cancelable, que no bloquea la UI</td></tr>
+</table>
+<p><strong>Done when:</strong> con 1.000 juegos la rejilla se desplaza sin saltos; cambiar un estado persiste y sobrevive a una sincronización completa; arrancar sin red muestra la biblioteca y un aviso, no un error.</p>
+
+<h3>Fase 6 — Conector GOG</h3>
+<p><em>Goal:</em> segunda tienda, y primera prueba real de la deduplicación.</p>
+<p>Login en una ventana webview contra la página real de GOG; se captura el <code>code</code> de la redirección a <code>on_login_success</code> y se canjea en <code>auth.gog.com/token</code>. La contraseña nunca pasa por código propio. Ids de <code>embed.gog.com/user/data/games</code> y detalle por lotes desde <code>api.gog.com/products</code>.</p>
+<p><strong>Done when:</strong> un juego poseído en Steam y GOG aparece como una sola ficha con dos insignias de tienda; el refresco de token funciona tras caducar el de acceso.</p>
+
+<h3>Fase 7 — Conector Epic</h3>
+<p><em>Goal:</em> la tienda hostil, aislada para que su rotura no arrastre nada.</p>
+<p>Flujo OAuth de Epic tomando legendary como referencia (GPLv3, compatible; conservar cabeceras y anotar en <code>NOTICE</code>). El conector se registra con un interruptor propio: si Epic cambia el auth, se desactiva y el resto de la app sigue funcionando.</p>
+<p><strong>Done when:</strong> la biblioteca de Epic aparece; forzar un fallo de auth deja el conector en estado de error con mensaje accionable y no afecta a Steam ni GOG.</p>
+
+<h3>Fase 8 — Precios y deseados</h3>
+<p><em>Goal:</em> los deseados dejan de ser una lista y pasan a ser una decisión de compra.</p>
+<p>ITAD sobre los <code>store_entry</code> de tipo <code>wishlist</code>: precio actual por tienda, mínimo histórico y mínimo del último año. Consulta por lotes y respetando su límite.</p>
+<p><strong>Done when:</strong> cada deseado muestra su mejor precio actual y su mínimo histórico, y la vista de deseados ordena por descuento.</p>
+
+<h2>Data &amp; contracts</h2>
+<table>
+<tr><th>Cambio</th><th>Up</th><th>Down</th><th>Backfill</th></tr>
+<tr><td>Esquema inicial</td><td><code>0001_initial.sql</code>, cinco tablas con UUIDv7, <code>updated_at</code> y <code>deleted_at</code></td><td><code>DROP</code> de las cinco</td><td>No aplica: base vacía</td></tr>
+<tr><td>Precios (fase 8)</td><td><code>0002_prices.sql</code>: <code>price_snapshot(game_id, store, amount, currency, low_all_time, captured_at)</code></td><td><code>DROP TABLE price_snapshot</code></td><td>Se rellena en la siguiente sincronización; ningún dato previo depende de ella</td></tr>
+</table>
+<p>Ninguna tabla borra filas físicamente: un juego que desaparece de la tienda se marca con <code>deleted_at</code> y conserva su <code>user_state</code>. Es lo que permitirá sincronizar más adelante sin resucitar registros borrados en otro dispositivo.</p>
+
+<h2>Risks</h2>
+<table>
+<tr><th>Riesgo</th><th>Impacto</th><th>Mitigación</th><th>Rollback</th></tr>
+<tr><td>Epic cambia su flujo de auth</td><td>El conector deja de funcionar, con periodicidad desconocida pero certeza alta</td><td>Conector aislado tras el trait, con interruptor propio y errores que no se propagan a la sincronización global</td><td>Desactivar el conector: el resto de la app no se entera</td></tr>
+<tr><td>Falsos positivos al deduplicar</td><td>Dos juegos distintos fusionados; el usuario pierde estado y confianza en la app</td><td>Umbral conservador, cola de revisión manual, <code>method='manual'</code> intocable</td><td>Reconstruir solo los enlaces <code>auto</code>; <code>store_entry</code> y <code>user_state</code> quedan intactos por diseño</td></tr>
+<tr><td>BYOK ahuyenta al usuario</td><td>Tres claves antes de ver un juego: el mayor riesgo de abandono del producto</td><td>El asistente es parte de la fase 3, con enlace directo, validación inmediata y la posibilidad de empezar solo con Steam</td><td>No aplica: es una decisión de producto, no un despliegue</td></tr>
+<tr><td>Endpoints de GOG obsoletos</td><td>La fase 6 no arranca</td><td>Contrastar contra el código actual de Heroic antes de escribir nada</td><td>Fase 6 aplazada; las fases 1-5 no dependen de ella</td></tr>
+<tr><td>Límite de 4 req/s de IGDB</td><td>429 y sincronización a medias en bibliotecas grandes</td><td>Limitador propio y caché permanente por <code>igdb_id</code>: un juego se consulta una vez en la vida</td><td>Reanudar: el emparejamiento es idempotente</td></tr>
+<tr><td>Sin secret-service en Linux</td><td>El keyring falla en entornos mínimos y no hay dónde guardar los tokens</td><td>Detectarlo al arrancar y ofrecer fichero cifrado con passphrase</td><td>Cambiar de almacén y volver a pedir las claves</td></tr>
+<tr><td>Uso de endpoints no documentados</td><td>GOG o Epic podrían bloquear el cliente</td><td>Solo lectura, a ritmo humano, sin scraping masivo ni redistribución de datos; una instalación = un usuario</td><td>Import manual como salida</td></tr>
+</table>
+
+<h2>Verification</h2>
+<ul>
+<li>Dominio y emparejamiento: tests puros con fixtures, incluido el corpus de 50 títulos como test de regresión.</li>
+<li>Conectores: respuestas HTTP grabadas en <code>crates/connectors/tests/fixtures/</code>. Ningún test toca la red.</li>
+<li>Storage: cada migración se aplica y revierte en un SQLite temporal.</li>
+<li>UI: Vitest sobre la lógica de filtrado y estado.</li>
+<li>Manual antes de cerrar cada fase de conector: cuenta real, sincronización completa, segunda sincronización sin duplicados, y arranque sin red.</li>
+</ul>
+<pre><code>cargo fmt --check &amp;&amp; cargo clippy --all-targets -- -D warnings &amp;&amp; cargo test --workspace
+npx tsc --noEmit &amp;&amp; npm run lint &amp;&amp; npm test
+npm run tauri dev</code></pre>
+
+<h2>Unknowns</h2>
+<table>
+<tr><th>Incógnita</th><th>Cómo resolverla</th><th>Fallback</th></tr>
+<tr><td>Vigencia real de los endpoints de GOG (documentación de 2018)</td><td>Leer el código actual de Heroic al empezar la fase 6 y probar el flujo a mano antes de escribir el conector</td><td>Import manual de la biblioteca GOG</td></tr>
+<tr><td>Flujo de auth de Epic hoy</td><td>Leer legendary al empezar la fase 7</td><td>Fase 7 aplazada; Epic por import manual</td></tr>
+<tr><td>Cobertura de IGDB para títulos que solo están en GOG o Epic</td><td>Medirla en la fase 4 con el corpus antes de fijar el umbral</td><td>Ficha mínima con el dato de la tienda y sin metadatos enriquecidos</td></tr>
+</table>
+
+<h2>Do not</h2>
+<ul class="x">
+<li>No añadir servidor, backend, cuentas ni telemetría. Si algo parece necesitarlo, para y pregunta.</li>
+<li>No empotrar ninguna clave ni secreto en el binario ni en el repositorio: ni de IGDB, ni de ITAD, ni de Steam.</li>
+<li>No pedir nunca usuario y contraseña de ninguna tienda. Steam va por clave propia; GOG y Epic, por su propia página de login en un webview.</li>
+<li>No implementar descarga, instalación ni lanzamiento de juegos, y no empaquetar legendary, gogdl, Wine ni Proton. Esto no es un launcher.</li>
+<li>No meter lógica de tienda en <code>crates/domain</code> ni SQL fuera de <code>crates/storage</code>.</li>
+<li>No usar <code>tauri-plugin-stronghold</code>: desaparece en Tauri v3.</li>
+<li>No borrar filas físicamente y no reutilizar claves autoincrementales.</li>
+<li>No fusionar automáticamente por debajo del umbral, y no sobrescribir jamás un <code>game_link</code> manual.</li>
+<li>No llamar a las APIs reales desde los tests.</li>
+<li>Al portar código de legendary o Heroic, conservar sus cabeceras de copyright y anotarlo en <code>NOTICE</code>.</li>
+<li>No adelantar fases: la 6, 7 y 8 están especificadas, no aprobadas para implementar con la v1.</li>
+</ul>
+
+</body>
+</html>
