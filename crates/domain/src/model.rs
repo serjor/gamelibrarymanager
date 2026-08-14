@@ -70,6 +70,7 @@ macro_rules! id_type {
 
 id_type!(GameId);
 id_type!(StoreEntryId);
+id_type!(StoreAccountId);
 
 #[cfg(test)]
 mod tests {

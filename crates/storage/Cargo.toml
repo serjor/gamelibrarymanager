@@ -6,4 +6,18 @@ license.workspace = true
 
 [dependencies]
 domain.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
+time.workspace = true
+uuid.workspace = true
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "macros",
+    "migrate",
+    "time",
+    "uuid",
+] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }

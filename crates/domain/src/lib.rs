@@ -4,6 +4,8 @@
 //! El paso `arquitectura` de CI ejecuta `cargo tree -p domain` y falla si
 //! encuentra reqwest, sqlx o tauri en el árbol.
 
+pub mod library;
 pub mod model;
 
-pub use model::{EntryKind, GameId, PlayStatus, StoreEntryId, StoreId};
+pub use library::{Game, GameLink, LinkMethod, StoreAccount, StoreEntry, UserState};
+pub use model::{EntryKind, GameId, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
