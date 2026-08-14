@@ -77,6 +77,7 @@ export interface IdentityReport {
   linked: number;
   review: number;
   unknown: number;
+  cancelled: boolean;
 }
 
 /** Única puerta hacia Rust. Nadie más llama a `invoke` directamente. */
@@ -101,7 +102,8 @@ export const api = {
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
   library: () => invoke<LibraryRow[]>("library"),
-  cancelSync: () => invoke<void>("cancel_sync"),
+  /** Para lo que esté corriendo: sincronizar o emparejar. */
+  cancelOperation: () => invoke<void>("cancel_operation"),
   setUserState: (
     gameId: string,
     status: PlayStatus | null,

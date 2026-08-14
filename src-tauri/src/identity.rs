@@ -17,6 +17,7 @@ use storage::repositories::{
 };
 
 use crate::error::AppError;
+use crate::sync::{ProgressSink, SyncProgress};
 
 #[derive(Debug, Default, Serialize)]
 pub struct IdentityReport {
@@ -26,6 +27,8 @@ pub struct IdentityReport {
     pub review: usize,
     /// Sin ningún candidato: ni IGDB las conoce.
     pub unknown: usize,
+    /// El usuario paró a mitad. Lo emparejado se queda: es idempotente.
+    pub cancelled: bool,
 }
 
 pub async fn resolve(
@@ -33,6 +36,7 @@ pub async fn resolve(
     igdb: &IgdbClient,
     credentials: &IgdbCredentials,
     token: &IgdbToken,
+    progress: &dyn ProgressSink,
 ) -> Result<IdentityReport, AppError> {
     let entries = StoreEntryRepository(db);
     // Las que nunca tuvieron ficha y las que tienen una hecha solo con el
@@ -43,8 +47,22 @@ pub async fn resolve(
 
     let mut report = IdentityReport::default();
     let mut links = GameLinkRepository(db).all().await?;
+    let total = pending.len();
 
-    for entry in pending {
+    for (indice, entry) in pending.into_iter().enumerate() {
+        // Se para entre juegos, nunca a mitad de uno. Lo ya decidido se
+        // conserva y la siguiente pasada sigue por donde iba.
+        if progress.cancelled() {
+            report.cancelled = true;
+            break;
+        }
+        progress.report(SyncProgress {
+            store: entry.store.as_str().to_owned(),
+            stage: "emparejando",
+            done: indice,
+            total,
+        });
+
         let decision = decide(igdb, credentials, token, &entry).await?;
         let ficha_local = links
             .iter()
@@ -102,12 +120,29 @@ pub async fn resolve(
 /// es una biblioteca de verdad —con su estado y sus insignias de tienda— a la
 /// espera de metadatos, y el mismo título en dos tiendas ya cae en una sola
 /// ficha: para eso basta la normalización, IGDB solo añade la certeza.
-pub async fn resolve_local(db: &Database) -> Result<IdentityReport, AppError> {
+pub async fn resolve_local(
+    db: &Database,
+    progress: &dyn ProgressSink,
+) -> Result<IdentityReport, AppError> {
     let games = GameRepository(db);
     let mut report = IdentityReport::default();
     let mut links = GameLinkRepository(db).all().await?;
 
-    for entry in StoreEntryRepository(db).unlinked().await? {
+    let pending = StoreEntryRepository(db).unlinked().await?;
+    let total = pending.len();
+
+    for (indice, entry) in pending.into_iter().enumerate() {
+        if progress.cancelled() {
+            report.cancelled = true;
+            break;
+        }
+        progress.report(SyncProgress {
+            store: entry.store.as_str().to_owned(),
+            stage: "agrupando por título",
+            done: indice,
+            total,
+        });
+
         let sort_title = matching::normalize(&entry.title);
         let game_id = match games.find_local_by_sort_title(&sort_title).await? {
             Some(existing) => existing.id,

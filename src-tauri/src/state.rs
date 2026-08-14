@@ -30,8 +30,10 @@ pub struct AppState {
     secrets: RwLock<Option<Arc<dyn SecretStore>>>,
     pub backend: Backend,
     secrets_path: PathBuf,
-    /// Bandera de cancelación de la sincronización en curso.
-    cancel_sync: AtomicBool,
+    /// Bandera de cancelación de la operación larga en curso. Es una sola
+    /// porque sincronizar y emparejar nunca corren a la vez: los dos botones se
+    /// deshabilitan mutuamente mientras uno trabaja.
+    cancel_flag: AtomicBool,
 }
 
 impl AppState {
@@ -59,7 +61,7 @@ impl AppState {
             secrets: RwLock::new(secrets),
             backend,
             secrets_path,
-            cancel_sync: AtomicBool::new(false),
+            cancel_flag: AtomicBool::new(false),
         }
     }
 
@@ -78,20 +80,20 @@ impl AppState {
             .ok_or(secrets::SecretsError::Unavailable)
     }
 
-    pub fn begin_sync(&self) {
-        self.cancel_sync.store(false, Ordering::Relaxed);
+    pub fn begin_operation(&self) {
+        self.cancel_flag.store(false, Ordering::Relaxed);
     }
 
-    pub fn cancel_sync(&self) {
-        self.cancel_sync.store(true, Ordering::Relaxed);
+    pub fn cancel_operation(&self) {
+        self.cancel_flag.store(true, Ordering::Relaxed);
     }
 
-    pub fn end_sync(&self) {
-        self.cancel_sync.store(false, Ordering::Relaxed);
+    pub fn end_operation(&self) {
+        self.cancel_flag.store(false, Ordering::Relaxed);
     }
 
-    pub fn sync_cancelled(&self) -> bool {
-        self.cancel_sync.load(Ordering::Relaxed)
+    pub fn operation_cancelled(&self) -> bool {
+        self.cancel_flag.load(Ordering::Relaxed)
     }
 
     pub async fn is_unlocked(&self) -> bool {

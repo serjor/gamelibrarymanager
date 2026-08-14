@@ -6,7 +6,7 @@ use domain::{
     EntryKind, GameLink, LinkMethod, StoreAccount, StoreAccountId, StoreEntry, StoreEntryId,
     StoreId,
 };
-use gamelibrarymanager_lib::testing::resolve;
+use gamelibrarymanager_lib::testing::{Silent, resolve};
 use metadata::IgdbClient;
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use storage::Database;
@@ -122,7 +122,7 @@ async fn el_appid_de_steam_enlaza_sin_preguntar_y_el_titulo_dudoso_va_a_la_cola(
     let igdb = IgdbClient::new(reqwest::Client::new())
         .with_bases(server.uri(), format!("{}/token", server.uri()));
 
-    let report = resolve(&db, &igdb, &credentials(), &token())
+    let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
         .expect("emparejar");
 
@@ -169,7 +169,7 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
         .with_bases(server.uri(), format!("{}/token", server.uri()));
 
     // Primera pasada: a la cola.
-    resolve(&db, &igdb, &credentials(), &token())
+    resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
         .expect("emparejar");
     assert!(
@@ -204,7 +204,7 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
 
     // Se vuelve a emparejar, dos veces más.
     for _ in 0..2 {
-        resolve(&db, &igdb, &credentials(), &token())
+        resolve(&db, &igdb, &credentials(), &token(), &Silent)
             .await
             .expect("re-emparejar");
     }
@@ -237,7 +237,7 @@ async fn un_juego_que_igdb_no_conoce_se_cuenta_aparte_y_no_se_inventa_ficha() {
     let igdb = IgdbClient::new(reqwest::Client::new())
         .with_bases(server.uri(), format!("{}/token", server.uri()));
 
-    let report = resolve(&db, &igdb, &credentials(), &token())
+    let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
         .expect("emparejar");
 

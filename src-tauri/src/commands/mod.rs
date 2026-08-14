@@ -124,12 +124,12 @@ struct WindowProgress<'a> {
 impl ProgressSink for WindowProgress<'_> {
     fn report(&self, progress: SyncProgress) {
         // Si la ventana ya no está, el progreso da igual: no es motivo para
-        // abortar una sincronización que por lo demás va bien.
+        // abortar una operación que por lo demás va bien.
         let _ = self.app.emit("sync:progress", progress);
     }
 
     fn cancelled(&self) -> bool {
-        self.state.sync_cancelled()
+        self.state.operation_cancelled()
     }
 }
 
@@ -137,19 +137,21 @@ impl ProgressSink for WindowProgress<'_> {
 /// que la ventana sigue respondiendo mientras dura.
 #[tauri::command]
 pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<SyncReport, AppError> {
-    state.begin_sync();
+    state.begin_operation();
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
     };
     let report = sync::sync_all(&state, &progress).await;
-    state.end_sync();
+    state.end_operation();
     report
 }
 
+/// Vale tanto para la sincronización como para el emparejamiento: los dos son
+/// largos, los dos se paran en el siguiente punto seguro y nunca corren a la vez.
 #[tauri::command]
-pub fn cancel_sync(state: State<'_, AppState>) {
-    state.cancel_sync();
+pub fn cancel_operation(state: State<'_, AppState>) {
+    state.cancel_operation();
 }
 
 /// La biblioteca entera en una consulta. Con mil juegos, hacer una consulta por
@@ -239,14 +241,31 @@ pub async fn has_igdb_credentials(state: State<'_, AppState>) -> Result<bool, Ap
 /// desde el primer arranque, y el día que el usuario configure IGDB estas fichas
 /// se enriquecen en su sitio sin perder lo que haya escrito encima.
 #[tauri::command]
-pub async fn resolve_identities(state: State<'_, AppState>) -> Result<IdentityReport, AppError> {
-    match igdb_session(&state).await {
+pub async fn resolve_identities(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<IdentityReport, AppError> {
+    state.begin_operation();
+    let progress = WindowProgress {
+        app: app.clone(),
+        state: &state,
+    };
+
+    // El emparejamiento es lento por el límite de 4 peticiones por segundo de
+    // IGDB, así que va informando juego a juego en vez de dejar la ventana
+    // callada varios minutos.
+    let report = match igdb_session(&state).await {
         Ok((credentials, token)) => {
-            identity::resolve(&state.db, &state.igdb, &credentials, &token).await
+            identity::resolve(&state.db, &state.igdb, &credentials, &token, &progress).await
         }
-        Err(AppError::MissingIgdbCredentials) => identity::resolve_local(&state.db).await,
+        Err(AppError::MissingIgdbCredentials) => {
+            identity::resolve_local(&state.db, &progress).await
+        }
         Err(other) => Err(other),
-    }
+    };
+
+    state.end_operation();
+    report
 }
 
 /// El token de Twitch dura unos sesenta días: se guarda y solo se renueva

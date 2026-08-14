@@ -29,7 +29,7 @@ export function App() {
   const [tab, setTab] = useState<"library" | "review">("library");
   // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
   // aplicación: se entra a ellos cuando el usuario quiere.
-  const [setup, setSetup] = useState<"gog" | "igdb" | null>(null);
+  const [setup, setSetup] = useState<"steam" | "gog" | "igdb" | null>(null);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -125,21 +125,12 @@ export function App() {
     refresh();
   };
 
-  if (setup === "gog") {
+  if (setup !== null) {
     return (
       <main>
-        <GogSetup onConnected={cerrarSetup} />
-        <button className="link" onClick={() => setSetup(null)}>
-          Volver
-        </button>
-      </main>
-    );
-  }
-
-  if (setup === "igdb") {
-    return (
-      <main>
-        <IgdbSetup onConnected={cerrarSetup} />
+        {setup === "steam" && <SteamSetup onConnected={cerrarSetup} />}
+        {setup === "gog" && <GogSetup onConnected={cerrarSetup} />}
+        {setup === "igdb" && <IgdbSetup onConnected={cerrarSetup} />}
         <button className="link" onClick={() => setSetup(null)}>
           Volver
         </button>
@@ -160,7 +151,13 @@ export function App() {
     );
   }
 
-  const tieneGog = accounts.some((account) => account.store === "gog");
+  // Cada tienda que falte tiene que seguir siendo alcanzable desde aquí. Con
+  // solo la primera pantalla, quien empezara por GOG se quedaba sin ninguna
+  // forma de añadir Steam después.
+  const conectadas = new Set(accounts.map((account) => account.store));
+  const porConectar = ([["steam", "Steam"], ["gog", "GOG"]] as const).filter(
+    ([store]) => !conectadas.has(store),
+  );
 
   return (
     <main>
@@ -170,8 +167,8 @@ export function App() {
           <button onClick={() => void run("sync", api.syncNow)} disabled={busy !== null}>
             {busy === "sync" ? "Sincronizando…" : "Sincronizar"}
           </button>
-          {busy === "sync" && (
-            <button className="link" onClick={() => void api.cancelSync()}>
+          {busy !== null && (
+            <button className="link" onClick={() => void api.cancelOperation()}>
               cancelar
             </button>
           )}
@@ -181,11 +178,11 @@ export function App() {
           >
             {busy === "identity" ? "Emparejando…" : "Emparejar"}
           </button>
-          {!tieneGog && (
-            <button className="link" onClick={() => setSetup("gog")}>
-              Conectar GOG
+          {porConectar.map(([store, nombre]) => (
+            <button key={store} className="link" onClick={() => setSetup(store)}>
+              Conectar {nombre}
             </button>
-          )}
+          ))}
         </div>
       </header>
 
@@ -229,9 +226,13 @@ export function App() {
         </ul>
       )}
 
-      {progress && (
+      {progress && progress.total > 0 && (
         <p className="hint">
-          {progress.store}: {progress.stage} ({progress.done + 1} de {progress.total})
+          {/* Emparejar mil juegos son minutos por el límite de IGDB: sin una
+              barra, el usuario no distingue «va despacio» de «se ha colgado». */}
+          <progress value={progress.done} max={progress.total} />{" "}
+          {progress.stage} · {progress.done} de {progress.total} (
+          {Math.floor((progress.done / progress.total) * 100)}%)
         </p>
       )}
 

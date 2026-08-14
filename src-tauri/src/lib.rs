@@ -43,7 +43,7 @@ pub fn run() {
             commands::review_queue,
             commands::review_confirm,
             commands::review_without_metadata,
-            commands::cancel_sync,
+            commands::cancel_operation,
             commands::library,
             commands::set_user_state,
         ])

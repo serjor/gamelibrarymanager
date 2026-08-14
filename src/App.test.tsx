@@ -24,7 +24,8 @@ mock.module("./lib/api", () => ({
     librarySummary: () => Promise.resolve(state.summary),
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () => Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [] }),
-    resolveIdentities: () => Promise.resolve({ linked: 0, review: 0, unknown: 0 }),
+    resolveIdentities: () =>
+      Promise.resolve({ linked: 0, review: 0, unknown: 0, cancelled: false }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
     connectGog: () => Promise.resolve("id"),
@@ -32,7 +33,7 @@ mock.module("./lib/api", () => ({
     reviewConfirm: () => Promise.resolve(),
     reviewWithoutMetadata: () => Promise.resolve(),
     library: () => Promise.resolve(state.rows),
-    cancelSync: () => Promise.resolve(),
+    cancelOperation: () => Promise.resolve(),
     setUserState: () => Promise.resolve(),
   },
   errorMessage: (cause: unknown) => String(cause),
@@ -43,6 +44,13 @@ const { App } = await import("./App");
 const cuentaSteam: Account = {
   store: "steam",
   account_ref: "7656119",
+  display_name: "serjor",
+  last_sync_at: null,
+};
+
+const cuentaGog: Account = {
+  store: "gog",
+  account_ref: "51000000000000000",
   display_name: "serjor",
   last_sync_at: null,
 };
@@ -95,6 +103,23 @@ describe("App", () => {
     // que el botón que lleva hasta él y no distinguiría nada.
     expect(await screen.findByLabelText("Client ID")).toBeDefined();
     expect(screen.getByText(/Tu contraseña de GOG no pasa por aquí/)).toBeDefined();
+  });
+
+  it("con solo GOG conectado todavía se puede añadir Steam", async () => {
+    // La primera pantalla solo aparece sin ninguna cuenta: quien empezara por
+    // GOG se quedaba sin ninguna forma de llegar a Steam después.
+    state.accounts = [cuentaGog];
+    render(<App />);
+    (await screen.findByRole("button", { name: "Conectar Steam" })).click();
+    expect(await screen.findByLabelText("Clave de API de Steam")).toBeDefined();
+  });
+
+  it("con las dos tiendas conectadas ya no ofrece conectar ninguna", async () => {
+    state.accounts = [cuentaSteam, cuentaGog];
+    render(<App />);
+    await screen.findByRole("button", { name: "Sincronizar" });
+    expect(screen.queryByRole("button", { name: "Conectar Steam" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Conectar GOG" })).toBeNull();
   });
 
   it("sin ninguna cuenta se puede empezar por GOG en vez de por Steam", async () => {

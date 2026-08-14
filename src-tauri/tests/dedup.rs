@@ -13,7 +13,7 @@
 
 use connectors::{GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreAccountId, StoreId};
-use gamelibrarymanager_lib::testing::{SyncReport, credential_key, resolve, sync_account};
+use gamelibrarymanager_lib::testing::{Silent, SyncReport, credential_key, resolve, sync_account};
 use metadata::IgdbClient;
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use secrets::{EncryptedFileStore, SecretStore};
@@ -168,7 +168,7 @@ async fn un_juego_en_steam_y_en_gog_es_una_sola_ficha_con_dos_insignias() {
     let igdb = IgdbClient::new(reqwest::Client::new())
         .with_bases(igdb_server.uri(), format!("{}/token", igdb_server.uri()));
 
-    resolve(&db, &igdb, &credenciales_igdb(), &token_igdb())
+    resolve(&db, &igdb, &credenciales_igdb(), &token_igdb(), &Silent)
         .await
         .expect("emparejar");
 
@@ -232,7 +232,7 @@ async fn volver_a_emparejar_no_desdobla_la_ficha() {
         sync_account(&db, &secretos, &conector_gog, &gog, &mut informe)
             .await
             .expect("sincronizar GOG");
-        resolve(&db, &igdb, &credenciales_igdb(), &token_igdb())
+        resolve(&db, &igdb, &credenciales_igdb(), &token_igdb(), &Silent)
             .await
             .expect("emparejar");
     }

@@ -10,7 +10,7 @@ use domain::{EntryKind, GameId};
 use domain::{
     PlayStatus, StoreAccount, StoreAccountId, StoreEntry, StoreEntryId, StoreId, UserState,
 };
-use gamelibrarymanager_lib::testing::{resolve, resolve_local};
+use gamelibrarymanager_lib::testing::{Silent, resolve, resolve_local};
 use metadata::IgdbClient;
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use storage::Database;
@@ -132,7 +132,9 @@ async fn sin_igdb_la_biblioteca_ya_se_ve_y_deduplica_por_titulo() {
     .await;
     copia(&db, StoreId::Steam, "105600", "Terraria").await;
 
-    let informe = resolve_local(&db).await.expect("emparejar sin IGDB");
+    let informe = resolve_local(&db, &Silent)
+        .await
+        .expect("emparejar sin IGDB");
     assert_eq!(informe.linked, 3);
 
     let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
@@ -166,7 +168,9 @@ async fn al_configurar_igdb_la_ficha_se_enriquece_sin_perder_el_estado() {
     .await;
 
     // --- primer arranque, sin IGDB: el usuario ya puede marcar su estado ---
-    resolve_local(&db).await.expect("emparejar sin IGDB");
+    resolve_local(&db, &Silent)
+        .await
+        .expect("emparejar sin IGDB");
     let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
     let ficha_local: GameId = biblioteca[0].game_id;
 
@@ -184,7 +188,7 @@ async fn al_configurar_igdb_la_ficha_se_enriquece_sin_perder_el_estado() {
 
     // --- y más tarde configura IGDB ---
     let server = servidor_igdb().await;
-    resolve(&db, &cliente(&server), &credenciales(), &token())
+    resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
         .await
         .expect("emparejar con IGDB");
 
@@ -224,7 +228,9 @@ async fn lo_que_igdb_no_reconoce_no_desaparece_de_la_biblioteca() {
     // Terraria no tiene cruce en las fixtures de IGDB: la búsqueda vuelve vacía.
     copia(&db, StoreId::Steam, "105600", "Terraria").await;
 
-    resolve_local(&db).await.expect("emparejar sin IGDB");
+    resolve_local(&db, &Silent)
+        .await
+        .expect("emparejar sin IGDB");
     assert_eq!(
         LibraryRepository(&db)
             .all()
@@ -235,7 +241,7 @@ async fn lo_que_igdb_no_reconoce_no_desaparece_de_la_biblioteca() {
     );
 
     let server = servidor_igdb().await;
-    resolve(&db, &cliente(&server), &credenciales(), &token())
+    resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
         .await
         .expect("emparejar con IGDB");
 
