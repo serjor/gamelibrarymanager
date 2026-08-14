@@ -1,0 +1,861 @@
+[
+ {
+  "title": "The Witcher 3: Wild Hunt - Game of the Year Edition",
+  "year": 2015,
+  "expected": 1942,
+  "candidates": [
+   {
+    "igdb_id": 1942,
+    "name": "The Witcher 3: Wild Hunt",
+    "release_year": 2015
+   },
+   {
+    "igdb_id": 9630,
+    "name": "The Witcher 2: Assassins of Kings",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Batman: Arkham Asylum Game of the Year Edition",
+  "year": 2009,
+  "expected": 1122,
+  "candidates": [
+   {
+    "igdb_id": 1122,
+    "name": "Batman: Arkham Asylum",
+    "release_year": 2009
+   },
+   {
+    "igdb_id": 1123,
+    "name": "Batman: Arkham City",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Divinity: Original Sin 2 - Definitive Edition",
+  "year": 2017,
+  "expected": 19565,
+  "candidates": [
+   {
+    "igdb_id": 19565,
+    "name": "Divinity: Original Sin II",
+    "release_year": 2017
+   },
+   {
+    "igdb_id": 2364,
+    "name": "Divinity: Original Sin",
+    "release_year": 2014
+   }
+  ]
+ },
+ {
+  "title": "BioShock Infinite: Complete Edition",
+  "year": 2013,
+  "expected": 867,
+  "candidates": [
+   {
+    "igdb_id": 867,
+    "name": "BioShock Infinite",
+    "release_year": 2013
+   },
+   {
+    "igdb_id": 866,
+    "name": "BioShock 2",
+    "release_year": 2010
+   }
+  ]
+ },
+ {
+  "title": "Borderlands 2 Game of the Year",
+  "year": 2012,
+  "expected": 620,
+  "candidates": [
+   {
+    "igdb_id": 620,
+    "name": "Borderlands 2",
+    "release_year": 2012
+   },
+   {
+    "igdb_id": 619,
+    "name": "Borderlands",
+    "release_year": 2009
+   }
+  ]
+ },
+ {
+  "title": "Fallout: New Vegas Ultimate Edition",
+  "year": 2010,
+  "expected": 462,
+  "candidates": [
+   {
+    "igdb_id": 462,
+    "name": "Fallout: New Vegas",
+    "release_year": 2010
+   },
+   {
+    "igdb_id": 463,
+    "name": "Fallout 3",
+    "release_year": 2008
+   }
+  ]
+ },
+ {
+  "title": "DARK SOULS™: REMASTERED",
+  "year": 2018,
+  "expected": 11133,
+  "candidates": [
+   {
+    "igdb_id": 11133,
+    "name": "Dark Souls: Remastered",
+    "release_year": 2018
+   },
+   {
+    "igdb_id": 1608,
+    "name": "Dark Souls",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Sid Meier's Civilization® VI",
+  "year": 2016,
+  "expected": 18986,
+  "candidates": [
+   {
+    "igdb_id": 18986,
+    "name": "Sid Meier's Civilization VI",
+    "release_year": 2016
+   },
+   {
+    "igdb_id": 1211,
+    "name": "Sid Meier's Civilization V",
+    "release_year": 2010
+   }
+  ]
+ },
+ {
+  "title": "Middle-earth™: Shadow of Mordor™",
+  "year": 2014,
+  "expected": 2274,
+  "candidates": [
+   {
+    "igdb_id": 2274,
+    "name": "Middle-earth: Shadow of Mordor",
+    "release_year": 2014
+   },
+   {
+    "igdb_id": 11169,
+    "name": "Middle-earth: Shadow of War",
+    "release_year": 2017
+   }
+  ]
+ },
+ {
+  "title": "Tom Clancy's Splinter Cell®",
+  "year": 2002,
+  "expected": 1276,
+  "candidates": [
+   {
+    "igdb_id": 1276,
+    "name": "Tom Clancy's Splinter Cell",
+    "release_year": 2002
+   },
+   {
+    "igdb_id": 1277,
+    "name": "Tom Clancy's Splinter Cell: Chaos Theory",
+    "release_year": 2005
+   }
+  ]
+ },
+ {
+  "title": "Cities: Skylines®",
+  "year": 2015,
+  "expected": 9634,
+  "candidates": [
+   {
+    "igdb_id": 9634,
+    "name": "Cities: Skylines",
+    "release_year": 2015
+   },
+   {
+    "igdb_id": 1892,
+    "name": "Cities in Motion",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "FINAL FANTASY VII",
+  "year": 1997,
+  "expected": 427,
+  "candidates": [
+   {
+    "igdb_id": 427,
+    "name": "Final Fantasy VII",
+    "release_year": 1997
+   },
+   {
+    "igdb_id": 428,
+    "name": "Final Fantasy VIII",
+    "release_year": 1999
+   }
+  ]
+ },
+ {
+  "title": "HELLDIVERS™ 2",
+  "year": 2024,
+  "expected": 217590,
+  "candidates": [
+   {
+    "igdb_id": 217590,
+    "name": "Helldivers II",
+    "release_year": 2024
+   },
+   {
+    "igdb_id": 9723,
+    "name": "Helldivers",
+    "release_year": 2015
+   }
+  ]
+ },
+ {
+  "title": "Baldur's Gate 3",
+  "year": 2023,
+  "expected": 119171,
+  "candidates": [
+   {
+    "igdb_id": 119171,
+    "name": "Baldur's Gate III",
+    "release_year": 2023
+   },
+   {
+    "igdb_id": 4,
+    "name": "Baldur's Gate II: Shadows of Amn",
+    "release_year": 2000
+   }
+  ]
+ },
+ {
+  "title": "Grand Theft Auto V",
+  "year": 2013,
+  "expected": 1020,
+  "candidates": [
+   {
+    "igdb_id": 1020,
+    "name": "Grand Theft Auto V",
+    "release_year": 2013
+   },
+   {
+    "igdb_id": 1019,
+    "name": "Grand Theft Auto IV",
+    "release_year": 2008
+   }
+  ]
+ },
+ {
+  "title": "Portal 2",
+  "year": 2011,
+  "expected": 72,
+  "candidates": [
+   {
+    "igdb_id": 72,
+    "name": "Portal 2",
+    "release_year": 2011
+   },
+   {
+    "igdb_id": 71,
+    "name": "Portal",
+    "release_year": 2007
+   }
+  ]
+ },
+ {
+  "title": "Portal",
+  "year": 2007,
+  "expected": 71,
+  "candidates": [
+   {
+    "igdb_id": 71,
+    "name": "Portal",
+    "release_year": 2007
+   },
+   {
+    "igdb_id": 72,
+    "name": "Portal 2",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Half-Life 2: Episode One",
+  "year": 2006,
+  "expected": 234,
+  "candidates": [
+   {
+    "igdb_id": 234,
+    "name": "Half-Life 2: Episode One",
+    "release_year": 2006
+   },
+   {
+    "igdb_id": 233,
+    "name": "Half-Life 2",
+    "release_year": 2004
+   }
+  ]
+ },
+ {
+  "title": "Hades",
+  "year": 2020,
+  "expected": 113112,
+  "candidates": [
+   {
+    "igdb_id": 113112,
+    "name": "Hades",
+    "release_year": 2020
+   },
+   {
+    "igdb_id": 229161,
+    "name": "Hades II",
+    "release_year": 2024
+   }
+  ]
+ },
+ {
+  "title": "Red Dead Redemption 2",
+  "year": 2018,
+  "expected": 25076,
+  "candidates": [
+   {
+    "igdb_id": 25076,
+    "name": "Red Dead Redemption 2",
+    "release_year": 2018
+   },
+   {
+    "igdb_id": 3357,
+    "name": "Red Dead Redemption",
+    "release_year": 2010
+   }
+  ]
+ },
+ {
+  "title": "Terraria",
+  "year": 2011,
+  "expected": 1879,
+  "candidates": [
+   {
+    "igdb_id": 1879,
+    "name": "Terraria",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Stardew Valley",
+  "year": 2016,
+  "expected": 17000,
+  "candidates": [
+   {
+    "igdb_id": 17000,
+    "name": "Stardew Valley",
+    "release_year": 2016
+   }
+  ]
+ },
+ {
+  "title": "Hollow Knight",
+  "year": 2017,
+  "expected": 14593,
+  "candidates": [
+   {
+    "igdb_id": 14593,
+    "name": "Hollow Knight",
+    "release_year": 2017
+   },
+   {
+    "igdb_id": 108974,
+    "name": "Hollow Knight: Silksong",
+    "release_year": 2025
+   }
+  ]
+ },
+ {
+  "title": "Celeste",
+  "year": 2018,
+  "expected": 26226,
+  "candidates": [
+   {
+    "igdb_id": 26226,
+    "name": "Celeste",
+    "release_year": 2018
+   }
+  ]
+ },
+ {
+  "title": "Slay the Spire",
+  "year": 2019,
+  "expected": 36926,
+  "candidates": [
+   {
+    "igdb_id": 36926,
+    "name": "Slay the Spire",
+    "release_year": 2019
+   },
+   {
+    "igdb_id": 259050,
+    "name": "Slay the Spire II",
+    "release_year": 2025
+   }
+  ]
+ },
+ {
+  "title": "The Elder Scrolls V: Skyrim Special Edition",
+  "year": 2016,
+  "expected": 16171,
+  "candidates": [
+   {
+    "igdb_id": 16171,
+    "name": "The Elder Scrolls V: Skyrim Special Edition",
+    "release_year": 2016
+   },
+   {
+    "igdb_id": 472,
+    "name": "The Elder Scrolls V: Skyrim",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Disco Elysium - The Final Cut",
+  "year": 2021,
+  "expected": 132727,
+  "candidates": [
+   {
+    "igdb_id": 132727,
+    "name": "Disco Elysium: The Final Cut",
+    "release_year": 2021
+   },
+   {
+    "igdb_id": 115653,
+    "name": "Disco Elysium",
+    "release_year": 2019
+   }
+  ]
+ },
+ {
+  "title": "Resident Evil 4",
+  "year": 2005,
+  "expected": "review",
+  "candidates": [
+   {
+    "igdb_id": 4,
+    "name": "Resident Evil 4",
+    "release_year": 2005
+   },
+   {
+    "igdb_id": 195171,
+    "name": "Resident Evil 4",
+    "release_year": 2023
+   }
+  ]
+ },
+ {
+  "title": "Mass Effect Legendary Edition",
+  "year": 2021,
+  "expected": 142803,
+  "candidates": [
+   {
+    "igdb_id": 142803,
+    "name": "Mass Effect: Legendary Edition",
+    "release_year": 2021
+   },
+   {
+    "igdb_id": 1108,
+    "name": "Mass Effect",
+    "release_year": 2007
+   },
+   {
+    "igdb_id": 1109,
+    "name": "Mass Effect 2",
+    "release_year": 2010
+   }
+  ]
+ },
+ {
+  "title": "Assassin's Creed",
+  "year": 2007,
+  "expected": 230,
+  "candidates": [
+   {
+    "igdb_id": 230,
+    "name": "Assassin's Creed",
+    "release_year": 2007
+   },
+   {
+    "igdb_id": 231,
+    "name": "Assassin's Creed II",
+    "release_year": 2009
+   }
+  ]
+ },
+ {
+  "title": "Dead Space",
+  "year": 2008,
+  "expected": "review",
+  "candidates": [
+   {
+    "igdb_id": 379,
+    "name": "Dead Space",
+    "release_year": 2008
+   },
+   {
+    "igdb_id": 180121,
+    "name": "Dead Space",
+    "release_year": 2023
+   }
+  ]
+ },
+ {
+  "title": "Deus Ex: Human Revolution - Director's Cut",
+  "year": 2013,
+  "expected": 1878,
+  "candidates": [
+   {
+    "igdb_id": 1878,
+    "name": "Deus Ex: Human Revolution - Director's Cut",
+    "release_year": 2013
+   },
+   {
+    "igdb_id": 1877,
+    "name": "Deus Ex: Human Revolution",
+    "release_year": 2011
+   }
+  ]
+ },
+ {
+  "title": "Baldur's Gate II: Enhanced Edition",
+  "year": 2013,
+  "expected": 5581,
+  "candidates": [
+   {
+    "igdb_id": 5581,
+    "name": "Baldur's Gate II: Enhanced Edition",
+    "release_year": 2013
+   },
+   {
+    "igdb_id": 4,
+    "name": "Baldur's Gate II: Shadows of Amn",
+    "release_year": 2000
+   }
+  ]
+ },
+ {
+  "title": "Doom",
+  "year": 2016,
+  "expected": "review",
+  "candidates": [
+   {
+    "igdb_id": 7351,
+    "name": "Doom",
+    "release_year": 2016
+   },
+   {
+    "igdb_id": 250,
+    "name": "Doom",
+    "release_year": 1993
+   }
+  ]
+ },
+ {
+  "title": "Prey",
+  "year": 2017,
+  "expected": "review",
+  "candidates": [
+   {
+    "igdb_id": 19560,
+    "name": "Prey",
+    "release_year": 2017
+   },
+   {
+    "igdb_id": 1194,
+    "name": "Prey",
+    "release_year": 2006
+   }
+  ]
+ },
+ {
+  "title": "XCOM 2",
+  "year": 2016,
+  "expected": 11208,
+  "candidates": [
+   {
+    "igdb_id": 11208,
+    "name": "XCOM 2",
+    "release_year": 2016
+   },
+   {
+    "igdb_id": 1246,
+    "name": "XCOM: Enemy Unknown",
+    "release_year": 2012
+   }
+  ]
+ },
+ {
+  "title": "Metro Exodus",
+  "year": 2019,
+  "expected": 26192,
+  "candidates": [
+   {
+    "igdb_id": 26192,
+    "name": "Metro Exodus",
+    "release_year": 2019
+   },
+   {
+    "igdb_id": 1443,
+    "name": "Metro: Last Light",
+    "release_year": 2013
+   }
+  ]
+ },
+ {
+  "title": "Frostpunk",
+  "year": 2018,
+  "expected": 29767,
+  "candidates": [
+   {
+    "igdb_id": 29767,
+    "name": "Frostpunk",
+    "release_year": 2018
+   },
+   {
+    "igdb_id": 199577,
+    "name": "Frostpunk 2",
+    "release_year": 2024
+   }
+  ]
+ },
+ {
+  "title": "Factorio",
+  "year": 2020,
+  "expected": 7046,
+  "candidates": [
+   {
+    "igdb_id": 7046,
+    "name": "Factorio",
+    "release_year": 2020
+   }
+  ]
+ },
+ {
+  "title": "RimWorld",
+  "year": 2018,
+  "expected": 9789,
+  "candidates": [
+   {
+    "igdb_id": 9789,
+    "name": "RimWorld",
+    "release_year": 2018
+   }
+  ]
+ },
+ {
+  "title": "Kerbal Space Program",
+  "year": 2015,
+  "expected": 1994,
+  "candidates": [
+   {
+    "igdb_id": 1994,
+    "name": "Kerbal Space Program",
+    "release_year": 2015
+   },
+   {
+    "igdb_id": 135435,
+    "name": "Kerbal Space Program 2",
+    "release_year": 2023
+   }
+  ]
+ },
+ {
+  "title": "Age of Empires II: Definitive Edition",
+  "year": 2019,
+  "expected": 115280,
+  "candidates": [
+   {
+    "igdb_id": 115280,
+    "name": "Age of Empires II: Definitive Edition",
+    "release_year": 2019
+   },
+   {
+    "igdb_id": 1035,
+    "name": "Age of Empires II: The Age of Kings",
+    "release_year": 1999
+   }
+  ]
+ },
+ {
+  "title": "Ori and the Blind Forest: Definitive Edition",
+  "year": 2016,
+  "expected": 9642,
+  "candidates": [
+   {
+    "igdb_id": 9642,
+    "name": "Ori and the Blind Forest",
+    "release_year": 2015
+   },
+   {
+    "igdb_id": 26192,
+    "name": "Ori and the Will of the Wisps",
+    "release_year": 2020
+   }
+  ]
+ },
+ {
+  "title": "Cyberpunk 2077",
+  "year": 2020,
+  "expected": 1877,
+  "candidates": [
+   {
+    "igdb_id": 1877,
+    "name": "Cyberpunk 2077",
+    "release_year": 2020
+   },
+   {
+    "igdb_id": 236917,
+    "name": "Cyberpunk 2077: Phantom Liberty",
+    "release_year": 2023
+   }
+  ]
+ },
+ {
+  "title": "Elden Ring",
+  "year": 2022,
+  "expected": 119133,
+  "candidates": [
+   {
+    "igdb_id": 119133,
+    "name": "Elden Ring",
+    "release_year": 2022
+   },
+   {
+    "igdb_id": 250616,
+    "name": "Elden Ring: Shadow of the Erdtree",
+    "release_year": 2024
+   }
+  ]
+ },
+ {
+  "title": "Sekiro™: Shadows Die Twice",
+  "year": 2019,
+  "expected": 26165,
+  "candidates": [
+   {
+    "igdb_id": 26165,
+    "name": "Sekiro: Shadows Die Twice",
+    "release_year": 2019
+   },
+   {
+    "igdb_id": 11133,
+    "name": "Dark Souls: Remastered",
+    "release_year": 2018
+   }
+  ]
+ },
+ {
+  "title": "Nier:Automata™",
+  "year": 2017,
+  "expected": 19686,
+  "candidates": [
+   {
+    "igdb_id": 19686,
+    "name": "NieR: Automata",
+    "release_year": 2017
+   },
+   {
+    "igdb_id": 10059,
+    "name": "NieR",
+    "release_year": 2010
+   }
+  ]
+ },
+ {
+  "title": "Ōkami HD",
+  "year": 2018,
+  "expected": 26742,
+  "candidates": [
+   {
+    "igdb_id": 26742,
+    "name": "Okami HD",
+    "release_year": 2017
+   },
+   {
+    "igdb_id": 1372,
+    "name": "Okami",
+    "release_year": 2006
+   }
+  ]
+ },
+ {
+  "title": "Tráiler Park Simulator",
+  "year": 2020,
+  "expected": 90001,
+  "candidates": [
+   {
+    "igdb_id": 90001,
+    "name": "Trailer Park Simulator",
+    "release_year": 2020
+   }
+  ]
+ },
+ {
+  "title": "Command & Conquer™ Remastered Collection",
+  "year": 2020,
+  "expected": 133528,
+  "candidates": [
+   {
+    "igdb_id": 133528,
+    "name": "Command & Conquer Remastered Collection",
+    "release_year": 2020
+   },
+   {
+    "igdb_id": 1174,
+    "name": "Command & Conquer",
+    "release_year": 1995
+   }
+  ]
+ },
+ {
+  "title": "Star Wars™: Knights of the Old Republic™",
+  "year": 2003,
+  "expected": 116,
+  "candidates": [
+   {
+    "igdb_id": 116,
+    "name": "Star Wars: Knights of the Old Republic",
+    "release_year": 2003
+   },
+   {
+    "igdb_id": 117,
+    "name": "Star Wars: Knights of the Old Republic II - The Sith Lords",
+    "release_year": 2004
+   }
+  ]
+ },
+ {
+  "title": "Hotline Miami",
+  "year": 2012,
+  "expected": 1030,
+  "candidates": [
+   {
+    "igdb_id": 1030,
+    "name": "Hotline Miami",
+    "release_year": 2012
+   },
+   {
+    "igdb_id": 1031,
+    "name": "Hotline Miami 2: Wrong Number",
+    "release_year": 2015
+   }
+  ]
+ }
+]

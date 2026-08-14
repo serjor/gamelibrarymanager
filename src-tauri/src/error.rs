@@ -15,6 +15,12 @@ pub enum AppError {
     Secrets(#[from] secrets::SecretsError),
     #[error(transparent)]
     Connector(#[from] domain::ConnectorError),
+    #[error(transparent)]
+    Metadata(#[from] metadata::MetadataError),
+    #[error("faltan las credenciales de IGDB: sin ellas no hay metadatos ni fichas unificadas")]
+    MissingIgdbCredentials,
+    #[error("dato interno ilegible: {0}")]
+    Serde(#[from] serde_json::Error),
 }
 
 // Tauri necesita serializar el error para cruzarlo al frontend. Se manda el

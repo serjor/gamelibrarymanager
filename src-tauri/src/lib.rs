@@ -1,11 +1,13 @@
 mod commands;
 mod error;
+mod identity;
 mod state;
 mod sync;
 
 /// Superficie que consumen los tests de integración. No la usa la aplicación:
 /// existe para poder probar el caso de uso completo sin arrancar Tauri.
 pub mod testing {
+    pub use crate::identity::{IdentityReport, resolve};
     pub use crate::state::credential_key;
     pub use crate::sync::{SyncReport, sync_account};
 }
@@ -34,6 +36,12 @@ pub fn run() {
             commands::list_accounts,
             commands::sync_now,
             commands::library_summary,
+            commands::set_igdb_credentials,
+            commands::has_igdb_credentials,
+            commands::resolve_identities,
+            commands::review_queue,
+            commands::review_confirm,
+            commands::review_without_metadata,
         ])
         .run(tauri::generate_context!())
         .expect("error al arrancar la aplicación");

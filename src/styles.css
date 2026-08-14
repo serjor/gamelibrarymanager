@@ -92,3 +92,26 @@ button.link {
     color: #f2857b;
   }
 }
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.review,
+.candidates {
+  list-style: none;
+  padding: 0;
+}
+
+.review > li {
+  border-top: 1px solid var(--line);
+  padding: 0.75rem 0;
+}
+
+.candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}

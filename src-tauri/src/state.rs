@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use connectors::SteamConnector;
 use domain::{StoreAccount, StoreConnector, StoreId};
+use metadata::IgdbClient;
 use secrets::{Backend, EncryptedFileStore, KeyringStore, SecretStore};
 use std::path::PathBuf;
 use storage::Database;
@@ -13,8 +14,15 @@ use tokio::sync::RwLock;
 
 pub const SERVICE: &str = "com.serjor.gamelibrarymanager";
 
+/// Claves bajo las que viven los secretos que no pertenecen a una cuenta de
+/// tienda. IGDB prohíbe empotrar el secreto en el binario, así que son del
+/// usuario y viven donde vive todo lo demás: en el almacén, nunca en SQLite.
+pub const IGDB_CREDENTIALS: &str = "igdb:credentials";
+pub const IGDB_TOKEN: &str = "igdb:token";
+
 pub struct AppState {
     pub db: Database,
+    pub igdb: IgdbClient,
     pub connectors: HashMap<StoreId, Arc<dyn StoreConnector>>,
     /// El almacén puede no existir todavía: sin keyring hace falta que el
     /// usuario escriba una contraseña antes de poder guardar nada.
@@ -30,6 +38,7 @@ impl AppState {
             .build()
             .unwrap_or_default();
 
+        let http_for_igdb = http.clone();
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
         connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http)));
 
@@ -41,6 +50,7 @@ impl AppState {
 
         Self {
             db,
+            igdb: IgdbClient::new(http_for_igdb),
             connectors,
             secrets: RwLock::new(secrets),
             backend,

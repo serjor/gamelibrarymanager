@@ -31,6 +31,27 @@ export interface SyncReport {
 export interface LibrarySummary {
   owned: number;
   wishlist: number;
+  games: number;
+  pending_review: number;
+}
+
+export interface ScoredCandidate {
+  igdb_id: number;
+  name: string;
+  score: number;
+}
+
+export interface ReviewItem {
+  store_entry_id: string;
+  store: string;
+  title: string;
+  candidates: ScoredCandidate[];
+}
+
+export interface IdentityReport {
+  linked: number;
+  review: number;
+  unknown: number;
 }
 
 /** Única puerta hacia Rust. Nadie más llama a `invoke` directamente. */
@@ -42,6 +63,15 @@ export const api = {
   listAccounts: () => invoke<Account[]>("list_accounts"),
   syncNow: () => invoke<SyncReport>("sync_now"),
   librarySummary: () => invoke<LibrarySummary>("library_summary"),
+  hasIgdbCredentials: () => invoke<boolean>("has_igdb_credentials"),
+  setIgdbCredentials: (clientId: string, clientSecret: string) =>
+    invoke<void>("set_igdb_credentials", { clientId, clientSecret }),
+  resolveIdentities: () => invoke<IdentityReport>("resolve_identities"),
+  reviewQueue: () => invoke<ReviewItem[]>("review_queue"),
+  reviewConfirm: (storeEntryId: string, igdbId: number) =>
+    invoke<void>("review_confirm", { storeEntryId, igdbId }),
+  reviewWithoutMetadata: (storeEntryId: string) =>
+    invoke<void>("review_without_metadata", { storeEntryId }),
 };
 
 /** Los errores cruzan el puente como texto plano; aquí se normalizan. */

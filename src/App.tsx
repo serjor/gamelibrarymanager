@@ -5,32 +5,44 @@ import {
   type Account,
   type AppInfo,
   type LibrarySummary,
+  type ReviewItem,
   type SyncReport,
 } from "./lib/api";
 import { SteamSetup } from "./features/onboarding/SteamSetup";
+import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
+import { ReviewQueue } from "./features/review/ReviewQueue";
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [hasIgdb, setHasIgdb] = useState(false);
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
+  const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [syncing, setSyncing] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   // `alive` evita que una carga en vuelo escriba estado sobre un componente ya
   // desmontado, que es la carrera clásica de este patrón.
   const load = useCallback(async (alive: () => boolean) => {
     try {
-      const [nextInfo, nextAccounts, nextSummary] = await Promise.all([
-        api.appInfo(),
-        api.listAccounts(),
-        api.librarySummary(),
-      ]);
+      const nextInfo = await api.appInfo();
       if (!alive()) return;
       setInfo(nextInfo);
+      if (!nextInfo.unlocked) return;
+
+      const [nextAccounts, nextIgdb, nextSummary, nextQueue] = await Promise.all([
+        api.listAccounts(),
+        api.hasIgdbCredentials(),
+        api.librarySummary(),
+        api.reviewQueue(),
+      ]);
+      if (!alive()) return;
       setAccounts(nextAccounts);
+      setHasIgdb(nextIgdb);
       setSummary(nextSummary);
+      setQueue(nextQueue);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -51,16 +63,17 @@ export function App() {
     };
   }, [load]);
 
-  const sync = async () => {
-    setSyncing(true);
+  const run = async (label: string, action: () => Promise<unknown>) => {
+    setBusy(label);
     setError(null);
     try {
-      setReport(await api.syncNow());
+      const result = await action();
+      if (label === "sync") setReport(result as SyncReport);
       await refresh();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
-      setSyncing(false);
+      setBusy(null);
     }
   };
 
@@ -77,7 +90,7 @@ export function App() {
   if (!info.unlocked) {
     return (
       <main>
-        <UnlockSecrets onUnlocked={() => void refresh()} />
+        <UnlockSecrets onUnlocked={refresh} />
       </main>
     );
   }
@@ -85,7 +98,15 @@ export function App() {
   if (accounts.length === 0) {
     return (
       <main>
-        <SteamSetup onConnected={() => void refresh()} />
+        <SteamSetup onConnected={refresh} />
+      </main>
+    );
+  }
+
+  if (!hasIgdb) {
+    return (
+      <main>
+        <IgdbSetup onConnected={refresh} />
       </main>
     );
   }
@@ -94,9 +115,17 @@ export function App() {
     <main>
       <header>
         <h1>Biblioteca</h1>
-        <button onClick={() => void sync()} disabled={syncing}>
-          {syncing ? "Sincronizando…" : "Sincronizar"}
-        </button>
+        <div className="actions">
+          <button onClick={() => void run("sync", api.syncNow)} disabled={busy !== null}>
+            {busy === "sync" ? "Sincronizando…" : "Sincronizar"}
+          </button>
+          <button
+            onClick={() => void run("identity", api.resolveIdentities)}
+            disabled={busy !== null}
+          >
+            {busy === "identity" ? "Emparejando…" : "Emparejar"}
+          </button>
+        </div>
       </header>
 
       <ul className="accounts">
@@ -112,7 +141,8 @@ export function App() {
 
       {summary && (
         <p className="summary">
-          {summary.owned} en la biblioteca · {summary.wishlist} deseados
+          {summary.games} fichas · {summary.owned} copias en propiedad · {summary.wishlist} deseados
+          {summary.pending_review > 0 && ` · ${summary.pending_review} por revisar`}
         </p>
       )}
 
@@ -127,9 +157,11 @@ export function App() {
       )}
 
       {error && <p role="alert">{error}</p>}
+
+      <ReviewQueue items={queue} onResolved={refresh} />
+
       <p className="hint">
-        Las fichas unificadas y el backlog llegan en las fases 4 y 5. Ahora mismo
-        esto solo demuestra que la biblioteca real entra en la base de datos.
+        La rejilla con portadas y el backlog llegan en la fase 5.
       </p>
     </main>
   );

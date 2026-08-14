@@ -93,6 +93,24 @@ impl StoreEntryRepository<'_> {
         .collect()
     }
 
+    /// Entradas activas que todavía no cuelgan de ninguna ficha. Es la cola de
+    /// revisión y también lo que queda por emparejar.
+    pub async fn unlinked(&self) -> Result<Vec<StoreEntry>> {
+        sqlx::query(
+            "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,
+                    e.playtime_minutes, e.acquired_at, e.raw
+             FROM store_entry e
+             WHERE e.deleted_at IS NULL
+               AND NOT EXISTS (SELECT 1 FROM game_link l WHERE l.store_entry_id = e.id)
+             ORDER BY e.title",
+        )
+        .fetch_all(self.0.pool())
+        .await?
+        .iter()
+        .map(hydrate)
+        .collect()
+    }
+
     pub async fn find(&self, id: StoreEntryId) -> Result<Option<StoreEntry>> {
         sqlx::query(
             "SELECT id, account_id, store, store_app_id, kind, title, playtime_minutes,

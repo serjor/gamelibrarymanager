@@ -1,36 +1,49 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import type { Account, AppInfo, LibrarySummary } from "./lib/api";
+import type { Account, AppInfo, LibrarySummary, ReviewItem } from "./lib/api";
 
 const state = {
-  info: {
-    version: "0.1.0",
-    secrets_backend: "keyring",
-    unlocked: true,
-  } as AppInfo,
+  info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true } as AppInfo,
   accounts: [] as Account[],
-  summary: { owned: 0, wishlist: 0 } as LibrarySummary,
+  hasIgdb: true,
+  summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
+  queue: [] as ReviewItem[],
 };
 
 mock.module("./lib/api", () => ({
   api: {
     appInfo: () => Promise.resolve(state.info),
     listAccounts: () => Promise.resolve(state.accounts),
+    hasIgdbCredentials: () => Promise.resolve(state.hasIgdb),
     librarySummary: () => Promise.resolve(state.summary),
+    reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () => Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [] }),
+    resolveIdentities: () => Promise.resolve({ linked: 0, review: 0, unknown: 0 }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
+    setIgdbCredentials: () => Promise.resolve(),
+    reviewConfirm: () => Promise.resolve(),
+    reviewWithoutMetadata: () => Promise.resolve(),
   },
   errorMessage: (cause: unknown) => String(cause),
 }));
 
 const { App } = await import("./App");
 
+const cuentaSteam: Account = {
+  store: "steam",
+  account_ref: "7656119",
+  display_name: "serjor",
+  last_sync_at: null,
+};
+
 describe("App", () => {
   beforeEach(() => {
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
-    state.summary = { owned: 0, wishlist: 0 };
+    state.hasIgdb = true;
+    state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
+    state.queue = [];
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {
@@ -44,13 +57,37 @@ describe("App", () => {
     expect(await screen.findByText("Contraseña del almacén")).toBeDefined();
   });
 
-  it("con una cuenta conectada muestra el recuento de la biblioteca", async () => {
-    state.accounts = [
-      { store: "steam", account_ref: "7656119", display_name: "serjor", last_sync_at: null },
-    ];
-    state.summary = { owned: 412, wishlist: 37 };
+  it("con cuenta pero sin IGDB pide las credenciales de metadatos", async () => {
+    state.accounts = [cuentaSteam];
+    state.hasIgdb = false;
     render(<App />);
-    expect(await screen.findByText(/412 en la biblioteca/)).toBeDefined();
-    expect(screen.getByText(/sin sincronizar/)).toBeDefined();
+    expect(await screen.findByText("Metadatos: IGDB")).toBeDefined();
+  });
+
+  it("muestra el recuento de fichas, copias y pendientes", async () => {
+    state.accounts = [cuentaSteam];
+    state.summary = { owned: 412, wishlist: 37, games: 400, pending_review: 12 };
+    render(<App />);
+    expect(await screen.findByText(/400 fichas/)).toBeDefined();
+    expect(screen.getByText(/12 por revisar/)).toBeDefined();
+  });
+
+  it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {
+    state.accounts = [cuentaSteam];
+    state.queue = [
+      {
+        store_entry_id: "11111111-1111-7111-8111-111111111111",
+        store: "gog",
+        title: "Disco Elysium - The Final Cut",
+        candidates: [
+          { igdb_id: 132727, name: "Disco Elysium: The Final Cut", score: 0.97 },
+          { igdb_id: 115653, name: "Disco Elysium", score: 0.93 },
+        ],
+      },
+    ];
+    render(<App />);
+    expect(await screen.findByText("Por revisar (1)")).toBeDefined();
+    expect(screen.getByText(/Disco Elysium: The Final Cut/)).toBeDefined();
+    expect(screen.getByText(/crear ficha con el título de la tienda/)).toBeDefined();
   });
 });
