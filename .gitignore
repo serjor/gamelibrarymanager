@@ -1,0 +1,7 @@
+/target
+/dist
+node_modules
+*.db
+*.db-journal
+.env
+.DS_Store

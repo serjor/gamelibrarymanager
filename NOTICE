@@ -1,0 +1,21 @@
+Game Library Manager
+Copyright (C) 2026 serjor
+
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los
+términos de la GNU General Public License, versión 3 o posterior, tal como la
+publica la Free Software Foundation. El texto completo está en LICENSE.
+
+Código de terceros
+------------------
+Este fichero registra todo código ajeno portado o adaptado en el proyecto, con
+su origen, su licencia y el fichero donde vive. Portar código de legendary o de
+Heroic Games Launcher (ambos GPLv3) es compatible con esta licencia, pero exige
+conservar sus cabeceras de copyright y anotarlo aquí.
+
+Hasta ahora: ninguno.
+
+Sobre las tiendas
+-----------------
+Este proyecto no está afiliado a Valve, GOG, CD PROJEKT ni Epic Games. Los
+conectores son de solo lectura, actúan con las credenciales del propio usuario y
+en su propia máquina, y no redistribuyen datos de ninguna tienda.
