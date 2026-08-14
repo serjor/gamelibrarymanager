@@ -6,6 +6,8 @@
 
 pub mod library;
 pub mod model;
+pub mod ports;
 
 pub use library::{Game, GameLink, LinkMethod, StoreAccount, StoreEntry, UserState};
 pub use model::{EntryKind, GameId, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
+pub use ports::{AuthContext, ConnectorError, StoreConnector, StoreSession};

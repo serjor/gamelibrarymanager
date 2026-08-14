@@ -1,0 +1,29 @@
+{
+  "response": {
+    "game_count": 3,
+    "games": [
+      {
+        "appid": 632470,
+        "name": "Disco Elysium",
+        "playtime_forever": 1240,
+        "img_icon_url": "3f2c0f9a",
+        "rtime_last_played": 1737129600,
+        "playtime_windows_forever": 1240,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 0
+      },
+      {
+        "appid": 292030,
+        "name": "The Witcher 3: Wild Hunt",
+        "playtime_forever": 9120,
+        "rtime_last_played": 1720000000
+      },
+      {
+        "appid": 105600,
+        "name": "Terraria",
+        "playtime_forever": 0,
+        "rtime_last_played": 0
+      }
+    ]
+  }
+}

@@ -1,11 +1,94 @@
 :root {
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
+  --line: color-mix(in srgb, currentColor 15%, transparent);
 }
 
 body {
   margin: 0;
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
+}
+
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+
+input {
+  font: inherit;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.link {
+  border: none;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  opacity: 0.8;
+}
+
+.hint {
+  opacity: 0.75;
+  font-size: 0.9rem;
+}
+
+.accounts,
+[role="alert"] {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+[role="alert"] {
+  color: #b3261e;
+}
+
+@media (prefers-color-scheme: dark) {
+  [role="alert"] {
+    color: #f2857b;
+  }
 }

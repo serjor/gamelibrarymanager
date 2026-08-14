@@ -22,3 +22,14 @@ secrets.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["sync"] }
+time.workspace = true
+thiserror.workspace = true
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
+wiremock = "0.6"
+tempfile = "3"
+serde_json.workspace = true

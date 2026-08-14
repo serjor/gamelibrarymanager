@@ -1,0 +1,8 @@
+{
+  "response": {
+    "items": [
+      { "appid": 1145360, "priority": 1, "date_added": 1730000000 },
+      { "appid": 1174180, "priority": 2, "date_added": 1731000000 }
+    ]
+  }
+}
