@@ -23,6 +23,19 @@ pub enum ConnectorError {
     Unexpected(String),
 }
 
+/// Credenciales de *cliente* de una tienda: identifican a la aplicación, no al
+/// usuario.
+///
+/// Las aporta el usuario al conectar la cuenta, igual que la clave de Steam.
+/// No es una elección estética: GOG no permite registrar un cliente propio, así
+/// que la única forma de no llevar un secreto dentro del binario es que el par
+/// entre por la misma puerta que las demás claves y viva en el almacén.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientCredentials {
+    pub client_id: String,
+    pub client_secret: String,
+}
+
 /// Lo que el usuario aporta para conectar una cuenta. Steam usa clave propia;
 /// GOG y Epic usarán el código que devuelve su propio formulario de login.
 #[derive(Debug, Clone)]
@@ -30,8 +43,13 @@ pub enum AuthContext {
     /// Clave de API del propio usuario. En Steam es además lo que da acceso a
     /// su biblioteca privada sin abrir el perfil.
     ApiKey { key: String, account_ref: String },
-    /// Código de autorización devuelto por la página de login de la tienda.
-    AuthCode { code: String },
+    /// Código de autorización devuelto por la página de login de la tienda,
+    /// junto con el cliente ante el que se pidió. Los dos hacen falta para
+    /// canjearlo: el código solo vale para el cliente que lo originó.
+    AuthCode {
+        code: String,
+        client: ClientCredentials,
+    },
     /// Material guardado en una sesión anterior.
     Stored { credential: String },
 }

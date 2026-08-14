@@ -85,6 +85,9 @@ export const api = {
   unlockSecrets: (passphrase: string) => invoke<void>("unlock_secrets", { passphrase }),
   connectSteam: (apiKey: string, steamId: string) =>
     invoke<string>("connect_steam", { apiKey, steamId }),
+  /** Abre el login de GOG y no resuelve hasta que el usuario termina o cierra. */
+  connectGog: (clientId: string, clientSecret: string) =>
+    invoke<string>("connect_gog", { clientId, clientSecret }),
   listAccounts: () => invoke<Account[]>("list_accounts"),
   syncNow: () => invoke<SyncReport>("sync_now"),
   librarySummary: () => invoke<LibrarySummary>("library_summary"),

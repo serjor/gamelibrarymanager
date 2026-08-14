@@ -17,6 +17,15 @@ pub const AUTO_THRESHOLD: f64 = 0.90;
 /// remaster, o dos entregas de la misma saga.
 pub const AMBIGUITY_MARGIN: f64 = 0.06;
 
+/// Confianza de un enlace hecho sin base de metadatos, agrupando solo por
+/// título normalizado idéntico.
+///
+/// No es una identidad y por eso no vale 1.0: eso queda reservado al
+/// identificador externo. Es lo máximo que se puede afirmar sin IGDB, se queda
+/// justo en el umbral automático, y el primer emparejamiento con IGDB lo
+/// sustituye.
+pub const LOCAL_TITLE_CONFIDENCE: f64 = AUTO_THRESHOLD;
+
 /// Un candidato de la base de metadatos.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Candidate {

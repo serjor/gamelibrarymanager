@@ -67,6 +67,48 @@ impl GameRepository<'_> {
         .transpose()
     }
 
+    /// Ficha local —sin metadatos— con ese título normalizado.
+    ///
+    /// Solo mira las que no tienen `igdb_id`: agrupar por título es lo mejor que
+    /// se puede hacer sin base de metadatos, pero no es identidad, y no puede
+    /// colarse por la puerta de atrás en una ficha que sí la tiene.
+    pub async fn find_local_by_sort_title(&self, sort_title: &str) -> Result<Option<Game>> {
+        sqlx::query(
+            "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
+             FROM game
+             WHERE sort_title = ? AND igdb_id IS NULL AND deleted_at IS NULL
+             ORDER BY id
+             LIMIT 1",
+        )
+        .bind(sort_title)
+        .fetch_optional(self.0.pool())
+        .await?
+        .as_ref()
+        .map(hydrate)
+        .transpose()
+    }
+
+    /// Da de baja las fichas que se han quedado sin ninguna copia detrás.
+    ///
+    /// Pasa cuando el emparejamiento con IGDB reúne bajo una sola ficha lo que
+    /// antes estaba en dos locales. Las que tienen estado del usuario **no** se
+    /// tocan: un duplicado a la vista molesta, perder lo que el usuario escribió
+    /// no se arregla.
+    pub async fn soft_delete_orphans(&self) -> Result<u64> {
+        let now = OffsetDateTime::now_utc();
+        Ok(sqlx::query(
+            "UPDATE game SET deleted_at = ?, updated_at = ?
+             WHERE deleted_at IS NULL
+               AND NOT EXISTS (SELECT 1 FROM game_link l WHERE l.game_id = game.id)
+               AND NOT EXISTS (SELECT 1 FROM user_state u WHERE u.game_id = game.id)",
+        )
+        .bind(now)
+        .bind(now)
+        .execute(self.0.pool())
+        .await?
+        .rows_affected())
+    }
+
     pub async fn all(&self) -> Result<Vec<Game>> {
         sqlx::query(
             "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres

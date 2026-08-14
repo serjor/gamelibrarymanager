@@ -111,6 +111,32 @@ impl StoreEntryRepository<'_> {
         .collect()
     }
 
+    /// Entradas que cuelgan de una ficha creada sin metadatos.
+    ///
+    /// Son las que se emparejaron por título mientras IGDB no estaba
+    /// configurado: siguen pendientes de identidad de verdad, pero ya se ven en
+    /// la biblioteca, así que `unlinked` no las devuelve. Los enlaces manuales
+    /// quedan fuera: la palabra del usuario no se revisa.
+    pub async fn pending_metadata(&self) -> Result<Vec<StoreEntry>> {
+        sqlx::query(
+            "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,
+                    e.playtime_minutes, e.acquired_at, e.raw
+             FROM store_entry e
+             JOIN game_link l ON l.store_entry_id = e.id
+             JOIN game g ON g.id = l.game_id
+             WHERE e.deleted_at IS NULL
+               AND g.deleted_at IS NULL
+               AND g.igdb_id IS NULL
+               AND l.method = 'auto'
+             ORDER BY e.title",
+        )
+        .fetch_all(self.0.pool())
+        .await?
+        .iter()
+        .map(hydrate)
+        .collect()
+    }
+
     pub async fn find(&self, id: StoreEntryId) -> Result<Option<StoreEntry>> {
         sqlx::query(
             "SELECT id, account_id, store, store_app_id, kind, title, playtime_minutes,

@@ -12,6 +12,7 @@ import {
   type SyncReport,
 } from "./lib/api";
 import { SteamSetup } from "./features/onboarding/SteamSetup";
+import { GogSetup } from "./features/onboarding/GogSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
@@ -26,6 +27,9 @@ export function App() {
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [tab, setTab] = useState<"library" | "review">("library");
+  // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
+  // aplicación: se entra a ellos cuando el usuario quiere.
+  const [setup, setSetup] = useState<"gog" | "igdb" | null>(null);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -116,21 +120,47 @@ export function App() {
     );
   }
 
-  if (accounts.length === 0) {
+  const cerrarSetup = () => {
+    setSetup(null);
+    refresh();
+  };
+
+  if (setup === "gog") {
     return (
       <main>
-        <SteamSetup onConnected={refresh} />
+        <GogSetup onConnected={cerrarSetup} />
+        <button className="link" onClick={() => setSetup(null)}>
+          Volver
+        </button>
       </main>
     );
   }
 
-  if (!hasIgdb) {
+  if (setup === "igdb") {
     return (
       <main>
-        <IgdbSetup onConnected={refresh} />
+        <IgdbSetup onConnected={cerrarSetup} />
+        <button className="link" onClick={() => setSetup(null)}>
+          Volver
+        </button>
       </main>
     );
   }
+
+  // Hay que empezar por algún sitio, y Steam es la única tienda con una vía
+  // oficial. Pero quien no tenga Steam no puede quedarse en un callejón.
+  if (accounts.length === 0) {
+    return (
+      <main>
+        <SteamSetup onConnected={refresh} />
+        <button className="link" onClick={() => setSetup("gog")}>
+          o empezar por GOG
+        </button>
+      </main>
+    );
+  }
+
+  const tieneGog = accounts.some((account) => account.store === "gog");
 
   return (
     <main>
@@ -151,8 +181,25 @@ export function App() {
           >
             {busy === "identity" ? "Emparejando…" : "Emparejar"}
           </button>
+          {!tieneGog && (
+            <button className="link" onClick={() => setSetup("gog")}>
+              Conectar GOG
+            </button>
+          )}
         </div>
       </header>
+
+      {/* Sin IGDB la biblioteca funciona, pero las fichas salen del título de
+          la tienda. Conviene decirlo, y no a modo de error: no lo es. */}
+      {!hasIgdb && (
+        <p className="hint">
+          Sin metadatos: las fichas se crean con el título de la tienda y sin
+          portada.{" "}
+          <button className="link" onClick={() => setSetup("igdb")}>
+            Configurar IGDB
+          </button>
+        </p>
+      )}
 
       <ul className="accounts">
         {accounts.map((account) => (

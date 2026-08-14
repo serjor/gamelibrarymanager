@@ -7,7 +7,7 @@ mod sync;
 /// Superficie que consumen los tests de integración. No la usa la aplicación:
 /// existe para poder probar el caso de uso completo sin arrancar Tauri.
 pub mod testing {
-    pub use crate::identity::{IdentityReport, resolve};
+    pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::state::credential_key;
     pub use crate::sync::{Silent, SyncReport, sync_account, sync_all};
 }
@@ -33,6 +33,7 @@ pub fn run() {
             commands::app_info,
             commands::unlock_secrets,
             commands::connect_steam,
+            commands::gog::connect_gog,
             commands::list_accounts,
             commands::sync_now,
             commands::library_summary,

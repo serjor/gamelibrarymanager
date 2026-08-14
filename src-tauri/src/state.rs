@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use connectors::SteamConnector;
+use connectors::{GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
 use metadata::IgdbClient;
 use secrets::{Backend, EncryptedFileStore, KeyringStore, SecretStore};
@@ -43,7 +43,8 @@ impl AppState {
 
         let http_for_igdb = http.clone();
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
-        connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http)));
+        connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http.clone())));
+        connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http)));
 
         let backend = secrets::detect(SERVICE);
         let secrets: Option<Arc<dyn SecretStore>> = match backend {

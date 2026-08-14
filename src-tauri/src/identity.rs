@@ -34,19 +34,34 @@ pub async fn resolve(
     credentials: &IgdbCredentials,
     token: &IgdbToken,
 ) -> Result<IdentityReport, AppError> {
-    let pending = StoreEntryRepository(db).unlinked().await?;
+    let entries = StoreEntryRepository(db);
+    // Las que nunca tuvieron ficha y las que tienen una hecha solo con el
+    // título de la tienda: estas segundas ya se ven en la biblioteca, pero
+    // siguen esperando una identidad de verdad.
+    let mut pending = entries.unlinked().await?;
+    pending.extend(entries.pending_metadata().await?);
+
     let mut report = IdentityReport::default();
     let mut links = GameLinkRepository(db).all().await?;
 
     for entry in pending {
         let decision = decide(igdb, credentials, token, &entry).await?;
+        let ficha_local = links
+            .iter()
+            .find(|link| link.store_entry_id == entry.id)
+            .map(|link| link.game_id);
 
         match decision {
             MatchDecision::Auto {
                 igdb_id,
                 confidence,
             } => {
-                let game_id = ensure_game(db, igdb, credentials, token, igdb_id, &entry).await?;
+                let game_id =
+                    ensure_game(db, igdb, credentials, token, igdb_id, &entry, ficha_local).await?;
+                // La entrada puede traer ya un enlace local: se sustituye, no se
+                // acumula. Con dos propuestas para la misma entrada, el índice
+                // único decidiría por orden de inserción cuál gana.
+                links.retain(|link| link.store_entry_id != entry.id);
                 links.push(GameLink {
                     game_id,
                     store_entry_id: entry.id,
@@ -56,6 +71,9 @@ pub async fn resolve(
                 MatchCandidateRepository(db).clear(entry.id).await?;
                 report.linked += 1;
             }
+            // Sin decisión, el enlace local que hubiera se queda como estaba: ya
+            // está en `links` y `rebuild_auto` lo reescribirá igual. Quitarlo
+            // haría desaparecer de la biblioteca un juego que el usuario ya veía.
             MatchDecision::Review { candidates } => {
                 if candidates.is_empty() {
                     report.unknown += 1;
@@ -71,6 +89,45 @@ pub async fn resolve(
 
     // Un solo `rebuild_auto` al final: reescribe los enlaces automáticos de una
     // vez y respeta los manuales, que es la garantía de la fase 2.
+    GameLinkRepository(db).rebuild_auto(&links).await?;
+    GameRepository(db).soft_delete_orphans().await?;
+    Ok(report)
+}
+
+/// Emparejamiento sin IGDB: agrupa las copias por título normalizado y les crea
+/// una ficha con lo que dice la tienda.
+///
+/// Existe porque bloquear la aplicación entera hasta que el usuario consiga unas
+/// credenciales de Twitch es muy duro en el primer arranque. Lo que sale de aquí
+/// es una biblioteca de verdad —con su estado y sus insignias de tienda— a la
+/// espera de metadatos, y el mismo título en dos tiendas ya cae en una sola
+/// ficha: para eso basta la normalización, IGDB solo añade la certeza.
+pub async fn resolve_local(db: &Database) -> Result<IdentityReport, AppError> {
+    let games = GameRepository(db);
+    let mut report = IdentityReport::default();
+    let mut links = GameLinkRepository(db).all().await?;
+
+    for entry in StoreEntryRepository(db).unlinked().await? {
+        let sort_title = matching::normalize(&entry.title);
+        let game_id = match games.find_local_by_sort_title(&sort_title).await? {
+            Some(existing) => existing.id,
+            None => {
+                let game = local_game(&entry);
+                games.upsert(&game).await?;
+                game.id
+            }
+        };
+
+        links.retain(|link| link.store_entry_id != entry.id);
+        links.push(GameLink {
+            game_id,
+            store_entry_id: entry.id,
+            confidence: matching::LOCAL_TITLE_CONFIDENCE,
+            method: LinkMethod::Auto,
+        });
+        report.linked += 1;
+    }
+
     GameLinkRepository(db).rebuild_auto(&links).await?;
     Ok(report)
 }
@@ -97,6 +154,11 @@ async fn decide(
 
 /// Crea la ficha si no existe. La tabla `game` es también la caché de IGDB: si
 /// el juego ya está, no se vuelve a preguntar nunca.
+///
+/// `ficha_local` es la ficha sin metadatos de la que ya colgaba esta copia, si
+/// la había. Se **reutiliza su identificador** en vez de crear otra, y esa es
+/// toda la diferencia: `user_state` cuelga del `game_id`, así que crear una
+/// ficha nueva dejaría huérfano el estado que el usuario ya había escrito.
 async fn ensure_game(
     db: &Database,
     igdb: &IgdbClient,
@@ -104,16 +166,20 @@ async fn ensure_game(
     token: &IgdbToken,
     igdb_id: i64,
     entry: &StoreEntry,
+    ficha_local: Option<GameId>,
 ) -> Result<GameId, AppError> {
     let games = GameRepository(db);
     if let Some(existing) = games.find_by_igdb(igdb_id).await? {
         return Ok(existing.id);
     }
 
+    // Sin ficha previa se crea una; con ella se reescribe la que ya existía.
+    // `GameId::default()` es `GameId::new()`, con su UUIDv7 recién hecho.
+    let id = ficha_local.unwrap_or_default();
     let fetched = igdb.game(credentials, token, igdb_id).await?;
     let game = match fetched {
         Some(meta) => Game {
-            id: GameId::new(),
+            id,
             canonical_title: meta.name.clone(),
             sort_title: matching::normalize(&meta.name),
             igdb_id: Some(meta.igdb_id),
@@ -124,7 +190,10 @@ async fn ensure_game(
         },
         // IGDB conoce el identificador pero no devuelve la ficha: mejor una
         // ficha con el título de la tienda que ninguna.
-        None => local_game(entry),
+        None => Game {
+            id,
+            ..local_game(entry)
+        },
     };
 
     games.upsert(&game).await?;

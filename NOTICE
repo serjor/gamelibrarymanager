@@ -12,7 +12,30 @@ su origen, su licencia y el fichero donde vive. Portar código de legendary o de
 Heroic Games Launcher (ambos GPLv3) es compatible con esta licencia, pero exige
 conservar sus cabeceras de copyright y anotarlo aquí.
 
-Hasta ahora: ninguno.
+Hasta ahora no se ha copiado ni adaptado código de terceros: no hay ninguna
+cabecera de copyright ajena que conservar.
+
+Sí hay conocimiento tomado de proyectos ajenos, que se registra igual por
+honestidad aunque no obligue a nada:
+
+  Conector de GOG (crates/connectors/src/gog/)
+  El flujo de autorización y los endpoints vigentes se determinaron leyendo
+  Heroic Games Launcher y gogdl, ambos GPLv3, y comprobándolos a mano el
+  2026-08-14:
+    - https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
+      Copyright (c) Heroic Games Launcher contributors
+    - https://github.com/Heroic-Games-Launcher/heroic-gogdl
+      Copyright (c) 2021-2026 Paweł Lidwin y contribuidores
+  De ahí sale el dato de que la biblioteca ya no se lee de embed.gog.com sino
+  de galaxy-library.gog.com. No se ha copiado código: la implementación es
+  propia y en Rust.
+
+  Credenciales de cliente de GOG Galaxy
+  GOG no permite registrar aplicaciones de terceros, así que el único cliente
+  que su servidor de autorización reconoce es el de GOG Galaxy. Ese par está
+  publicado en gogdl desde hace años. Este programa **no lo lleva dentro**: lo
+  aporta el usuario al conectar su cuenta y se guarda en el almacén de
+  secretos, como cualquier otra credencial.
 
 Sobre las tiendas
 -----------------

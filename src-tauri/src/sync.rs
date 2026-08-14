@@ -120,11 +120,18 @@ pub async fn sync_account(
     account: &StoreAccount,
     report: &mut SyncReport,
 ) -> Result<(), AppError> {
-    let credential = secrets
-        .get(&credential_key(account))?
-        .ok_or(AppError::MissingCredential)?;
+    let key = credential_key(account);
+    let credential = secrets.get(&key)?.ok_or(AppError::MissingCredential)?;
 
-    let session = restore_session(connector, account, credential).await?;
+    let session = restore_session(connector, account, credential.clone()).await?;
+
+    // Si el conector ha renovado la credencial hay que guardarla antes de nada.
+    // GOG rota el token de refresco al usarlo: perder el nuevo deja la cuenta
+    // sin forma de volver a entrar, y no se notaría hasta la próxima caducidad.
+    if session.credential != credential {
+        secrets.set(&key, &session.credential)?;
+    }
+
     let entries = StoreEntryRepository(db);
 
     let owned = connector.owned(&session, account.id).await?;

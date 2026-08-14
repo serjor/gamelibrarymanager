@@ -1,6 +1,10 @@
 //! Comandos expuestos a la UI. Orquestan casos de uso y traducen tipos: la
 //! lógica vive en los crates de dominio y adaptadores.
 
+// Público porque `generate_handler!` necesita llegar al elemento que genera
+// `#[tauri::command]`, y un `pub use` de la función sola no lo arrastra.
+pub mod gog;
+
 use domain::{
     AuthContext, EntryKind, GameId, GameLink, LinkMethod, PlayStatus, ScoredCandidate,
     StoreAccount, StoreAccountId, StoreEntryId, StoreId, UserState,
@@ -229,10 +233,20 @@ pub async fn has_igdb_credentials(state: State<'_, AppState>) -> Result<bool, Ap
 }
 
 /// Empareja lo que haya llegado de las tiendas con las fichas de IGDB.
+///
+/// Sin credenciales de IGDB no se para: se agrupan las copias por título y se
+/// les crea una ficha con lo que dice la tienda. La biblioteca se puede usar
+/// desde el primer arranque, y el día que el usuario configure IGDB estas fichas
+/// se enriquecen en su sitio sin perder lo que haya escrito encima.
 #[tauri::command]
 pub async fn resolve_identities(state: State<'_, AppState>) -> Result<IdentityReport, AppError> {
-    let (credentials, token) = igdb_session(&state).await?;
-    identity::resolve(&state.db, &state.igdb, &credentials, &token).await
+    match igdb_session(&state).await {
+        Ok((credentials, token)) => {
+            identity::resolve(&state.db, &state.igdb, &credentials, &token).await
+        }
+        Err(AppError::MissingIgdbCredentials) => identity::resolve_local(&state.db).await,
+        Err(other) => Err(other),
+    }
 }
 
 /// El token de Twitch dura unos sesenta días: se guarda y solo se renueva

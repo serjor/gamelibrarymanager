@@ -27,6 +27,7 @@ mock.module("./lib/api", () => ({
     resolveIdentities: () => Promise.resolve({ linked: 0, review: 0, unknown: 0 }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
+    connectGog: () => Promise.resolve("id"),
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
     reviewWithoutMetadata: () => Promise.resolve(),
@@ -67,11 +68,39 @@ describe("App", () => {
     expect(await screen.findByText("Contraseña del almacén")).toBeDefined();
   });
 
-  it("con cuenta pero sin IGDB pide las credenciales de metadatos", async () => {
+  it("sin IGDB avisa pero no bloquea la biblioteca", async () => {
+    // La ficha nace del emparejamiento, así que sin IGDB sale del título de la
+    // tienda. Es un aviso, no un error: cerrar la aplicación entera hasta tener
+    // credenciales de Twitch es demasiado duro en el primer arranque.
     state.accounts = [cuentaSteam];
     state.hasIgdb = false;
     render(<App />);
+    expect(await screen.findByText(/las fichas se crean con el título/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Sincronizar" })).toBeDefined();
+  });
+
+  it("desde el aviso se llega al asistente de IGDB", async () => {
+    state.accounts = [cuentaSteam];
+    state.hasIgdb = false;
+    render(<App />);
+    (await screen.findByRole("button", { name: "Configurar IGDB" })).click();
     expect(await screen.findByText("Metadatos: IGDB")).toBeDefined();
+  });
+
+  it("ofrece conectar GOG cuando aún no hay cuenta de GOG", async () => {
+    state.accounts = [cuentaSteam];
+    render(<App />);
+    (await screen.findByRole("button", { name: "Conectar GOG" })).click();
+    // Se busca algo que solo esté en el asistente: el encabezado se llama igual
+    // que el botón que lleva hasta él y no distinguiría nada.
+    expect(await screen.findByLabelText("Client ID")).toBeDefined();
+    expect(screen.getByText(/Tu contraseña de GOG no pasa por aquí/)).toBeDefined();
+  });
+
+  it("sin ninguna cuenta se puede empezar por GOG en vez de por Steam", async () => {
+    render(<App />);
+    (await screen.findByRole("button", { name: "o empezar por GOG" })).click();
+    expect(await screen.findByRole("button", { name: /Iniciar sesión en GOG/ })).toBeDefined();
   });
 
   it("muestra el recuento de fichas, copias y pendientes", async () => {

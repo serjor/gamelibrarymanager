@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1942,
+    "name": "The Witcher 3: Wild Hunt",
+    "summary": "Geralt de Rivia busca a Ciri mientras la Cacería Salvaje le pisa los talones.",
+    "first_release_date": 1431993600,
+    "cover": { "id": 89386, "image_id": "co1wyy" },
+    "genres": [{ "id": 12, "name": "Role-playing (RPG)" }]
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "access_token": "TOKEN_DE_ACCESO_RENOVADO",
+  "expires_in": 3600,
+  "token_type": "bearer",
+  "scope": "",
+  "session_id": "SESION_DE_PRUEBA",
+  "refresh_token": "TOKEN_DE_REFRESCO_ROTADO",
+  "user_id": "51000000000000000"
+}
