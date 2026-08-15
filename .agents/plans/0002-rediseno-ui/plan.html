@@ -39,6 +39,7 @@ strong{font-weight:600}
 <h3>In</h3>
 <ul>
 <li>Sistema de diseño: tokens de color para claro y oscuro, escala tipográfica, escala de espaciado, estados de foco visibles, y las primitivas que consumen el resto de features.</li>
+<li>Comportamiento por rango: cada vista declara en qué anchos funciona y qué hace al salirse de ellos. Los puntos de ruptura se miden, no se heredan de la configuración.</li>
 <li>Biblioteca con dos modos de vista sobre un estado compartido: <strong>tabla</strong> (ordenable, selección múltiple, edición en lote) y <strong>pared</strong> de portadas.</li>
 <li>Ficha unificada: un componente, dos presentaciones (inspector acoplado en tabla, hoja superpuesta con imagen apaisada desde la pared y desde «Hoy»).</li>
 <li>Cola de revisión rediseñada como tabla comparable con confirmación en lote.</li>
@@ -73,7 +74,7 @@ strong{font-weight:600}
 <tr><td>Última partida en GOG</td><td><code>crates/connectors/src/gog/parse.rs:174</code></td><td>No existe: GOG no la publica. <code>raw</code> lleva id, título, carátula y enlace</td></tr>
 <tr><td>Portada de tienda</td><td><code>migrations/0005_origen_visible.up.sql</code></td><td><code>store_entry.cover_url</code> y <code>store_url</code> poblados por las dos tiendas. Solo los usa la cola de revisión</td></tr>
 <tr><td>CSP</td><td><code>src-tauri/tauri.conf.json:24</code></td><td><code>img-src</code> permite IGDB, <code>cdn.cloudflare.steamstatic.com</code> y <code>*.gog-statics.com</code>. <strong>No hay <code>font-src</code></strong>: cae en <code>default-src 'self'</code></td></tr>
-<tr><td>Ventana</td><td><code>src-tauri/tauri.conf.json:17-18</code></td><td>1200×800 por defecto, mínimo <strong>900×600</strong></td></tr>
+<tr><td>Ventana</td><td><code>src-tauri/tauri.conf.json:17-18</code></td><td>1200×800 por defecto, mínimo 900×600. Lo escribió entero <code>e79f394</code> al montar el andamio y el plan 0001 no menciona ninguna dimensión: <strong>es un valor heredado, no un requisito</strong>. En escritorio la ventana se maximiza y se redimensiona a voluntad</td></tr>
 <tr><td>Tests de interfaz</td><td><code>src/App.test.tsx:59-268</code></td><td>13 tests que afirman sobre textos y nombres accesibles literales: <code>"Sincronizar"</code>, <code>/Por revisar \(1\)/</code>, <code>"steam · gog"</code>, <code>"Ver Limbo en IGDB"</code></td></tr>
 <tr><td>Dependencias de UI</td><td><code>package.json:14-19</code></td><td>Cuatro: React, ReactDOM y dos de Tauri. Ninguna de estilos, iconos, tabla o DnD</td></tr>
 </table>
@@ -111,6 +112,7 @@ strong{font-weight:600}
 <tr><td>¿Qué se hace con los 13 tests?</td><td>Reescribir conservando la intención, y ampliar.</td><td>Cada test cubre una decisión de producto (sin cuentas → asistente; sin IGDB → aviso que no bloquea; empates agrupados). Rechazado el arreglo mínimo de selectores: dejaría sin red todo lo que se estrena, que es justo lo que más se puede romper</td></tr>
 <tr><td>¿Se pueden añadir dependencias?</td><td>Solo si escribirla a mano cuesta más que mantenerla, y justificándolo aquí.</td><td>Coherente con la decisión del plan 0001 y con <code>useVirtualGrid.ts:21-28</code>. Con C fuera, la candidata realista (DnD accesible) desaparece: <strong>este plan no prevé ninguna alta</strong></td></tr>
 <tr><td>¿Tipografía propia?</td><td>No: pila del sistema.</td><td><code>font-src</code> no está en la CSP (<code>tauri.conf.json:24</code>), así que una fuente web no carga y una empaquetada obliga a tocar la CSP y a meter binarios en el repo. La personalidad la dan escala, peso y espaciado</td></tr>
+<tr><td>¿Contra qué ancho se diseña?</td><td>Contra un rango, no contra un suelo. Cada vista declara dónde deja de funcionar y qué hace entonces; el <code>minWidth</code> de la configuración se elige <em>después</em>, a partir de lo que digan las vistas.</td><td>Los 900 px de <code>tauri.conf.json:17-18</code> no los decidió nadie: los escribió el andamiaje en <code>e79f394</code> y el plan 0001 ni menciona las dimensiones de la ventana. Rechazado tomarlos como suelo de diseño: en escritorio el usuario maximiza y redimensiona a voluntad, y con móvil y tableta en el horizonte un punto de ruptura heredado es justo lo que obliga a rehacer en vez de extender</td></tr>
 </table>
 
 <h2>Plan</h2>
@@ -161,7 +163,7 @@ strong{font-weight:600}
 <tr><td><code>src/styles.css</code></td><td>Filas de rejilla con altura explícita (<code>grid-auto-rows</code>) y columnas de ancho fijo. <strong>No</strong> usar <code>aspect-ratio</code> sobre el item de rejilla</td></tr>
 <tr><td><code>src/features/library/Library.tsx</code></td><td>Conmutador de vista. La vista elegida se recuerda mientras dure la sesión</td></tr>
 </table>
-<p><strong>Done when:</strong> filtrar en tabla y cambiar a pared enseña exactamente el mismo conjunto; a 900 px de ancho ninguna baldosa se solapa con la de la fila siguiente.</p>
+<p><strong>Done when:</strong> filtrar en tabla y cambiar a pared enseña exactamente el mismo conjunto; arrastrando el borde de la ventana de maximizada a lo más estrecho que permita, ninguna baldosa se solapa con la de la fila siguiente en ningún punto del recorrido.</p>
 
 <h3>Fase 5 — La ficha, un componente con dos presentaciones</h3>
 <p><em>Objetivo:</em> una sola lógica de formulario, dos maneras de enseñarla.</p>
@@ -210,13 +212,13 @@ strong{font-weight:600}
 <tr><td><code>json_extract</code> sobre <code>raw</code> en cada fila</td><td>La consulta de la biblioteca se hace más lenta con miles de copias</td><td>Medir en la fase 2 con <code>una_sola_consulta.rs</code>, que ya existe; el coste es de <em>una</em> consulta más grande, no de N consultas</td><td>Si no da, columna materializada y migración: es la alternativa que se rechazó y sigue disponible</td></tr>
 <tr><td><code>aspect-ratio</code> en un item de rejilla</td><td>Las portadas se solapan con la fila siguiente: la fila se dimensiona con el contenido en flujo, que es cero si el rótulo va <code>position:absolute</code></td><td>Altura de fila explícita con <code>grid-auto-rows</code> y columnas de ancho fijo (fase 4)</td><td>N/A: es una regla, no un interruptor</td></tr>
 <tr><td>Reescribir los 13 tests</td><td>Perder cobertura sin enterarse</td><td>Reescribir de uno en uno, dejando en el mensaje del commit qué comportamiento cubre cada uno</td><td>Los originales están en el historial</td></tr>
-<tr><td>Superficie nueva a 900 px</td><td>Tabla e inspector no caben a la vez en la ventana mínima</td><td>Por debajo de cierto ancho, el inspector pasa a hoja: la presentación ya existe por la fase 5</td><td>N/A</td></tr>
+<tr><td>Diseñar contra un ancho fijo en vez de contra un rango</td><td>Es lo que convierte la futura versión de móvil y tableta en una reescritura en lugar de una extensión</td><td>Cada vista declara en qué rango funciona y qué hace al salirse, medido y no supuesto. El inspector pasa a hoja cuando la tabla deja de caber a su lado, con la presentación que ya trae la fase 5</td><td>N/A: es una regla, no un interruptor</td></tr>
 </table>
 
 <h2>Verification</h2>
 <ul>
 <li>Las mismas comprobaciones que ejecuta CI, todas en verde antes de dar una fase por cerrada.</li>
-<li>Manual, con la ventana a 900 px: filtrar en tabla → cambiar a pared → el conjunto no cambia; seleccionar cuatro → aplicar estado → la tabla lo refleja; abrir ficha desde tabla y desde pared → guardar en las dos.</li>
+<li>Manual, redimensionando: filtrar en tabla → cambiar a pared → el conjunto no cambia; seleccionar cuatro → aplicar estado → la tabla lo refleja; abrir ficha desde tabla y desde pared → guardar en las dos. Todo el recorrido se repite con la ventana maximizada y arrastrando el borde hasta el mínimo, buscando el ancho en el que cada vista se rompe.</li>
 <li>Manual, sin IGDB configurado: la pared, la ficha y «Hoy» se sostienen sin portada y sin resumen. Es el caso que el aviso de <code>App.tsx:191-199</code> promete que funciona.</li>
 </ul>
 <pre><code>cargo fmt --all --check
@@ -230,6 +232,8 @@ bun run tauri dev            # tiene que abrir la ventana</code></pre>
 <tr><th>Incógnita</th><th>Cómo resolverla</th><th>Plan B</th></tr>
 <tr><td>Qué imagen luce mejor de cabecera en la hoja: el <code>header.jpg</code> de Steam (apaisado) o el logo de GOG (apaisado con otra proporción)</td><td>Mirarlo con una biblioteca real en la fase 5; las dos ya se sirven en la cola de revisión (<code>ReviewQueue.tsx:79</code>)</td><td>Recortar las dos a la misma caja, como ya hace <code>.origen img</code> en <code>styles.css:184-188</code></td></tr>
 <tr><td>Cuántas estanterías de «Hoy» sobreviven con una biblioteca pequeña</td><td>Probar con 20 juegos en la fase 7</td><td>Umbral mínimo por estantería; por debajo, no se pinta</td></tr>
+<tr><td>Qué forma toma la tabla en una pantalla estrecha</td><td>De las tres superficies es la única que no sobrevive a un teléfono: la pared y «Hoy» son rejilla y filas y escalan solas, pero nueve columnas en 390 px no son un punto de ruptura, son otra forma. Se decide cuando llegue la versión de móvil y tableta, no aquí</td><td>Por debajo de su rango, la biblioteca se queda solo en modo pared, que sí escala. Queda anotado como bifurcación conocida para no descubrirla entonces</td></tr>
+<tr><td>Qué <code>minWidth</code> debe quedar en <code>tauri.conf.json</code></td><td>Con las siete fases cerradas, medir el ancho al que cada vista deja de funcionar de verdad y poner ese, o quitarlo</td><td>Dejar el 900 heredado, sabiendo ya que es arbitrario y no un requisito</td></tr>
 </table>
 
 <h2>Do not</h2>
@@ -241,6 +245,7 @@ bun run tauri dev            # tiene que abrir la ventana</code></pre>
 <li>No borrar ningún test para que CI pase. Cada uno se reescribe conservando lo que comprobaba.</li>
 <li>No convertir «Hoy» en un modo de vista de la biblioteca ni hacerlo leer <code>filters</code>.</li>
 <li>No enlazar tipografías externas: <code>font-src</code> no está en la CSP.</li>
+<li>No tomar los 900 px de <code>tauri.conf.json</code> como suelo de diseño, ni escribir ese número en ninguna media query. Los puntos de ruptura salen de medir dónde se rompe cada vista, no de la configuración de la ventana.</li>
 <li>No editar <code>.agents/plans/0001-game-library-manager/plan.html</code>.</li>
 </ul>
 
