@@ -36,9 +36,9 @@ strong{font-weight:600}
 <p>La aplicación tiene un sistema de diseño propio en lugar de 324 líneas de CSS sin tokens. La biblioteca es una pantalla con dos presentaciones sobre el mismo estado —tabla densa y pared de portadas—, la ficha es un único componente que se acopla como inspector o se abre como hoja, la cola de revisión se resuelve comparando en lote, y una pestaña «Hoy» propone a qué jugar. Nada de esto exige una migración de base de datos.</p>
 
 <h2>Estado</h2>
-<p><strong>Fases 1 a 5 hechas</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>, y la 5 en el commit que trae este párrafo). Quedan la 6 y la 7. En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (36), <code>bun run build &amp;&amp; bun run visual</code> (98 comprobaciones de maquetación) y —por primera vez, en la máquina del usuario y no en el contenedor— <code>cargo fmt</code>, <code>cargo clippy --all-targets --workspace</code> y <code>cargo test --workspace</code> (69 tests, 1 ignorado). <strong>Sigue sin ejecutarse <code>bun run tauri dev</code></strong>: la ventana no se ha abierto todavía. Ninguna de las cinco fases toca <code>src-tauri</code>.</p>
+<p><strong>Fases 1 a 6 hechas</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>, <code>d608d31</code>, y la 6 en el commit que trae este párrafo). Queda la 7. En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (39), <code>bun run build &amp;&amp; bun run visual</code> (130 comprobaciones de maquetación) y —por primera vez, en la máquina del usuario y no en el contenedor— <code>cargo fmt</code>, <code>cargo clippy --all-targets --workspace</code> y <code>cargo test --workspace</code> (69 tests, 1 ignorado). <strong>Sigue sin ejecutarse <code>bun run tauri dev</code></strong>: la ventana no se ha abierto todavía. De <code>src-tauri</code> solo se ha tocado un comentario, en la fase 6.</p>
 
-<p>Pendiente del criterio del usuario, con la aplicación abierta y su biblioteca de verdad. Nada de esto es un fallo conocido; son cinco juicios que no se pueden hacer sin mirar:</p>
+<p>Pendiente del criterio del usuario, con la aplicación abierta y su biblioteca de verdad. Nada de esto es un fallo conocido; son juicios que no se pueden hacer sin mirar:</p>
 <table>
 <tr><th>Qué mirar</th><th>Dónde se cambia</th></tr>
 <tr><td>Alto de fila de la tabla, hoy 33 px: ¿cómodo o apretado?</td><td><code>LibraryTable.tsx</code> <code>ALTO_FILA</code> + <code>.tabla td</code></td></tr>
@@ -49,6 +49,8 @@ strong{font-weight:600}
 <tr><td>El ancho al que la ficha deja de acoplarse y pasa a hoja, hoy 82rem. Está medido —es la suma de lo que necesita cada pieza— pero se nota en una ventana de 1280, que es donde justo cambia</td><td><code>Library.tsx</code> <code>CABE_EL_INSPECTOR</code> + <code>main</code> en <code>styles.css</code></td></tr>
 <tr><td>Alto de la banda de arte de la hoja, hoy 15rem, y ancho de la hoja, hoy 34rem</td><td><code>.hoja-arte</code> / <code>.hoja-caja</code> en <code>styles.css</code></td></tr>
 <tr><td>El resumen en el inspector se queda en siete líneas y se desplaza dentro. En la hoja va entero</td><td><code>.detail .resumen</code> en <code>styles.css</code></td></tr>
+<tr><td>La preselección de la cola. Con ciento cincuenta pendientes ahorra ciento cincuenta clics, pero el botón del lote sale armado nada más abrir la pestaña, y eso hay que verlo con una cola de verdad</td><td><code>preseleccion</code> en <code>ReviewQueue.tsx</code></td></tr>
+<tr><td>Una fila de la cola con cinco candidatos mide bastante alto: las tarjetas van en columna dentro de su celda. Se ganó comparabilidad y se perdió densidad</td><td><code>.revision .candidates</code> en <code>styles.css</code>, y los anchos de <code>colgroup</code> en <code>ReviewQueue.tsx</code></td></tr>
 </table>
 
 <p>Y lo que ni la pared ni la hoja han visto nunca: <strong>arte real</strong>. Los CDN de Steam e IGDB estaban bloqueados en aquel entorno, así que la vista de portadas está juzgada entera con rectángulos de color, y la banda apaisada de la hoja también: el arnés visual la mide con un SVG de 460×215 servido desde la propia página. Es donde más probable es que algo cante al abrirla con carátulas de verdad.</p>
@@ -64,6 +66,8 @@ strong{font-weight:600}
 <li>La ficha usa ya <code>ESTADOS</code> y <code>ETIQUETA_ESTADO</code> de <code>src/lib/estado.ts</code>. Era el último sitio con su propia copia de la lista, que es justo lo que ese fichero decía haber quitado.</li>
 <li>La fase 5 arregló de paso dos cosas que se veían y no eran suyas: la celda de la casilla recortaba —el navegador pintaba unos puntos suspensivos al lado de cada casilla de la tabla— y la fila abierta se recuadraba celda a celda en vez de como una fila. Las dos son de la fase 3, y la primera la vigila ahora una comprobación del arnés.</li>
 <li>Se borró el CSS muerto que dejó la fase 4 al no renombrar <code>LibraryGrid.tsx</code>: <code>.grid</code>, <code>.grid-viewport</code>, <code>.card</code> y <code>.card-title</code> no los usaba nadie.</li>
+<li>La fase 6 sí tocó <code>src-tauri</code>, pero solo un comentario: el de <code>review_confirm_many</code> decía que cada par lo había elegido el usuario mirándolo, y con la preselección eso ya no es del todo cierto. Lo que sigue siendo cierto —nada se escribe sin confirmar, y los empates llegan sin elegir— está ahora escrito ahí.</li>
+<li>El estado de la cola guarda solo lo que el usuario ha tocado, no la selección entera. Así la preselección se deriva de la cola en cada render y no hace falta ningún efecto que la copie a estado cada vez que la cola se recarga.</li>
 </ul>
 
 <h2>Scope</h2>

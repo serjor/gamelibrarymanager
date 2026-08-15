@@ -18,6 +18,8 @@ const state = {
   rows: [] as LibraryRow[],
   /** Lo que se ha escrito de verdad, para poder contarlo y mirarlo. */
   guardados: [] as [string, PlayStatus | null, number | null, string | null][],
+  /** Los emparejamientos que ha llegado a confirmar el lote. */
+  confirmados: [] as [string, number][],
 };
 
 // El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
@@ -40,7 +42,10 @@ mock.module("./lib/api", () => ({
     connectGog: () => Promise.resolve("id"),
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
-    reviewConfirmMany: () => Promise.resolve(0),
+    reviewConfirmMany: (decisions: [string, number][]) => {
+      state.confirmados.push(...decisions);
+      return Promise.resolve(decisions.length);
+    },
     reviewWithoutMetadata: () => Promise.resolve(),
     library: () => Promise.resolve(state.rows),
     cancelOperation: () => Promise.resolve(),
@@ -119,6 +124,51 @@ const fichaAbierta = () => screen.queryByRole("heading", { level: 2 })?.textCont
 const enLaFicha = () =>
   within(screen.getByRole("heading", { level: 2 }).closest(".ficha") as HTMLElement);
 
+/** Dos fichas que puntúan igual: el motivo más común de acabar en la cola. */
+const EMPATE: ReviewItem = {
+  store_entry_id: "11111111-1111-7111-8111-111111111111",
+  store: "steam",
+  title: "LIMBO",
+  cover_url: null,
+  store_url: null,
+  tie: true,
+  candidates: [
+    { igdb_id: 1, name: "Limbo", score: 1, release_year: 2010, cover_url: null, slug: "limbo" },
+    { igdb_id: 2, name: "Limbo", score: 1, release_year: 2011, cover_url: null, slug: null },
+  ],
+};
+
+/** Una entrada en la que un candidato gana con holgura: viene ya elegido. */
+const HOLGADO: ReviewItem = {
+  store_entry_id: "22222222-2222-7222-8222-222222222222",
+  store: "gog",
+  title: "Otro juego",
+  cover_url: null,
+  store_url: null,
+  tie: false,
+  candidates: [
+    { igdb_id: 3, name: "Otro juego", score: 0.95, release_year: 2015, cover_url: null, slug: null },
+    {
+      igdb_id: 4,
+      name: "Otro juego, pero de 2009",
+      score: 0.72,
+      release_year: 2009,
+      cover_url: null,
+      slug: null,
+    },
+  ],
+};
+
+/**
+ * Lo que dice la columna «se emparejará con» de una entrada.
+ *
+ * Se busca por el título de la tienda dentro de su celda, y no a secas: el
+ * candidato elegido puede llamarse igual que la entrada —de hecho es lo normal
+ * cuando el emparejamiento acierta— y entonces el título sale dos veces.
+ */
+const emparejaCon = (titulo: string) =>
+  screen.getByText(titulo, { selector: ".origen strong" }).closest("tr")?.cells[2]?.textContent;
+
 /**
  * El ancho de la ventana es lo que decide entre inspector y hoja, así que aquí
  * hay que poder moverlo: happy-dom lo expone y `matchMedia` le hace caso.
@@ -141,6 +191,7 @@ describe("App", () => {
     state.queue = [];
     state.rows = [];
     state.guardados = [];
+    state.confirmados = [];
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {
@@ -446,6 +497,52 @@ describe("App", () => {
     }
   });
 
+  it("lo que gana con holgura viene ya elegido, y lo que empata no", async () => {
+    // La asimetría es la cola entera: repetir con un clic lo que la pantalla ya
+    // dice es trabajo inventado, y elegir por el usuario en un empate es
+    // exactamente lo que el umbral se negó a hacer.
+    state.accounts = [cuentaSteam];
+    state.queue = [EMPATE, HOLGADO];
+    render(<App />);
+    (await screen.findByRole("button", { name: /Por revisar \(2\)/ })).click();
+
+    await screen.findByText("Empates (1)");
+    expect(emparejaCon("LIMBO")).toBe("sin elegir");
+    expect(emparejaCon("Otro juego")).toContain("Otro juego");
+    // Y el lote solo se lleva el que viene puesto.
+    expect(screen.getByRole("button", { name: /Confirmar 1 emparejamiento$/ })).toBeDefined();
+  });
+
+  it("el lote escribe lo que enseña la columna, no lo que se tocó", async () => {
+    state.accounts = [cuentaSteam];
+    state.queue = [HOLGADO];
+    render(<App />);
+    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+
+    // Se cambia por la otra ficha: la elegida y la descartada se intercambian.
+    fireEvent.click(await screen.findByRole("button", { name: /^Otro juego, pero de 2009/ }));
+    expect(emparejaCon("Otro juego")).toContain("Otro juego, pero de 2009");
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar 1 emparejamiento$/ }));
+    await waitFor(() => expect(state.confirmados).toHaveLength(1));
+    expect(state.confirmados[0]).toEqual([HOLGADO.store_entry_id, 4]);
+  });
+
+  it("quitar la ficha que venía puesta deja la entrada fuera del lote", async () => {
+    // Es la única forma de decir «esta no» sin decir cuál sí, y hace falta para
+    // dejar una entrada sin resolver mientras se confirman las demás.
+    state.accounts = [cuentaSteam];
+    state.queue = [HOLGADO];
+    render(<App />);
+    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+
+    // El elegido va sin año ni parecido —los dos tienen su columna—, así que
+    // su nombre accesible es el título a secas y no se confunde con el otro.
+    fireEvent.click(await screen.findByRole("button", { name: "Otro juego" }));
+    expect(emparejaCon("Otro juego")).toBe("sin elegir");
+    expect(screen.queryByRole("button", { name: /Confirmar/ })).toBeNull();
+  });
+
   it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {
     state.accounts = [cuentaSteam];
     state.queue = [
@@ -487,31 +584,7 @@ describe("App", () => {
     // ediciones se normalizan al mismo título. Agruparlos es lo que hace la
     // revisión llevadera sin tocar el umbral.
     state.accounts = [cuentaSteam];
-    state.queue = [
-      {
-        store_entry_id: "11111111-1111-7111-8111-111111111111",
-        store: "steam",
-        title: "LIMBO",
-        cover_url: null,
-        store_url: null,
-        tie: true,
-        candidates: [
-          { igdb_id: 1, name: "Limbo", score: 1, release_year: 2010, cover_url: null, slug: "limbo" },
-          { igdb_id: 2, name: "Limbo", score: 1, release_year: 2011, cover_url: null, slug: null },
-        ],
-      },
-      {
-        store_entry_id: "22222222-2222-7222-8222-222222222222",
-        store: "gog",
-        title: "Otro juego",
-        cover_url: null,
-        store_url: null,
-        tie: false,
-        candidates: [
-          { igdb_id: 3, name: "Otro juego", score: 0.95, release_year: 2015, cover_url: null, slug: null },
-        ],
-      },
-    ];
+    state.queue = [EMPATE, HOLGADO];
     render(<App />);
     (await screen.findByRole("button", { name: /Por revisar \(2\)/ })).click();
     expect(await screen.findByText(/Empates \(1\)/)).toBeDefined();
@@ -526,20 +599,7 @@ describe("App", () => {
 
   it("elegir candidatos ofrece confirmarlos en lote", async () => {
     state.accounts = [cuentaSteam];
-    state.queue = [
-      {
-        store_entry_id: "11111111-1111-7111-8111-111111111111",
-        store: "steam",
-        title: "LIMBO",
-        cover_url: null,
-        store_url: null,
-        tie: true,
-        candidates: [
-          { igdb_id: 1, name: "Limbo", score: 1, release_year: 2010, cover_url: null, slug: "limbo" },
-          { igdb_id: 2, name: "Limbo", score: 1, release_year: 2011, cover_url: null, slug: null },
-        ],
-      },
-    ];
+    state.queue = [EMPATE];
     render(<App />);
     (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
     // Sin nada elegido no hay botón de lote: nada que confirmar.

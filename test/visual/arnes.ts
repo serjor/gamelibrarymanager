@@ -91,6 +91,54 @@ export function bibliotecaDeEjemplo(): LibraryRow[] {
   ];
 }
 
+/**
+ * Una cola de revisión con las cuatro formas que tiene una fila: la que empata
+ * —sin nada elegido—, la que gana con holgura, la que IGDB no conoce, y la que
+ * trae un título de tienda que no cabe en su columna.
+ */
+export function colaDeEjemplo(): ReviewItem[] {
+  const candidato = (
+    igdb_id: number,
+    name: string,
+    score: number,
+    release_year: number | null,
+  ) => ({ igdb_id, name, score, release_year, cover_url: null, slug: "ficha" });
+
+  return [
+    {
+      store_entry_id: "11111111-1111-7111-8111-111111111111",
+      store: "steam",
+      title: "LIMBO",
+      cover_url: ARTE_APAISADO,
+      store_url: "https://store.steampowered.com/app/48000",
+      tie: true,
+      candidates: [candidato(1, "Limbo", 1, 2010), candidato(2, "Limbo", 1, 2011)],
+    },
+    {
+      store_entry_id: "22222222-2222-7222-8222-222222222222",
+      store: "gog",
+      title: "Ori and the Blind Forest: Definitive Edition",
+      cover_url: null,
+      store_url: null,
+      tie: false,
+      candidates: [
+        candidato(3, "Ori and the Blind Forest: Definitive Edition", 0.97, 2016),
+        candidato(4, "Ori and the Blind Forest", 0.81, 2015),
+        candidato(5, "Ori and the Will of the Wisps", 0.55, 2020),
+      ],
+    },
+    {
+      store_entry_id: "33333333-3333-7333-8333-333333333333",
+      store: "gog",
+      title: "Un juego con un título larguísimo que no cabe de ninguna manera en su columna",
+      cover_url: null,
+      store_url: null,
+      tie: false,
+      candidates: [],
+    },
+  ];
+}
+
 function respuestasPorDefecto(library: LibraryRow[]): Respuestas {
   return {
     app_info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true },

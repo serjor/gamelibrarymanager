@@ -208,18 +208,9 @@ button.link {
   gap: var(--e-3);
 }
 
-.review,
 .candidates {
   list-style: none;
   padding: 0;
-}
-
-.review > li {
-  border-top: 1px solid var(--borde);
-  padding: var(--e-4) 0;
-}
-
-.candidates {
   display: flex;
   flex-wrap: wrap;
   /* `stretch` iguala la altura de toda la fila: si no, cada tarjeta mide lo que
@@ -277,8 +268,12 @@ button.link {
   gap: var(--e-1);
 }
 
-/* Lo que dice la tienda, arriba y con su carátula: es contra lo que se compara
-   cada candidato de IGDB, así que tiene que verse a la vez que ellos. */
+.candidate-wrap .link {
+  white-space: nowrap;
+}
+
+/* Lo que dice la tienda, con su carátula: es contra lo que se compara cada
+   candidato de IGDB, así que tiene que verse a la vez que ellos. */
 .origen {
   display: flex;
   align-items: center;
@@ -594,7 +589,9 @@ button.link {
   border: none;
 }
 
-.tabla .num {
+/* Las cifras se comparan en vertical, así que a la derecha y con las cifras
+   del mismo ancho. Vale para las dos tablas: la biblioteca y la revisión. */
+.num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -642,6 +639,80 @@ button.link {
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* La cola de revisión, en columnas por lo mismo que la biblioteca: lo que se
+   repasa de ciento cincuenta entradas es una sola columna.
+   Su rango empieza en 65rem, que es lo que suman las cinco columnas fijas más
+   lo mínimo que necesita la entrada de tienda para enseñar carátula y título.
+   Por debajo se desplaza dentro de su caja, sin arrastrar la página. */
+.revision-viewport {
+  overflow-x: auto;
+}
+
+.revision {
+  width: 100%;
+  min-width: 65rem;
+  border-collapse: collapse;
+  font-size: var(--t-m);
+  table-layout: fixed;
+}
+
+.revision th {
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-atenuado);
+}
+
+/* Arriba y no centradas: una fila mide lo que mida su columna más alta —la de
+   los otros candidatos, que envuelve— y con las celdas centradas la entrada de
+   tienda se iría a flotar a media altura, lejos de lo que se compara con ella. */
+.revision td {
+  vertical-align: top;
+  padding: var(--e-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+/* Lo que queda por decidir, marcado. Son los empates y lo que se ha quitado a
+   mano: las únicas filas que el botón del lote no se va a llevar. */
+.revision tr.sin-elegir td {
+  background: color-mix(in srgb, var(--estado-pendiente) 10%, transparent);
+}
+
+.revision .origen strong {
+  /* Un título de tienda largo parte donde le toque en vez de estirar su
+     columna y llevarse por delante el ancho de las demás. */
+  overflow-wrap: anywhere;
+}
+
+/* En la tabla los candidatos van uno debajo de otro y no en fila: en 20rem no
+   caben dos al lado, y en columna las carátulas quedan alineadas, que es lo
+   que hace comparables dos fichas que se llaman igual. */
+.revision .candidates {
+  flex-direction: column;
+  margin: 0 0 var(--e-2);
+}
+
+/* La tarjeta y su enlace, también uno debajo del otro: al lado no caben en la
+   columna de la elegida, y forzarlo parte el «IGDB ↗» en dos líneas de dos
+   palabras. */
+.revision .candidate-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Sin `height: 100%`: con el enlace debajo, estirar la tarjeta a toda la altura
+   de su fila la echa fuera y encima de lo que venga después. */
+.revision .candidate {
+  height: auto;
+  width: 100%;
 }
 
 .tienda {

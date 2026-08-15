@@ -11,7 +11,7 @@
  *
  *     bun run build && bun run visual
  */
-import { conLaApp } from "./arnes";
+import { colaDeEjemplo, conLaApp } from "./arnes";
 
 let fallos = 0;
 
@@ -198,6 +198,60 @@ for (const [ancho, desde, juego, arte] of [
   comprobar(`${ancho} px desde ${desde} · el arte no se sale de la hoja`, !r.arteDesborda);
   comprobar(`${ancho} px desde ${desde} · la hoja no se desplaza en horizontal`, !r.cuerpoDeLado);
   comprobar(`${ancho} px desde ${desde} · el velo se pinta`, r.velo);
+}
+
+console.log("\nCola de revisión");
+for (const ancho of ANCHOS) {
+  const r = await conLaApp(
+    async (pagina) => {
+      await pagina.getByRole("button", { name: /Por revisar/ }).click();
+      await pagina.locator(".revision tbody tr").first().waitFor();
+      return pagina.evaluate(() => {
+        const izquierdas = (fila: Element) =>
+          [...fila.children].map((c) => Math.round(c.getBoundingClientRect().left));
+        const cabecera = document.querySelector(".revision thead tr");
+        const primera = document.querySelector(".revision tbody tr");
+        // Las columnas son de ancho fijo y dentro va de todo: carátulas,
+        // tarjetas y títulos de tienda sin espacios. Lo que se sale de su celda
+        // se mete encima de la de al lado.
+        const desbordan = [...document.querySelectorAll(".revision td")].filter((celda) => {
+          const caja = celda.getBoundingClientRect();
+          return [...celda.querySelectorAll("*")].some(
+            (dentro) => dentro.getBoundingClientRect().right > caja.right + 0.5,
+          );
+        }).length;
+        // Y dentro de la celda, cada candidato tiene que caber en su hueco. La
+        // lista los iguala de altura, así que lo que se salga por abajo no
+        // empuja nada: se pinta encima de lo que venga después. Se mira contra
+        // el hueco y no contra la celda porque ahí es donde pasa —el enlace de
+        // IGDB se escapaba de su tarjeta y aterrizaba sobre la salida «ninguno»,
+        // sin salirse de la celda en ningún momento.
+        const seSalen = [...document.querySelectorAll(".revision .candidates > li")].filter(
+          (hueco) => {
+            const caja = hueco.getBoundingClientRect();
+            return [...hueco.querySelectorAll("*")].some(
+              (dentro) => dentro.getBoundingClientRect().bottom > caja.bottom + 0.5,
+            );
+          },
+        ).length;
+        return {
+          cuadra:
+            cabecera !== null &&
+            primera !== null &&
+            JSON.stringify(izquierdas(cabecera)) === JSON.stringify(izquierdas(primera)),
+          desbordan,
+          seSalen,
+          deLado: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      });
+    },
+    { ancho, respuestas: { review_queue: colaDeEjemplo() } },
+  );
+
+  comprobar(`${ancho} px · la cabecera cuadra con las celdas`, r.cuadra);
+  comprobar(`${ancho} px · ninguna celda se sale de su columna`, r.desbordan === 0);
+  comprobar(`${ancho} px · ningún candidato se sale de su hueco`, r.seSalen === 0);
+  comprobar(`${ancho} px · la página no se va de lado`, !r.deLado);
 }
 
 console.log("\nContraste del texto sobre su fondo");
