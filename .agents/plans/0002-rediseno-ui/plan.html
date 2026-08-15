@@ -35,6 +35,29 @@ strong{font-weight:600}
 <h2>Goal</h2>
 <p>La aplicación tiene un sistema de diseño propio en lugar de 324 líneas de CSS sin tokens. La biblioteca es una pantalla con dos presentaciones sobre el mismo estado —tabla densa y pared de portadas—, la ficha es un único componente que se acopla como inspector o se abre como hoja, la cola de revisión se resuelve comparando en lote, y una pestaña «Hoy» propone a qué jugar. Nada de esto exige una migración de base de datos.</p>
 
+<h2>Estado</h2>
+<p><strong>Fases 1 a 4 hechas</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>). Quedan la 5, la 6 y la 7. En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (30) y <code>cargo test -p storage -p domain</code> (18). <strong>No se ha ejecutado nunca <code>cargo test --workspace</code> ni <code>bun run tauri dev</code></strong>: se trabajó en un contenedor sin <code>webkit2gtk</code> ni pantalla, así que <code>src-tauri</code> no se ha compilado y la ventana no se ha abierto. Ninguna de las cuatro fases toca <code>src-tauri</code>.</p>
+
+<p>Pendiente del criterio del usuario, con la aplicación abierta y su biblioteca de verdad. Nada de esto es un fallo conocido; son cinco juicios que no se pueden hacer sin mirar:</p>
+<table>
+<tr><th>Qué mirar</th><th>Dónde se cambia</th></tr>
+<tr><td>Alto de fila de la tabla, hoy 33 px: ¿cómodo o apretado?</td><td><code>LibraryTable.tsx</code> <code>ALTO_FILA</code> + <code>.tabla td</code></td></tr>
+<tr><td>Anchos de columna con títulos reales. El título nunca baja de 245 px, pero eso se decidió con títulos inventados</td><td><code>LibraryTable.tsx</code> <code>COLUMNAS</code></td></tr>
+<tr><td>Tamaño de baldosa, hoy 126×168</td><td><code>LibraryWall.tsx</code> <code>ANCHO</code> / <code>ALTO_PORTADA</code></td></tr>
+<tr><td>La casilla de selección de la pared solo sale al pasar por encima o al enfocar. Discreta con el arte, quizá demasiado</td><td><code>.pared-marca</code> en <code>styles.css</code></td></tr>
+<tr><td>El lote escribe secuencialmente, una llamada por juego. Con cuatro es instantáneo; con trescientos son trescientas idas y vueltas</td><td><code>BulkBar.tsx</code>; un comando en lote sería <code>src-tauri</code>, y <strong>no está en este plan</strong></td></tr>
+</table>
+
+<p>Y lo que la pared no ha visto nunca: <strong>arte real</strong>. Los CDN de Steam e IGDB estaban bloqueados en aquel entorno, así que la vista de portadas está juzgada entera con rectángulos de color. Es donde más probable es que algo cante al abrirla con carátulas.</p>
+
+<p>Cuatro cosas pasaron distinto de como las cuenta el resto de este documento, y mandan estas:</p>
+<ul>
+<li><code>LibraryGrid.tsx</code> se borró en la fase 3, y la 4 escribió <code>LibraryWall.tsx</code> nuevo en vez de renombrarlo.</li>
+<li>De <code>useVirtualGrid</code> se reaprovecha la <strong>aritmética</strong>, no la forma de pintar: la tabla usa filas espaciadoras y la pared <code>transform</code>. Dentro de una tabla, mover el <code>tbody</code> saca las celdas de su columna.</li>
+<li>Hay tres ficheros que el plan no nombraba: <code>src/lib/estado.ts</code> (etiquetas de estado en un solo sitio), <code>src/features/library/useSeleccion.ts</code> (el rango con mayúsculas, compartido por las dos vistas) y <code>sort.test.ts</code>.</li>
+<li>La fase 2 encontró y arregló una patología anterior al plan: cinco de las seis subconsultas de la biblioteca arrancaban por <code>store_entry</code>. Los <code>CROSS JOIN</code> que lo arreglan <strong>son necesarios</strong> y los vigila un test; quitarlos no rompe ningún resultado, solo multiplica por ochenta lo que tarda.</li>
+</ul>
+
 <h2>Scope</h2>
 <h3>In</h3>
 <ul>
