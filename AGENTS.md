@@ -35,6 +35,7 @@ Antes de escribir código, lee también:
 | Convención | De qué trata |
 | --- | --- |
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
+| [Lo que el webview necesita del entorno se pone en `main.rs`](docs/tauri/preparar-el-webview-antes-de-que-arranque-gtk.md) | Antes de que arranque GTK, tras un `cfg` de plataforma y respetando lo que ya venga puesto. En el script de desarrollo solo arregla la máquina de quien lo escribe. |
 
 ### `docs/ui/` — interfaz
 
