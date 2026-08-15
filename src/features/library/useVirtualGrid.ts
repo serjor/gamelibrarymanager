@@ -3,7 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 interface Options {
   itemCount: number;
   rowHeight: number;
-  columnWidth: number;
+  /**
+   * Ancho de cada columna. Sin él la rejilla es de una sola columna, que es lo
+   * que necesita una tabla: una lista es una rejilla que no tiene nada que
+   * dividir.
+   */
+  columnWidth?: number;
   /** Filas de más arriba y abajo, para que no se vea el hueco al desplazar. */
   overscan?: number;
 }
@@ -57,7 +62,7 @@ export function useVirtualGrid({
   }, []);
 
   return useMemo(() => {
-    const columns = Math.max(1, Math.floor(viewport.width / columnWidth));
+    const columns = columnWidth ? Math.max(1, Math.floor(viewport.width / columnWidth)) : 1;
     const rows = Math.ceil(itemCount / columns);
     const firstRow = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
     const visibleRows = Math.ceil(viewport.height / rowHeight) + overscan * 2;

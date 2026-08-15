@@ -327,6 +327,169 @@ button.link {
   align-items: flex-start;
 }
 
+.library-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* El rango en el que esta vista funciona: de 56rem para arriba. Por debajo se
+   desplaza en horizontal dentro de su propia caja, sin arrastrar consigo el
+   resto de la página.
+   El número no es arbitrario: las ocho columnas de ancho fijo suman 40,7rem y
+   el título se queda con lo que sobra, así que con menos de 56rem el título
+   empieza a recortarse a «Ba…» y la tabla deja de servir para nada. Encoger
+   hasta ahí no es más legible que empujar. */
+.tabla-viewport {
+  height: 70vh;
+  overflow: auto;
+}
+
+.tabla {
+  width: 100%;
+  min-width: 56rem;
+  border-collapse: collapse;
+  font-size: var(--t-m);
+  /* Fijo y con `colgroup`: sin esto cada columna mide lo que mida su contenido
+     y la cabecera deja de cuadrar con las celdas al desplazar. */
+  table-layout: fixed;
+}
+
+.tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--fondo);
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+  padding: 0;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-atenuado);
+}
+
+.tabla th .th {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: var(--e-2) var(--e-3);
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.tabla th.num .th {
+  text-align: right;
+}
+
+.tabla td {
+  height: 33px;
+  padding: 0 var(--e-3);
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Las filas espaciadoras de la virtualización no llevan celdas, y sin esto
+   heredarían el borde inferior y pintarían una raya suelta. */
+.tabla tbody tr:not([class]) td,
+.tabla tbody tr:empty {
+  border: none;
+}
+
+.tabla .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla tbody tr:hover td {
+  background: var(--hueco);
+}
+
+.tabla tr.marcada td {
+  background: color-mix(in srgb, var(--acento) 12%, transparent);
+}
+
+.tabla tr.abierta td {
+  box-shadow: inset 0 0 0 1px var(--acento);
+}
+
+.tabla .celda {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tienda {
+  font-size: var(--t-xs);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-s);
+  padding: 0 var(--e-1);
+  margin-right: var(--e-1);
+  color: var(--texto-atenuado);
+}
+
+.estado {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  border-radius: var(--radio-s);
+  padding: 0 var(--e-1);
+  border: 1px solid currentColor;
+}
+
+.estado.backlog { color: var(--estado-pendiente); }
+.estado.playing { color: var(--estado-jugando); }
+.estado.finished { color: var(--estado-terminado); }
+.estado.abandoned { color: var(--estado-abandonado); }
+
+/* Pegada abajo mientras dure la selección: si hay que buscarla, no se usa. */
+.lote {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+  padding: var(--e-3);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
+  margin-top: var(--e-3);
+}
+
+.lote-campo {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--texto-atenuado);
+  font-weight: 400;
+}
+
+.lote select {
+  font: inherit;
+  font-size: var(--t-s);
+  padding: var(--e-1) var(--e-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-s);
+  background: transparent;
+  color: inherit;
+}
+
+.lote [role="alert"] {
+  flex-basis: 100%;
+  padding: 0;
+}
+
 .grid-viewport {
   flex: 1;
   height: 70vh;

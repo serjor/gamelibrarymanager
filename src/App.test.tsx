@@ -1,6 +1,13 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { render, screen } from "@testing-library/react";
-import type { Account, AppInfo, LibraryRow, LibrarySummary, ReviewItem } from "./lib/api";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import type {
+  Account,
+  AppInfo,
+  LibraryRow,
+  LibrarySummary,
+  PlayStatus,
+  ReviewItem,
+} from "./lib/api";
 
 const state = {
   info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true } as AppInfo,
@@ -9,6 +16,8 @@ const state = {
   summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
   queue: [] as ReviewItem[],
   rows: [] as LibraryRow[],
+  /** Lo que se ha escrito de verdad, para poder contarlo y mirarlo. */
+  guardados: [] as [string, PlayStatus | null, number | null, string | null][],
 };
 
 // El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
@@ -35,7 +44,15 @@ mock.module("./lib/api", () => ({
     reviewWithoutMetadata: () => Promise.resolve(),
     library: () => Promise.resolve(state.rows),
     cancelOperation: () => Promise.resolve(),
-    setUserState: () => Promise.resolve(),
+    setUserState: (
+      gameId: string,
+      status: PlayStatus | null,
+      rating: number | null,
+      notes: string | null,
+    ) => {
+      state.guardados.push([gameId, status, rating, notes]);
+      return Promise.resolve();
+    },
   },
   errorMessage: (cause: unknown) => String(cause),
 }));
@@ -56,6 +73,42 @@ const cuentaGog: Account = {
   last_sync_at: null,
 };
 
+function fila(overrides: Partial<LibraryRow>): LibraryRow {
+  return {
+    game_id: crypto.randomUUID(),
+    title: "Juego",
+    sort_title: "juego",
+    cover_url: null,
+    summary: null,
+    release_year: null,
+    genres: [],
+    owned_stores: ["steam"],
+    wishlist_stores: [],
+    store_cover_url: null,
+    store_url: null,
+    playtime_minutes: 0,
+    last_played_at: null,
+    status: null,
+    rating: null,
+    notes: null,
+    ...overrides,
+  };
+}
+
+/**
+ * Cuatro filas y no más en los tests de tabla: sin layout de verdad, el
+ * virtualizador mide el contenedor a cero y solo pinta su ventana de reserva.
+ * Cuatro es lo que entra, y además es el tamaño de lote que pide el plan.
+ */
+const CUATRO = [
+  fila({ title: "Celeste", sort_title: "celeste", playtime_minutes: 900, rating: 9, notes: "corto y redondo" }),
+  fila({ title: "Hades", sort_title: "hades", playtime_minutes: 3120, rating: 8 }),
+  fila({ title: "Outer Wilds", sort_title: "outer wilds", playtime_minutes: 0 }),
+  fila({ title: "Prey", sort_title: "prey", playtime_minutes: 120, rating: 6 }),
+];
+
+const marcaDe = (titulo: string) => screen.getByLabelText(`Seleccionar ${titulo}`) as HTMLInputElement;
+
 describe("App", () => {
   beforeEach(() => {
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
@@ -64,6 +117,7 @@ describe("App", () => {
     state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
     state.queue = [];
     state.rows = [];
+    state.guardados = [];
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {
@@ -140,30 +194,83 @@ describe("App", () => {
   it("la biblioteca pinta las fichas con sus tiendas", async () => {
     state.accounts = [cuentaSteam];
     state.rows = [
-      {
-        game_id: "22222222-2222-7222-8222-222222222222",
+      fila({
         title: "Disco Elysium",
         sort_title: "disco elysium",
-        cover_url: null,
-        summary: null,
         release_year: 2019,
         genres: ["RPG"],
         owned_stores: ["steam", "gog"],
-        wishlist_stores: [],
-        store_cover_url: null,
-        store_url: null,
         playtime_minutes: 1240,
-        last_played_at: null,
-        status: null,
-        rating: null,
-        notes: null,
-      },
+      }),
     ];
     render(<App />);
-    // La tarjeta es un botón: su nombre accesible es lo que oye quien no ve la
-    // portada, y lleva el título y las tiendas.
-    const tarjeta = await screen.findByRole("button", { name: /Disco Elysium/ });
-    expect(tarjeta.textContent).toContain("steam · gog");
+    // Cada juego es una fila, y en ella están las dos tiendas que lo tienen: es
+    // lo que distingue una copia duplicada de una sola.
+    const celda = await screen.findByRole("button", { name: "Disco Elysium" });
+    const filaDom = celda.closest("tr");
+    expect(filaDom?.textContent).toContain("steam");
+    expect(filaDom?.textContent).toContain("gog");
+    expect(filaDom?.textContent).toContain("21 h");
+  });
+
+  it("pulsar una columna ordena por ella, y volver a pulsarla da la vuelta", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+
+    const titulos = () =>
+      screen.getAllByRole("button").filter((b) => b.className === "celda").map((b) => b.textContent);
+
+    // De salida, por título.
+    expect(await screen.findByRole("button", { name: "Celeste" })).toBeDefined();
+    expect(titulos()).toEqual(["Celeste", "Hades", "Outer Wilds", "Prey"]);
+
+    fireEvent.click(screen.getByRole("button", { name: /Horas/ }));
+    // Ascendente, y lo que no se ha jugado al final aunque valga cero.
+    expect(titulos()).toEqual(["Prey", "Celeste", "Hades", "Outer Wilds"]);
+
+    fireEvent.click(screen.getByRole("button", { name: /Horas/ }));
+    expect(titulos()).toEqual(["Hades", "Celeste", "Prey", "Outer Wilds"]);
+  });
+
+  it("con mayúsculas se selecciona el rango entero, no una fila", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    await screen.findByRole("button", { name: "Celeste" });
+
+    fireEvent.click(marcaDe("Celeste"));
+    expect(marcaDe("Celeste").checked).toBe(true);
+    expect(marcaDe("Prey").checked).toBe(false);
+
+    fireEvent.click(marcaDe("Prey"), { shiftKey: true });
+    for (const titulo of ["Celeste", "Hades", "Outer Wilds", "Prey"]) {
+      expect(marcaDe(titulo).checked).toBe(true);
+    }
+  });
+
+  it("el lote escribe una vez por juego y no se lleva por delante lo escrito", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    await screen.findByRole("button", { name: "Celeste" });
+
+    fireEvent.click(marcaDe("Celeste"));
+    fireEvent.click(marcaDe("Prey"), { shiftKey: true });
+
+    fireEvent.change(screen.getByLabelText("Marcar como"), { target: { value: "abandoned" } });
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    // Una llamada por juego, ni una más: el lote no puede escribir dos veces
+    // sobre el mismo ni saltarse uno.
+    await waitFor(() => expect(state.guardados).toHaveLength(4));
+    expect(state.guardados.every(([, estado]) => estado === "abandoned")).toBe(true);
+    // La nota y el texto se devuelven tal cual: `set_user_state` reescribe la
+    // fila entera, y sin esto un cambio de estado en lote borraría en silencio
+    // lo único que la aplicación sabe del usuario.
+    const celeste = state.guardados.find(([id]) => id === CUATRO[0]!.game_id);
+    expect(celeste?.[2]).toBe(9);
+    expect(celeste?.[3]).toBe("corto y redondo");
   });
 
   it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {
