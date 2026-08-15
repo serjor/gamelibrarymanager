@@ -16,6 +16,7 @@ struct TokenResponse {
 
 #[derive(Deserialize)]
 struct ExternalGame {
+    uid: String,
     game: i64,
 }
 
@@ -61,10 +62,16 @@ pub fn parse_token(body: &str, now: OffsetDateTime) -> Result<IgdbToken> {
     })
 }
 
-pub fn parse_external_game(body: &str) -> Result<Option<i64>> {
+/// Los cruces de un lote, indexados por el identificador de la tienda.
+///
+/// Un `uid` puede venir repetido —IGDB registra la misma copia bajo varias
+/// fichas cuando hay ediciones— y entonces gana la primera. Devolver dos fichas
+/// para un identificador que se pidió como exacto sería mentir sobre lo que es
+/// exacto, y quien llama no tiene con qué desempatar.
+pub fn parse_external_games(body: &str) -> Result<Vec<(String, i64)>> {
     let parsed: Vec<ExternalGame> = serde_json::from_str(body)
         .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
-    Ok(parsed.first().map(|e| e.game))
+    Ok(parsed.into_iter().map(|e| (e.uid, e.game)).collect())
 }
 
 pub fn parse_candidates(body: &str) -> Result<Vec<Candidate>> {

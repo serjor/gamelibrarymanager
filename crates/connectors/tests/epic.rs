@@ -33,6 +33,23 @@ const CLIENT_SECRET: &str = "CLIENT_SECRET_FROM_THE_USER";
 const BASIC: &str =
     "Basic MzRhMDJjZjhmNDQxNGUyOWIxNTkyMTg3NmRhMzZmOWE6Q0xJRU5UX1NFQ1JFVF9GUk9NX1RIRV9VU0VS";
 
+/// Offers of a namespace, in the shape the catalogue answers: `elements`, and
+/// each one with its `offerType`. Checked against the real service on
+/// 2026-08-15.
+const OFFERS_ONE_BASE_GAME: &str = r#"{"elements":[
+    {"id":"OFFER_CARDPOCALYPSE","offerType":"BASE_GAME","title":"Cardpocalypse"},
+    {"id":"OFFER_DECKS","offerType":"DLC","title":"Cardpocalypse - Deck Pack"}
+]}"#;
+
+/// The case of `Chivalry 2`: the game and its special edition share a
+/// namespace, and nothing in the answer says which one the account owns.
+const OFFERS_TWO_BASE_GAMES: &str = r#"{"elements":[
+    {"id":"OFFER_KENA","offerType":"BASE_GAME","title":"Kena"},
+    {"id":"OFFER_KENA_DELUXE","offerType":"BASE_GAME","title":"Kena Deluxe"}
+]}"#;
+
+const OFFER_CARDPOCALYPSE: &str = "OFFER_CARDPOCALYPSE";
+
 const NAMESPACE_CARDS: &str = "a1b2c3d4e5f6478899aabbccddeeff00";
 const NAMESPACE_KENA: &str = "d5241c76f178492ea1540fce45616757";
 const ITEM_ID_GAME: &str = "e6ff9d3d4b2a4a5e9b7c0a1d2e3f4a5b";
@@ -97,6 +114,28 @@ async fn mock_library(server: &MockServer) {
                 "/catalog/api/shared/namespace/{namespace}/bulk/items"
             )))
             .and(query_param("id", id))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(body, "application/json"))
+            .mount(server)
+            .await;
+    }
+
+    mock_offers(server).await;
+}
+
+/// The offers of each namespace, which is where the identifier that IGDB
+/// indexes lives.
+///
+/// The namespace of the cards has one base game and one add-on, so it has an
+/// identifier. The one of Kena has two base games, so it has none.
+async fn mock_offers(server: &MockServer) {
+    for (namespace, body) in [
+        (NAMESPACE_CARDS, OFFERS_ONE_BASE_GAME),
+        (NAMESPACE_KENA, OFFERS_TWO_BASE_GAMES),
+    ] {
+        Mock::given(method("GET"))
+            .and(path(format!(
+                "/catalog/api/shared/namespace/{namespace}/offers"
+            )))
             .respond_with(ResponseTemplate::new(200).set_body_raw(body, "application/json"))
             .mount(server)
             .await;
@@ -242,6 +281,62 @@ async fn reads_the_library_without_dlc_or_unreal_assets() {
     // guessing it from the title lands on the wrong page half the time. In the
     // screen that exists for comparing, that is worse than no link.
     assert!(entries.iter().all(|entry| entry.store_url.is_none()));
+}
+
+/// The identifier that crosses with IGDB is the offer, and it only travels when
+/// the namespace leaves no doubt about which offer it is.
+#[tokio::test]
+async fn a_copy_carries_the_offer_of_its_namespace() {
+    let server = MockServer::start().await;
+    mock_library(&server).await;
+
+    let entries = connector(&server)
+        .owned(&session(future()), StoreAccountId::new())
+        .await
+        .expect("library");
+
+    let cards = entries
+        .iter()
+        .find(|entry| entry.title == "Cardpocalypse")
+        .expect("the game of the cards");
+    assert_eq!(cards.raw["offerId"], OFFER_CARDPOCALYPSE);
+
+    // Kena lives in a namespace with two base games. Guessing would attach the
+    // copy to the card of the wrong edition, so it carries no identifier and
+    // the matching decides it by title.
+    let kena = entries
+        .iter()
+        .find(|entry| entry.title == "Kena: Bridge of Spirits")
+        .expect("the second game");
+    assert!(kena.raw["offerId"].is_null());
+}
+
+/// A namespace whose offers fail costs its identifier, never the library.
+#[tokio::test]
+async fn a_failure_in_the_offers_does_not_bring_down_the_synchronisation() {
+    let server = MockServer::start().await;
+    // First the failure, because wiremock answers with the first mock that
+    // matches and `mock_library` also mounts these offers.
+    Mock::given(method("GET"))
+        .and(path(format!(
+            "/catalog/api/shared/namespace/{NAMESPACE_CARDS}/offers"
+        )))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&server)
+        .await;
+    mock_library(&server).await;
+
+    let entries = connector(&server)
+        .owned(&session(future()), StoreAccountId::new())
+        .await
+        .expect("a failure in the offers does not invalidate the synchronisation");
+
+    assert_eq!(entries.len(), 2);
+    let cards = entries
+        .iter()
+        .find(|entry| entry.title == "Cardpocalypse")
+        .expect("the game of the cards");
+    assert!(cards.raw["offerId"].is_null());
 }
 
 #[tokio::test]

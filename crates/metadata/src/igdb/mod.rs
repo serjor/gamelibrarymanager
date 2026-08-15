@@ -2,13 +2,37 @@
 //!
 //! Dos vías de búsqueda, y el orden importa:
 //!
-//! 1. `external_games`, que cruza el appid de Steam con la ficha de IGDB. Es
-//!    exacto y no admite discusión.
-//! 2. Búsqueda por nombre, para GOG y Epic, que no tienen identificador
-//!    cruzado. Aquí ya no hay certeza y decide `domain::matching`.
+//! 1. `external_games`, que cruza el identificador de la tienda con la ficha de
+//!    IGDB. Es exacto y no admite discusión. Vale para las tres tiendas.
+//! 2. Búsqueda por nombre, para lo que no cruza. Aquí ya no hay certeza y decide
+//!    `domain::matching`.
+//!
+//! ## Cobertura de `external_games` (medida el 2026-08-15)
+//!
+//! Contra una biblioteca real de 602 copias de Steam, 288 de GOG y 318 de Epic:
+//!
+//! - **Steam**, con el appid: 486 de 500 cruzan, el 97%.
+//! - **GOG**, con el `external_id` de Galaxy: 211 de 288, el 73%. De los 77 que
+//!   fallan, 69 no son juegos del catálogo de GOG —53 claves de Amazon Luna y
+//!   Amazon Prime, 10 bandas sonoras y extras, 6 prólogos y demos—. Sobre los
+//!   219 juegos de verdad cruzan 211, **el 96%**, la misma cifra que Steam.
+//! - **Epic**, con el identificador de la oferta: 78 de 80 namespaces, el 97%.
+//!   El conector lo consigue; aquí solo se consulta. Por qué es la oferta y no
+//!   el item está en `connectors::epic`.
+//!
+//! Es decir, la nota que vivía aquí —«Steam es el único cruce fiable»— era
+//! falsa. Se escribió en la fase 4, cuando Steam era la única tienda del
+//! proyecto, y nadie la volvió a medir al llegar GOG y Epic.
+//!
+//! ## `category` está obsoleto
+//!
+//! La documentación marca `category` como obsoleto y manda usar
+//! `external_game_source`. Los identificadores son los mismos, así que el cambio
+//! es de nombre de campo y nada más.
 
 mod parse;
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use domain::Candidate;
@@ -21,9 +45,21 @@ use crate::{MetadataError, Result};
 const API: &str = "https://api.igdb.com/v4";
 const TWITCH_TOKEN: &str = "https://id.twitch.tv/oauth2/token";
 
-/// Categoría 1 de `external_games`: Steam. Es el único cruce fiable que
-/// publica IGDB para las tiendas que nos interesan.
-const EXTERNAL_CATEGORY_STEAM: u8 = 1;
+/// Cuántos identificadores caben en una consulta de `external_games`.
+///
+/// El tope de `limit` que documenta IGDB es 500, y el filtro `uid = (…)` admite
+/// ese mismo lote. Con 602 copias de Steam la diferencia es 2 peticiones en vez
+/// de 602, que a 4 por segundo son dos segundos en vez de dos minutos y medio.
+const BATCH: usize = 500;
+
+/// Tienda de la que viene un identificador, tal y como la numera
+/// `external_game_sources`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExternalSource {
+    Steam = 1,
+    Gog = 5,
+    Epic = 26,
+}
 
 /// Credenciales del propio usuario, sacadas de su aplicación de Twitch.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,20 +131,49 @@ impl IgdbClient {
         parse::parse_token(&body, OffsetDateTime::now_utc())
     }
 
-    /// Ficha exacta a partir del appid de Steam.
-    pub async fn by_steam_app_id(
+    /// Fichas exactas a partir de los identificadores de una tienda.
+    ///
+    /// Se pregunta por lotes y no copia a copia. No es solo velocidad: a 4
+    /// peticiones por segundo, una biblioteca grande tardaba tanto en cruzarse
+    /// que el usuario cancelaba antes de llegar al final, y lo que se quedaba
+    /// sin cruzar caía en la búsqueda por título, que es la vía dudosa.
+    ///
+    /// Los identificadores que IGDB no conozca sencillamente no aparecen en el
+    /// mapa. No es un error: es lo normal en las claves de terceros y en los
+    /// extras que las tiendas venden como si fueran juegos.
+    pub async fn by_external_ids(
         &self,
         credentials: &IgdbCredentials,
         token: &IgdbToken,
-        app_id: &str,
-    ) -> Result<Option<i64>> {
-        let query = format!(
-            "fields game; where category = {EXTERNAL_CATEGORY_STEAM} & uid = \"{app_id}\"; limit 1;"
-        );
-        let body = self
-            .post("external_games", credentials, token, query)
-            .await?;
-        parse::parse_external_game(&body)
+        source: ExternalSource,
+        uids: &[String],
+    ) -> Result<HashMap<String, i64>> {
+        let source = source as u8;
+        let mut cruces = HashMap::with_capacity(uids.len());
+
+        for lote in uids.chunks(BATCH) {
+            // Las comillas de un identificador romperían la consulta. Ninguna
+            // tienda las usa, pero el identificador llega de la red.
+            let valores = lote
+                .iter()
+                .map(|uid| format!("\"{}\"", uid.replace('"', "")))
+                .collect::<Vec<_>>()
+                .join(",");
+            let query = format!(
+                "fields uid, game; \
+                 where external_game_source = {source} & uid = ({valores}); \
+                 limit {BATCH};"
+            );
+            let body = self
+                .post("external_games", credentials, token, query)
+                .await?;
+
+            for (uid, igdb_id) in parse::parse_external_games(&body)? {
+                cruces.entry(uid).or_insert(igdb_id);
+            }
+        }
+
+        Ok(cruces)
     }
 
     /// Candidatos por nombre, para las tiendas sin identificador cruzado.

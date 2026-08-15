@@ -18,7 +18,7 @@ use time::OffsetDateTime;
 use wiremock::matchers::{body_string_contains, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-const EXTERNAL: &str = r#"[{"id":1,"game":115653}]"#;
+const EXTERNAL: &str = r#"[{"id":1,"uid":"632470","game":115653}]"#;
 const GAME_115653: &str = r#"[{"id":115653,"name":"Disco Elysium","first_release_date":1571270400,
                               "cover":{"id":1,"image_id":"co1x2y"}}]"#;
 const SEARCH_AMBIGUO: &str = r#"[{"id":250,"name":"Doom","first_release_date":757382400},
@@ -43,7 +43,7 @@ async fn igdb_server(search_body: &'static str) -> MockServer {
 
     Mock::given(method("POST"))
         .and(path("/external_games"))
-        .and(body_string_contains("uid = \"632470\""))
+        .and(body_string_contains("\"632470\""))
         .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
         .mount(&server)
         .await;
@@ -242,9 +242,10 @@ async fn un_corte_de_igdb_no_tira_lo_que_ya_se_habia_emparejado() {
         .expect("volcar entradas");
 
     let server = MockServer::start().await;
+    // El cruce va por lotes: el appid viaja dentro de `uid = (…)`, no suelto.
     Mock::given(method("POST"))
         .and(path("/external_games"))
-        .and(body_string_contains("uid = \"632470\""))
+        .and(body_string_contains("\"632470\""))
         .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
         .mount(&server)
         .await;
@@ -319,4 +320,85 @@ async fn un_juego_que_igdb_no_conoce_se_cuenta_aparte_y_no_se_inventa_ficha() {
         GameRepository(&db).all().await.expect("fichas").is_empty(),
         "sin candidatos no se inventa una ficha: lo decide el usuario"
     );
+}
+
+/// GOG y Epic también tienen identificador exacto, y desde que lo tienen no
+/// pasan por la búsqueda por título.
+///
+/// Cada tienda pregunta por su propia fuente de `external_games`: el
+/// `external_id` de Galaxy para GOG y la oferta de la tienda para Epic, que
+/// viaja en `raw` porque no está en la copia del lanzador.
+#[tokio::test]
+async fn gog_y_epic_enlazan_por_identificador_y_no_llegan_a_buscar_por_titulo() {
+    let db = Database::in_memory().await.expect("base");
+    let gog = cuenta(&db, StoreId::Gog).await;
+    let epic = cuenta(&db, StoreId::Epic).await;
+
+    let de_gog = entrada(gog, StoreId::Gog, "1207658930", "The Witcher 3");
+    let mut de_epic = entrada(epic, StoreId::Epic, "Heron", "Alan Wake");
+    de_epic.raw = serde_json::json!({ "offerId": "OFERTA_ALAN_WAKE" });
+    StoreEntryRepository(&db)
+        .upsert_many(&[de_gog.clone(), de_epic.clone()])
+        .await
+        .expect("volcar entradas");
+
+    let server = MockServer::start().await;
+    for (fuente, cuerpo) in [
+        (5, r#"[{"id":1,"uid":"1207658930","game":1942}]"#),
+        (26, r#"[{"id":2,"uid":"OFERTA_ALAN_WAKE","game":548}]"#),
+    ] {
+        Mock::given(method("POST"))
+            .and(path("/external_games"))
+            .and(body_string_contains(format!(
+                "external_game_source = {fuente}"
+            )))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(cuerpo, "application/json"))
+            .mount(&server)
+            .await;
+    }
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .mount(&server)
+        .await;
+
+    // Si alguna de las dos copias llegara a la búsqueda por título, esta
+    // expectativa de cero llamadas fallaría al soltar el servidor.
+    Mock::given(method("POST"))
+        .and(path("/games"))
+        .and(body_string_contains("search"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .expect(0)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(
+            r#"[{"id":1942,"name":"The Witcher 3: Wild Hunt"}]"#,
+            "application/json",
+        ))
+        .mount(&server)
+        .await;
+
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("emparejar");
+
+    assert_eq!(
+        report.linked, 2,
+        "las dos copias tienen identificador exacto"
+    );
+    assert_eq!(report.review, 0);
+
+    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    assert_eq!(links.len(), 2);
+    assert!(
+        links.iter().all(|link| link.confidence == 1.0),
+        "un identificador externo no se puntúa: vale 1.0 o no vale"
+    );
+
+    drop(server);
 }

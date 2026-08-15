@@ -4,12 +4,24 @@
 //! solo cuando no lo hay se recurre al parecido de títulos, y ahí decide
 //! `domain::matching`, que ante la duda manda a revisión.
 //!
+//! Las tres tiendas tienen identificador externo, y cada una el suyo: el appid
+//! de Steam, el `external_id` de Galaxy y la oferta de Epic. Los cruces se piden
+//! **todos de golpe antes del bucle**, en lotes de 500, y no copia a copia. A 4
+//! peticiones por segundo, una biblioteca de 1.200 copias tardaba cinco minutos
+//! en cruzarse y el usuario cancelaba antes del final; lo que se quedaba sin
+//! cruzar caía en la búsqueda por título, que es justo la vía dudosa que el
+//! identificador existe para evitar.
+//!
 //! Escribe en `game`, `game_link` y `match_candidate`. Nunca en `store_entry`
 //! —eso es de la tienda— ni en `user_state` —eso es del usuario—.
 
-use domain::{Game, GameId, GameLink, LinkMethod, MatchDecision, StoreEntry, StoreId, matching};
+use std::collections::HashMap;
+
+use domain::{
+    Game, GameId, GameLink, LinkMethod, MatchDecision, StoreEntry, StoreEntryId, StoreId, matching,
+};
 use metadata::IgdbClient;
-use metadata::igdb::{IgdbCredentials, IgdbToken};
+use metadata::igdb::{ExternalSource, IgdbCredentials, IgdbToken};
 use serde::Serialize;
 use storage::Database;
 use storage::repositories::{
@@ -69,6 +81,25 @@ pub async fn resolve(
     let total = pending.len();
     let mut desde_el_ultimo_guardado = 0;
 
+    progress.report(SyncProgress {
+        store: "igdb".to_owned(),
+        stage: "cruzando identificadores",
+        done: 0,
+        total,
+    });
+    // El cruce va antes del bucle, así que un corte aquí no deja nada a medias:
+    // es el tramo cero. Se dice por qué se para y no se empareja nada, en vez de
+    // dejar caer la biblioteca entera en la búsqueda por título, que enlazaría
+    // peor de lo que enlaza el identificador.
+    let external = match external_ids(igdb, credentials, token, &pending).await {
+        Ok(external) => external,
+        Err(AppError::Metadata(error)) => {
+            report.stopped = Some(error.to_string());
+            return Ok(report);
+        }
+        Err(otro) => return Err(otro),
+    };
+
     for (indice, entry) in pending.into_iter().enumerate() {
         // Se para entre juegos, nunca a mitad de uno. Lo ya decidido se
         // conserva y la siguiente pasada sigue por donde iba.
@@ -83,7 +114,15 @@ pub async fn resolve(
             total,
         });
 
-        let decision = match decide(igdb, credentials, token, &entry).await {
+        let decision = match decide(
+            igdb,
+            credentials,
+            token,
+            &entry,
+            external.get(&entry.id).copied(),
+        )
+        .await
+        {
             Ok(decision) => decision,
             // Un corte del proveedor para la pasada aquí mismo, y lo de atrás se
             // guarda igual. Un fallo de la base de datos sí sube: si no se puede
@@ -213,19 +252,84 @@ pub async fn resolve_local(
     Ok(report)
 }
 
+/// Cruza contra `external_games` todo lo que traiga identificador, tienda por
+/// tienda y en lotes.
+///
+/// Lo que no cruce no aparece en el mapa, y eso es lo normal: las claves de
+/// Amazon que GOG regala, las bandas sonoras y los prólogos no tienen ficha en
+/// IGDB, y son la mayor parte de lo que falla. Esas copias siguen su camino por
+/// el título.
+async fn external_ids(
+    igdb: &IgdbClient,
+    credentials: &IgdbCredentials,
+    token: &IgdbToken,
+    pending: &[StoreEntry],
+) -> Result<HashMap<StoreEntryId, i64>, AppError> {
+    const FUENTES: [(StoreId, ExternalSource); 3] = [
+        (StoreId::Steam, ExternalSource::Steam),
+        (StoreId::Gog, ExternalSource::Gog),
+        (StoreId::Epic, ExternalSource::Epic),
+    ];
+
+    let mut resueltos = HashMap::new();
+
+    for (store, source) in FUENTES {
+        let de_la_tienda: Vec<(StoreEntryId, String)> = pending
+            .iter()
+            .filter(|entry| entry.store == store)
+            .filter_map(|entry| external_uid(entry).map(|uid| (entry.id, uid)))
+            .collect();
+        if de_la_tienda.is_empty() {
+            continue;
+        }
+
+        // El mismo juego puede estar en dos cuentas de la misma tienda, y
+        // preguntar dos veces por él gastaría hueco del lote.
+        let mut uids: Vec<String> = de_la_tienda.iter().map(|(_, uid)| uid.clone()).collect();
+        uids.sort_unstable();
+        uids.dedup();
+
+        let cruces = igdb
+            .by_external_ids(credentials, token, source, &uids)
+            .await?;
+        for (id, uid) in de_la_tienda {
+            if let Some(igdb_id) = cruces.get(&uid) {
+                resueltos.insert(id, *igdb_id);
+            }
+        }
+    }
+
+    Ok(resueltos)
+}
+
+/// El identificador con el que cada tienda aparece en `external_games`.
+///
+/// Steam y GOG publican el suyo en la propia copia. Epic no: lo que IGDB indexa
+/// es la **oferta** de su tienda, que no viaja en el asset del lanzador, y por
+/// eso el conector la resuelve durante la sincronización y la deja en `raw`.
+/// Una copia de Epic sincronizada antes de que existiera ese campo no lo tiene
+/// y se empareja por título hasta la siguiente pasada.
+fn external_uid(entry: &StoreEntry) -> Option<String> {
+    match entry.store {
+        StoreId::Steam | StoreId::Gog => Some(entry.store_app_id.clone()),
+        StoreId::Epic => entry
+            .raw
+            .get("offerId")
+            .and_then(|offer| offer.as_str())
+            .map(str::to_owned),
+    }
+}
+
 async fn decide(
     igdb: &IgdbClient,
     credentials: &IgdbCredentials,
     token: &IgdbToken,
     entry: &StoreEntry,
+    external: Option<i64>,
 ) -> Result<MatchDecision, AppError> {
-    // Steam publica su appid en `external_games`: es exacto y ahorra toda la
-    // incertidumbre del parecido de títulos.
-    if entry.store == StoreId::Steam
-        && let Some(igdb_id) = igdb
-            .by_steam_app_id(credentials, token, &entry.store_app_id)
-            .await?
-    {
+    // El identificador de la tienda es exacto y ahorra toda la incertidumbre
+    // del parecido de títulos.
+    if let Some(igdb_id) = external {
         return Ok(matching::decide_by_external_id(igdb_id));
     }
 

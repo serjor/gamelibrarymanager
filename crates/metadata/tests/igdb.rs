@@ -2,7 +2,7 @@
 //! ser lento y frágil, haría falta una aplicación de Twitch para ejecutarlos.
 
 use metadata::MetadataError;
-use metadata::igdb::{IgdbClient, IgdbCredentials, IgdbToken};
+use metadata::igdb::{ExternalSource, IgdbClient, IgdbCredentials, IgdbToken};
 use time::OffsetDateTime;
 use wiremock::matchers::{body_string_contains, header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -68,19 +68,51 @@ async fn el_appid_de_steam_da_la_ficha_exacta() {
         .and(path("/external_games"))
         .and(header("Client-ID", "MI_CLIENT_ID"))
         .and(header("Authorization", "Bearer TOKEN_DE_APLICACION"))
-        // Categoría 1 es Steam: sin ese filtro vendrían cruces de otras tiendas.
-        .and(body_string_contains("category = 1"))
-        .and(body_string_contains("uid = \"632470\""))
+        // La fuente 1 es Steam: sin ese filtro vendrían cruces de otras
+        // tiendas. Y es `external_game_source`, no `category`, que IGDB marca
+        // como obsoleto.
+        .and(body_string_contains("external_game_source = 1"))
+        .and(body_string_contains("uid = (\"632470\")"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
         .mount(&server)
         .await;
 
-    let igdb_id = client(&server)
-        .by_steam_app_id(&credentials(), &token(), "632470")
+    let cruces = client(&server)
+        .by_external_ids(
+            &credentials(),
+            &token(),
+            ExternalSource::Steam,
+            &["632470".to_owned()],
+        )
         .await
         .expect("consulta");
 
-    assert_eq!(igdb_id, Some(115653));
+    assert_eq!(cruces.get("632470"), Some(&115653));
+}
+
+#[tokio::test]
+async fn cada_tienda_pregunta_por_su_propia_fuente() {
+    let server = MockServer::start().await;
+    // GOG es la fuente 5 y Epic la 26. Preguntar por la fuente equivocada
+    // devolvería la ficha de otro juego que comparte identificador.
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .and(body_string_contains("external_game_source = 5"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
+        .mount(&server)
+        .await;
+
+    let cruces = client(&server)
+        .by_external_ids(
+            &credentials(),
+            &token(),
+            ExternalSource::Gog,
+            &["632470".to_owned()],
+        )
+        .await
+        .expect("consulta");
+
+    assert_eq!(cruces.len(), 1);
 }
 
 #[tokio::test]
@@ -92,13 +124,40 @@ async fn un_appid_desconocido_no_es_un_error() {
         .mount(&server)
         .await;
 
-    assert_eq!(
+    assert!(
         client(&server)
-            .by_steam_app_id(&credentials(), &token(), "999999")
+            .by_external_ids(
+                &credentials(),
+                &token(),
+                ExternalSource::Steam,
+                &["999999".to_owned()],
+            )
             .await
-            .expect("consulta"),
-        None
+            .expect("consulta")
+            .is_empty()
     );
+}
+
+/// El lote es lo que convierte una biblioteca grande en dos peticiones. Si
+/// alguien vuelve a preguntar copia a copia, este test lo dice.
+#[tokio::test]
+async fn mil_identificadores_caben_en_dos_peticiones() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .expect(2)
+        .mount(&server)
+        .await;
+
+    let uids: Vec<String> = (0..1000).map(|i| i.to_string()).collect();
+    client(&server)
+        .by_external_ids(&credentials(), &token(), ExternalSource::Steam, &uids)
+        .await
+        .expect("consulta");
+
+    // `expect(2)` se comprueba al soltar el servidor.
+    drop(server);
 }
 
 #[tokio::test]

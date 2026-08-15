@@ -24,6 +24,7 @@ Antes de escribir código, lee también:
 | [Ninguna credencial de tienda va dentro del binario](docs/connectors/credenciales-fuera-del-binario.md) | Todo lo aporta el usuario y vive en el almacén de secretos, incluso cuando el secreto es público. Nunca se pide la contraseña de una tienda. |
 | [Los endpoints no oficiales se contrastan antes de escribir el conector](docs/connectors/contrastar-endpoints-no-oficiales.md) | Leer la implementación de referencia viva, probar a mano, y anotar la vigencia con fecha en el módulo. |
 | [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | Una tienda rota se apaga y el resto sigue igual. El motivo se guarda, apagar es decisión del usuario y nada más la toma. |
+| [Un identificador ambiguo no es una identidad](docs/connectors/un-identificador-ambiguo-no-es-una-identidad.md) | Si la tienda admite dos lecturas de cuál es el identificador de la copia, el conector no elige: no lo entrega y decide el título. |
 
 ### `docs/domain/` — reglas puras
 

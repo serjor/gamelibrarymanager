@@ -66,6 +66,28 @@
 //! screen that exists for comparing is worse than no link, and it is the same
 //! call the GOG connector makes about the wish list.
 //!
+//! **Correction of 2026-08-15.** The sentence above says the two ways were
+//! both tried. There was a third one, and it works:
+//! `catalog/api/shared/namespace/{ns}/offers` answers `200` to the token of the
+//! launcher that this connector already holds, with no bot check, and every
+//! offer carries its `urlSlug`. That endpoint is what [`EpicConnector::offers`]
+//! now asks for, though for the identifier and not for the address. Whether the
+//! copy should also get its page of the store is a separate decision and nobody
+//! has taken it: this note exists so that the decision is taken with the true
+//! facts and not with the two of them that were known before.
+//!
+//! ## Why the copy crosses with IGDB by offer (measured on 2026-08-15)
+//!
+//! IGDB indexes Epic by the **offer** of the store, never by the item of the
+//! launcher. Over 90 namespaces of a real account:
+//!
+//! - The `catalogItemId` that this connector reads appears in **zero** offers,
+//!   so there is no join by item and the namespace is the only anchor.
+//! - 85 namespaces have exactly one offer of type `BASE_GAME`, 1 has two and 4
+//!   have none.
+//! - With the identifier of that single offer, 78 of 80 games cross with IGDB,
+//!   which is 97%, the same figure Steam gets with its appid.
+//!
 //! The names of the image types and the rest of the item shape were checked
 //! against `store-site-backend-static.ak.epicgames.com/freeGamesPromotions`,
 //! and confirmed afterwards against the real library.
@@ -325,6 +347,50 @@ impl EpicConnector {
 
         items
     }
+
+    /// The identifier of the base game offer of every namespace that the
+    /// account owns.
+    ///
+    /// This is what lets a copy of Epic cross with IGDB by identifier instead
+    /// of by title: IGDB indexes Epic by offer, and the item of the launcher
+    /// that this connector reads never appears in an offer. Measured on
+    /// 2026-08-15 over 90 namespaces: the item of the launcher appears in zero
+    /// offers, so no join by item exists and the namespace is the only anchor.
+    ///
+    /// One request per namespace, in the shape of [`Self::items`] and for the
+    /// same reason: the address carries the namespace. Namespaces repeat
+    /// between assets, so they are asked once each. A namespace that fails
+    /// leaves its copy without an identifier, and the copy then travels the
+    /// path of the title.
+    async fn offers(&self, assets: &[parse::Asset], access_token: &str) -> HashMap<String, String> {
+        let mut namespaces: Vec<&str> = assets.iter().map(|a| a.namespace.as_str()).collect();
+        namespaces.sort_unstable();
+        namespaces.dedup();
+
+        let mut offers = HashMap::with_capacity(namespaces.len());
+        for namespace in namespaces {
+            let url = format!(
+                "{}/catalog/api/shared/namespace/{namespace}/offers",
+                self.catalog_base
+            );
+            // The same English of `items`, and for the same reason: what
+            // reaches IGDB has to be the name that IGDB knows.
+            let query = [
+                ("count", "100"),
+                ("start", "0"),
+                ("country", "US"),
+                ("locale", "en"),
+            ];
+
+            if let Ok(body) = self.get(&url, &query, access_token).await
+                && let Some(offer) = parse::parse_base_game_offer(&body)
+            {
+                offers.insert(namespace.to_owned(), offer);
+            }
+        }
+
+        offers
+    }
 }
 
 #[async_trait]
@@ -402,7 +468,8 @@ impl StoreConnector for EpicConnector {
         let assets = parse_assets(&body)?;
 
         let items = self.items(&assets, &credential.access_token).await;
-        Ok(parse::to_entries(&assets, &items, account_id))
+        let offers = self.offers(&assets, &credential.access_token).await;
+        Ok(parse::to_entries(&assets, &items, &offers, account_id))
     }
 
     /// Epic keeps the wish list in the GraphQL of its store, which answers to
