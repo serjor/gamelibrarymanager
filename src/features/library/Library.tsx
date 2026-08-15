@@ -19,7 +19,7 @@ export type Vista = "tabla" | "pared";
  * por debajo de 56rem (`.tabla` en `styles.css`), el inspector mide 20rem
  * (`.detail`), entre los dos hay 1rem de hueco (`--e-5`) y `main` se lleva 3rem
  * de relleno: 80rem. Los 2rem de más son para la barra de desplazamiento, que
- * entra en lo que mide una media query y no en lo que le queda a `main`.
+ * entra en lo que mide una media query y no en lo que le queda a la ventana.
  *
  * Por debajo, la ficha se abre como hoja. La alternativa —dejar el inspector y
  * que la tabla se desplace en horizontal a su lado— recorta el título a «Ba…»

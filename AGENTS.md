@@ -43,6 +43,7 @@ Antes de escribir código, lee también:
 | --- | --- |
 | [Ningún componente declara un color: todos salen de los tokens](docs/ui/tokens-como-unica-fuente-de-color.md) | La paleta y su variante oscura se definen una vez. Ni literales, ni `Canvas`, ni colores derivados de `currentColor`. |
 | [Un estado para los dos modos de vista: las vistas solo pintan](docs/ui/un-estado-para-los-dos-modos-de-vista.md) | Filtro, orden y selección viven en `Library.tsx`; la tabla y la pared pintan lo que les llega. Y lo que hace sus propios cortes no es un modo de vista. |
+| [Se desplaza una sola región, y llega a los bordes de la ventana](docs/ui/una-sola-region-que-se-desplaza.md) | La altura se reparte con `flex` y `min-height: 0`; el tope de ancho lo pone la pieza y no el marco, o el hueco de los lados deja de responder a la rueda. |
 
 ### `docs/testing/` — comprobaciones
 

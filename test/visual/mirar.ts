@@ -25,7 +25,54 @@ function comprobar(que: string, bien: boolean, detalle = "") {
 }
 
 /** De maximizada a lo más estrecho: el recorrido, no dos puntos sueltos. */
-const ANCHOS = [1600, 1400, 1200, 1000, 900, 800, 700, 620];
+const ANCHOS = [1920, 1600, 1400, 1200, 1000, 900, 800, 700, 620];
+
+/**
+ * Una sola barra de desplazamiento, y que llegue a los bordes.
+ *
+ * Es el fallo que más molestaba y ninguna comprobación lo miraba: la lista
+ * medía `70vh` dentro de una página que también se desplazaba, así que había
+ * dos barras a la vez y la de fuera tenía cuarenta píxeles de recorrido. Y con
+ * `main` capado a 80rem, la rueda sobre los 320 px de hueco de cada lado no
+ * encontraba nada que mover.
+ */
+console.log("\nUna sola barra de desplazamiento");
+for (const ancho of [1920, 1400, 1000]) {
+  for (const pantalla of ["Biblioteca", "Hoy", "Por revisar"] as const) {
+    const r = await conLaApp(
+      async (pagina) => {
+        if (pantalla !== "Biblioteca") {
+          await pagina.getByRole("button", { name: new RegExp(`^${pantalla}`) }).click();
+        }
+        await pagina.getByRole("navigation").waitFor();
+        return pagina.evaluate(() => {
+          const raiz = document.documentElement;
+          const marco = document.querySelector("main")!;
+          // Quien de verdad se desplaza: la lista, «Hoy» o la cola.
+          const region =
+            document.querySelector(".tabla-viewport, .pared-viewport, .hoy, .revision-pantalla")!;
+          const caja = region.getBoundingClientRect();
+          return {
+            paginaSeDesplaza: raiz.scrollHeight > raiz.clientHeight + 1,
+            marcoSeDesplaza: marco.scrollHeight > marco.clientHeight + 1,
+            // De borde a borde salvo el relleno de `main`, que son 24 px.
+            deBordeABorde: caja.left <= 25 && caja.right >= window.innerWidth - 25,
+            // Y que quede sitio de verdad: una región de cien píxeles de alto
+            // cumpliría todo lo de arriba y no serviría para nada.
+            alto: Math.round(caja.height),
+          };
+        });
+      },
+      { ancho, alto: 900, respuestas: { review_queue: colaDeEjemplo() } },
+    );
+
+    const donde = `${ancho} px · ${pantalla}`;
+    comprobar(`${donde} · la página no se desplaza`, !r.paginaSeDesplaza);
+    comprobar(`${donde} · el marco tampoco: solo se desplaza la región`, !r.marcoSeDesplaza);
+    comprobar(`${donde} · la región llega a los dos bordes`, r.deBordeABorde);
+    comprobar(`${donde} · y se queda con el alto que sobra (${r.alto} px)`, r.alto > 400);
+  }
+}
 
 console.log("\nPared de portadas");
 for (const ancho of ANCHOS) {

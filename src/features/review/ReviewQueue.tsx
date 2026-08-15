@@ -225,7 +225,7 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
   );
 
   return (
-    <section>
+    <section className="revision-pantalla">
       <h2>Por revisar ({items.length})</h2>
       {error && <p role="alert">{error}</p>}
 

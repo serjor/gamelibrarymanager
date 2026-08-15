@@ -95,6 +95,18 @@
   box-sizing: border-box;
 }
 
+/* La ventana es el marco, y dentro se desplaza **una** sola cosa: la lista.
+   Antes se desplazaban dos —la página y la lista, que medía `70vh`—, y eso
+   pone dos barras en pantalla a la vez y deja a la de fuera cuarenta píxeles de
+   recorrido: la rueda sobre los lados no movía nada y había que llevar el ratón
+   al centro. Con la altura repartida desde aquí, la lista se queda con lo que
+   sobra y es la única que se desplaza. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   /* Explícito y no heredado del `color-scheme`: en cuanto un token define el
@@ -111,18 +123,22 @@ body {
   outline-offset: 2px;
 }
 
-/* 80rem no es una medida de lectura, es una suma: la tabla no funciona por
-   debajo de 56rem, el inspector mide 20rem, entre los dos va 1rem de hueco y
-   aquí se van 3rem de relleno. Con menos, la ficha acoplada no cabe nunca y el
-   inspector sería código muerto. El mismo número está en `Library.tsx`, que es
-   quien decide con él entre inspector y hoja. */
+/* Sin tope de ancho: lo que se desplaza tiene que llegar a los dos bordes de la
+   ventana, o la rueda sobre el hueco de los lados no encuentra nada que mover.
+   Lo que no debe estirarse hasta 1920 px se pone su propio tope —los
+   formularios, la tabla, el destacado de «Hoy»—, y entonces el hueco que dejan
+   sigue siendo parte de la caja que se desplaza.
+
+   `overflow: auto` es una red: las pantallas de la biblioteca reparten la
+   altura y nunca desbordan, pero un asistente en una ventana baja sí, y sin
+   esto sus últimas líneas quedarían fuera de alcance. */
 main {
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: var(--e-8) var(--e-6);
+  height: 100%;
+  padding: var(--e-6);
   display: flex;
   flex-direction: column;
   gap: var(--e-4);
+  overflow: auto;
 }
 
 header {
@@ -340,15 +356,35 @@ button.link {
   color: var(--texto);
 }
 
+/* De aquí para abajo la altura se reparte, no se inventa. Cada eslabón declara
+   `min-height: 0` porque un hijo de flex no se encoge por debajo de su
+   contenido salvo que se le diga, y con la cadena rota la lista crece hasta
+   sacar la página de la ventana: que es como se acaba con dos barras. */
+.library {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+/* `stretch` y no `flex-start`: con `flex-start` la columna de la lista mide lo
+   que mida la lista, no lo que queda de ventana, y entonces `flex: 1` sobre el
+   visor no reparte nada. Con ocho juegos no se nota; con cuatrocientos la tabla
+   crece hasta sacar el marco de la ventana. Quien no quiere estirarse lo dice
+   por su cuenta, que es lo que hace el inspector aquí abajo. */
 .library-body {
+  flex: 1;
+  min-height: 0;
   display: flex;
   gap: var(--e-5);
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .library-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -398,7 +434,8 @@ button.link {
 }
 
 .pared-viewport {
-  height: 70vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -528,12 +565,19 @@ button.link {
    empieza a recortarse a «Ba…» y la tabla deja de servir para nada. Encoger
    hasta ahí no es más legible que empujar. */
 .tabla-viewport {
-  height: 70vh;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 
+/* El tope no es estético: 96rem + 1rem de hueco + 20rem de inspector + 3rem de
+   relleno son exactamente 120rem, que es una pantalla de 1920 maximizada. La
+   tabla nunca ocupa el sitio del inspector, así que abrir una ficha ahí no
+   mueve ni una columna. Y una fila de 1900 px tampoco se lee: el título se
+   queda en un extremo y el año en el otro. */
 .tabla {
   width: 100%;
+  max-width: 96rem;
   min-width: 56rem;
   border-collapse: collapse;
   font-size: var(--t-m);
@@ -658,6 +702,7 @@ button.link {
 
 .revision {
   width: 100%;
+  max-width: 96rem;
   min-width: 65rem;
   border-collapse: collapse;
   font-size: var(--t-m);
@@ -781,10 +826,24 @@ button.link {
 }
 
 /* «Hoy»: una propuesta y estanterías con su motivo. */
+.hoy,
+.revision-pantalla {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .hoy {
   display: flex;
   flex-direction: column;
   gap: var(--e-6);
+}
+
+/* Ni el destacado ni la tabla de la cola ganan nada estirándose a 1920 px: uno
+   acaba con el texto a un palmo de su portada y la otra con la entrada de
+   tienda a un extremo y el candidato al otro. */
+.destacado {
+  max-width: 64rem;
 }
 
 .destacado {
@@ -878,14 +937,18 @@ button.link {
 /* Acoplada. La columna sigue a la tabla mientras se desplaza, y no se lleva
    por delante el sitio del formulario cuando el resumen es largo: el texto se
    queda con su alto y se desplaza dentro. */
+/* Sin `sticky`: ya no hay página que se desplace por debajo, así que la ficha
+   se queda donde está y es ella la que se desplaza por dentro cuando la ventana
+   es más baja que el formulario. */
 .detail {
   width: 20rem;
   flex-shrink: 0;
+  align-self: flex-start;
+  max-height: 100%;
+  overflow-y: auto;
   border: 1px solid var(--borde);
   border-radius: var(--radio-l);
   padding: var(--e-5);
-  position: sticky;
-  top: var(--e-5);
 }
 
 /* Siete líneas justas, en `em` sobre la interlínea: un alto en `rem` corta la
