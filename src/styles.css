@@ -1,27 +1,116 @@
+/* Sistema de diseño.
+ *
+ * Ningún selector de este fichero declara un color literal: todos salen de los
+ * tokens de aquí arriba. La regla existe porque la alternativa —un `#b3261e`
+ * suelto a mitad de la hoja— obliga a buscarlo a mano el día que haya que
+ * tocar el tema oscuro, y garantiza que alguno se quede sin tocar. */
+
 :root {
+  /* Sigue mandando en los controles nativos: `select`, los campos de texto y
+     las barras de desplazamiento se pintan solos según esto. Los tokens de
+     abajo cubren lo que dibujamos nosotros; esto cubre lo que dibuja el
+     sistema. */
   color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  --line: color-mix(in srgb, currentColor 15%, transparent);
+
+  /* Color. Los neutros van con un sesgo mínimo hacia el azul en vez de ser
+     grises puros: es una aplicación que se mira en una pantalla durante un
+     rato largo, y un gris exacto se lee como una decisión no tomada. */
+  --fondo: #fbfbfc;
+  --superficie: #ffffff;
+  /* El relleno de una portada que no existe, y de las cajas que hacen su
+     hueco. Antes era `color-mix` sobre `currentColor`, que cambiaba de tono
+     según quién fuera el padre. */
+  --hueco: #eceef2;
+  --borde: #d7d9e0;
+  --texto: #16181d;
+  --texto-atenuado: #5a5f6e;
+  --acento: #2f5fd0;
+  --error: #b3261e;
+
+  /* Estado de la partida. Semánticos y aparte del acento a propósito: el
+     acento marca dónde estás, estos dicen qué es cada juego. Confundirlos
+     hace que la interfaz grite en cuatro sitios a la vez. */
+  --estado-pendiente: #8a6a12;
+  --estado-jugando: #1f6b86;
+  --estado-terminado: #1c6b4f;
+  --estado-abandonado: #98413a;
+
+  /* Tipografía. Pila del sistema: la CSP no declara `font-src`, así que una
+     fuente enlazada no cargaría y una empaquetada obligaría a tocarla. */
+  --fuente: system-ui, sans-serif;
+  --t-xs: 0.75rem;
+  --t-s: 0.8125rem;
+  --t-m: 0.875rem;
+  --t-base: 1rem;
+  --t-l: 1.25rem;
+  --t-xl: 1.75rem;
+
+  /* Espaciado, en pasos de 4 px. Antes había once valores distintos entre
+     0,3rem y 3rem, que es lo mismo que no tener ninguno. */
+  --e-1: 0.25rem;
+  --e-2: 0.375rem;
+  --e-3: 0.5rem;
+  --e-4: 0.75rem;
+  --e-5: 1rem;
+  --e-6: 1.5rem;
+  --e-7: 2rem;
+  --e-8: 3rem;
+
+  --radio-s: 3px;
+  --radio-m: 6px;
+  --radio-l: 8px;
+
+  font-family: var(--fuente);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #131519;
+    --superficie: #1a1d23;
+    --hueco: #23262e;
+    --borde: #333741;
+    --texto: #e6e8ee;
+    --texto-atenuado: #9aa0ae;
+    --acento: #8ab4f8;
+    --error: #f2857b;
+
+    --estado-pendiente: #d4b263;
+    --estado-jugando: #79c0dd;
+    --estado-terminado: #6fc3a0;
+    --estado-abandonado: #e0928a;
+  }
 }
 
 body {
   margin: 0;
+  /* Explícito y no heredado del `color-scheme`: en cuanto un token define el
+     fondo de una superficie, el de la página tiene que salir del mismo sitio
+     o los dos temas dejan de cuadrar entre sí. */
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+/* El teclado tiene que poder ver dónde está. Antes esto lo ponía el navegador
+   y cada uno lo pinta a su manera. */
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
 }
 
 main {
-  max-width: 34rem;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 3rem 1.5rem;
+  padding: var(--e-8) var(--e-6);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--e-4);
 }
 
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--e-5);
 }
 
 h1,
@@ -32,28 +121,28 @@ h2 {
 form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--e-3);
 }
 
 label {
   font-weight: 600;
-  margin-top: 0.75rem;
+  margin-top: var(--e-4);
 }
 
 input {
   font: inherit;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
 }
 
 button {
   font: inherit;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -69,33 +158,30 @@ button.link {
   padding: 0;
   text-align: left;
   text-decoration: underline;
-  opacity: 0.8;
+  color: var(--texto-atenuado);
 }
 
+/* Color y no `opacity`: la transparencia se lleva por delante también los
+   bordes y los fondos de lo que haya dentro, y aquí solo se quería bajar el
+   texto un escalón. */
 .hint {
-  opacity: 0.75;
-  font-size: 0.9rem;
+  color: var(--texto-atenuado);
+  font-size: var(--t-m);
 }
 
 .accounts,
 [role="alert"] {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--e-5);
 }
 
 [role="alert"] {
-  color: #b3261e;
-}
-
-@media (prefers-color-scheme: dark) {
-  [role="alert"] {
-    color: #f2857b;
-  }
+  color: var(--error);
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--e-3);
 }
 
 .review,
@@ -105,8 +191,8 @@ button.link {
 }
 
 .review > li {
-  border-top: 1px solid var(--line);
-  padding: 0.75rem 0;
+  border-top: 1px solid var(--borde);
+  padding: var(--e-4) 0;
 }
 
 .candidates {
@@ -115,8 +201,8 @@ button.link {
   /* `stretch` iguala la altura de toda la fila: si no, cada tarjeta mide lo que
      mida su contenido y compararlas cuesta más de lo que debería. */
   align-items: stretch;
-  gap: 0.4rem;
-  margin: 0.4rem 0;
+  gap: var(--e-2);
+  margin: var(--e-2) 0;
 }
 
 .candidates > li {
@@ -129,9 +215,9 @@ button.link {
   width: 45px;
   height: 60px;
   flex: none;
-  border-radius: 3px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  border: 1px dashed var(--line);
+  border-radius: var(--radio-s);
+  background: var(--hueco);
+  border: 1px dashed var(--borde);
 }
 
 .cover-missing.wide {
@@ -144,30 +230,27 @@ button.link {
 .candidate {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--e-3);
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: var(--e-2) var(--e-3);
+  height: 100%;
 }
 
 .candidate img {
-  border-radius: 3px;
+  border-radius: var(--radio-s);
   object-fit: cover;
   flex: none;
 }
 
 .candidate.chosen {
-  outline: 2px solid currentColor;
+  outline: 2px solid var(--acento);
   outline-offset: -2px;
 }
 
 .candidate-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-}
-
-.candidate {
-  height: 100%;
+  gap: var(--e-1);
 }
 
 /* Lo que dice la tienda, arriba y con su carátula: es contra lo que se compara
@@ -175,14 +258,14 @@ button.link {
 .origen {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--e-3);
 }
 
 /* Steam sirve una cápsula apaisada y GOG un logo también apaisado, pero con
    proporciones distintas: se recortan a la misma caja para que el título de
    cada fila empiece siempre a la misma altura. */
 .origen img {
-  border-radius: 3px;
+  border-radius: var(--radio-s);
   object-fit: cover;
   flex: none;
 }
@@ -192,59 +275,55 @@ button.link {
 }
 
 /* La barra de confirmación sigue a la vista mientras se recorre una cola de
-   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa.
-   `Canvas` es el color de fondo del sistema y sigue al `color-scheme`, así que
-   tapa lo que pasa por debajo en claro y en oscuro sin declarar dos paletas. */
+   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa. El
+   fondo sale del mismo token que el de la página, así que tapa lo que pasa por
+   debajo en claro y en oscuro sin declarar dos paletas. */
 .sticky {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: Canvas;
-  padding: 0.5rem 0;
-}
-
-main {
-  max-width: 72rem;
+  background: var(--fondo);
+  padding: var(--e-3) 0;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e-3);
   align-items: center;
 }
 
 .filters input,
 .filters select {
   font: inherit;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
 }
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--line);
+  gap: var(--e-3);
+  border-bottom: 1px solid var(--borde);
 }
 
 .tab {
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  opacity: 0.7;
+  color: var(--texto-atenuado);
 }
 
 .tab.active {
   border-bottom-color: currentColor;
-  opacity: 1;
+  color: var(--texto);
 }
 
 .library-body {
   display: flex;
-  gap: 1rem;
+  gap: var(--e-5);
   align-items: flex-start;
 }
 
@@ -259,7 +338,7 @@ main {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--e-4);
   position: absolute;
   inset-inline: 0;
   top: 0;
@@ -269,7 +348,7 @@ main {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--e-1);
   text-align: left;
   border: none;
   padding: 0;
@@ -280,21 +359,21 @@ main {
   width: 100%;
   aspect-ratio: 3 / 4;
   object-fit: cover;
-  border-radius: 6px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
+  border-radius: var(--radio-m);
+  background: var(--hueco);
 }
 
 .cover-placeholder {
   display: grid;
   place-items: center;
-  padding: 0.5rem;
-  font-size: 0.8rem;
+  padding: var(--e-3);
+  font-size: var(--t-s);
   text-align: center;
 }
 
 .card-title {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--t-m);
   line-height: 1.2;
 }
 
@@ -303,21 +382,21 @@ main {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1rem;
+  gap: var(--e-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+  padding: var(--e-5);
   position: sticky;
-  top: 1rem;
+  top: var(--e-5);
 }
 
 .detail textarea,
 .detail select,
 .detail input {
   font: inherit;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
   width: 100%;
