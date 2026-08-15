@@ -9,6 +9,9 @@ Antes de escribir código, lee también:
 - `.agents/plans/0001-game-library-manager/plan.html` — el plan acordado, con las
   decisiones cerradas **y sus alternativas descartadas**. No se relitigan: si
   crees que alguna está mal, dilo y espera respuesta en vez de cambiarla.
+- `.agents/plans/0002-rediseno-ui/plan.html` — el rediseño de la interfaz, con la
+  misma regla. Al lado, `maquetas.html` recoge navegables las cinco alternativas
+  que se compararon, incluidas las cuatro descartadas.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — cómo
   se escribe y dónde va un documento nuevo.
 
