@@ -9,8 +9,8 @@ cuentas y ninguna credencial de tienda sale de tu ordenador.
 
 ## Estado
 
-Fases 1 a 7: Steam, GOG, Epic, metadatos de IGDB, deduplicación entre tiendas y
-backlog. Queda especificada y sin implementar la fase 8 (precios con ITAD).
+Las ocho fases del plan: Steam, GOG, Epic, metadatos de IGDB, deduplicación
+entre tiendas, backlog y precios de los deseados con IsThereAnyDeal.
 
 Puedes empezar solo con Steam, que es la única tienda con una vía oficial: hace
 falta tu clave de la API. GOG y Epic se conectan en su propia página de login,
@@ -28,6 +28,13 @@ Los metadatos de IGDB son opcionales. Sin ellos la biblioteca funciona igual,
 con las fichas hechas a partir del título de la tienda —incluida la
 deduplicación entre tiendas—, y el día que configures IGDB esas fichas se
 enriquecen en su sitio sin perder el estado que hayas escrito encima.
+
+Los precios también son opcionales, y por la misma razón: con una clave de ITAD
+—gratis— y tu país, cada deseado enseña lo que cuesta hoy, en qué tienda, y
+cuánto ha llegado a bajar; la lista se ordena por descuento. Sin la clave sigue
+estando la lista, solo que sin precios. Se piden con su propio botón y no al
+sincronizar: preguntar a un tercero cuánto cuesta algo no puede dejarte sin
+sincronizar Steam.
 
 Ninguna de esas credenciales sale de tu ordenador: viven en el keyring del
 sistema, o en un fichero cifrado si tu escritorio no tiene uno.
@@ -69,7 +76,7 @@ bunx tsc --noEmit && bun run lint && bun test
 | `crates/domain` | Entidades y reglas. Sin red, sin base de datos, sin Tauri. CI lo verifica. |
 | `crates/storage` | SQLite y migraciones. Todo el SQL del proyecto está aquí. |
 | `crates/connectors` | Tiendas (Steam, GOG, Epic), solo autenticación y listado. Nunca descargas. |
-| `crates/metadata` | Proveedores de metadatos (IGDB). |
+| `crates/metadata` | Proveedores externos: fichas (IGDB) y precios (ITAD). |
 | `crates/secrets` | Keyring nativo del sistema operativo. |
 | `src-tauri` | Shell de la app y comandos: orquestan, no deciden. |
 | `src` | UI en React, organizada por feature. |

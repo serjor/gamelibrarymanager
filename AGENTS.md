@@ -25,11 +25,18 @@ Antes de escribir código, lee también:
 | [Los endpoints no oficiales se contrastan antes de escribir el conector](docs/connectors/contrastar-endpoints-no-oficiales.md) | Leer la implementación de referencia viva, probar a mano, y anotar la vigencia con fecha en el módulo. |
 | [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | Una tienda rota se apaga y el resto sigue igual. El motivo se guarda, apagar es decisión del usuario y nada más la toma. |
 
+### `docs/domain/` — reglas puras
+
+| Convención | De qué trata |
+| --- | --- |
+| [Money is kept in whole cents](docs/domain/dinero-en-centimos.md) | Enteros con su moneda al lado, y texto solo al pintarlo. En coma flotante, 19,99 deja de ser 19,99 en cuanto se opera con él. |
+
 ### `docs/storage/` — esquema y datos
 
 | Convención | De qué trata |
 | --- | --- |
 | [Enriquecer una ficha reescribe su fila; no crea otra](docs/storage/enriquecer-fichas-en-su-sitio.md) | `user_state` cuelga del `game_id`: reutilizarlo es lo que impide perder lo que el usuario escribió. |
+| [A price is a cache of somebody else's data, and it is replaced whole](docs/storage/precios-son-cache-que-se-sustituye.md) | La única excepción a la baja lógica, acotada a dos tablas: una oferta que terminó no puede seguir pareciendo una oferta. |
 
 ### `docs/tauri/` — shell de la aplicación
 
@@ -38,6 +45,7 @@ Antes de escribir código, lee también:
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
 | [Lo que el webview necesita del entorno se pone en `main.rs`](docs/tauri/preparar-el-webview-antes-de-que-arranque-gtk.md) | Antes de que arranque GTK, tras un `cfg` de plataforma y respetando lo que ya venga puesto. En el script de desarrollo solo arregla la máquina de quien lo escribe. |
 | [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | Leer la página de una tienda solo se hace donde emite el código, sin lógica dentro del script y sin darle comandos. |
+| [A long pass saves as it goes, and a provider that cuts it off is a result](docs/tauri/pasadas-largas-guardan-por-tramos.md) | Escribir por tramos, parar donde te corten sin perder lo de atrás, y decir por qué. Un fallo de la base de datos sí sube. |
 
 ### `docs/ui/` — interfaz
 
@@ -55,7 +63,7 @@ Antes de escribir código, lee también:
 
 ### Pendientes de documentar
 
-Áreas previstas y todavía vacías: `docs/domain/`.
+No queda ninguna área vacía. La siguiente convención se añade donde le toque.
 
 ## Comprobaciones
 

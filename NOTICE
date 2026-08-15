@@ -60,3 +60,9 @@ Sobre las tiendas
 Este proyecto no está afiliado a Valve, GOG, CD PROJEKT ni Epic Games. Los
 conectores son de solo lectura, actúan con las credenciales del propio usuario y
 en su propia máquina, y no redistribuyen datos de ninguna tienda.
+
+Tampoco está afiliado a IsThereAnyDeal. Los precios se piden a su API pública y
+documentada, con la clave del propio usuario, desde su propia máquina y solo
+para los juegos de su lista de deseados. No se ha portado código suyo: no hay
+ninguno que portar, porque la API está documentada y no hizo falta leer ninguna
+implementación de referencia.
