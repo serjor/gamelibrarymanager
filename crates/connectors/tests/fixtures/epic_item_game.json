@@ -27,10 +27,6 @@
     "customAttributes": {
       "CanRunOffline": { "type": "STRING", "value": "true" }
     },
-    "productSlug": "cardpocalypse/home",
-    "catalogNs": {
-      "mappings": [{ "pageSlug": "cardpocalypse", "pageType": "productHome" }]
-    },
     "creationDate": "2019-10-16T14:22:11.000Z"
   }
 }

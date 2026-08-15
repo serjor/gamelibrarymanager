@@ -84,10 +84,6 @@ struct CatalogItem {
     /// game, and there is no other flag that says it.
     #[serde(default)]
     main_game_item: Option<serde_json::Value>,
-    #[serde(default)]
-    product_slug: Option<String>,
-    #[serde(default)]
-    catalog_ns: Option<CatalogNs>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -102,26 +98,16 @@ struct Category {
     path: Option<String>,
 }
 
-#[derive(Debug, Default, Deserialize)]
-struct CatalogNs {
-    #[serde(default)]
-    mappings: Vec<Mapping>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Mapping {
-    page_slug: Option<String>,
-}
-
-/// What the catalogue knows about an item and this connector uses: its name,
-/// its cover and its page. The matching only reads the name; the other two are
-/// there so that a person can compare when the queue asks.
+/// What the catalogue knows about an item and this connector uses: its name and
+/// its cover. The matching only reads the name; the cover is there so that a
+/// person can compare when the queue asks.
+///
+/// There is no page of the store here, and it is not an oversight. See the
+/// module documentation.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ItemInfo {
     pub title: Option<String>,
     pub cover_url: Option<String>,
-    pub store_url: Option<String>,
     /// False for DLC and for mods. They are owned, they have their own asset,
     /// and they are not games: listing them would put an entry in the library
     /// for every expansion of every game.
@@ -144,8 +130,6 @@ const COVER_TYPES: [&str; 4] = [
 /// Path of the category that marks a modification of another game.
 const CATEGORY_MODS: &str = "mods";
 
-const STORE_PAGE: &str = "https://store.epicgames.com/p/";
-
 /// Data of `catalog/api/shared/namespace/{ns}/bulk/items`, indexed by catalogue
 /// identifier, which is the key of the answer itself.
 pub fn parse_items(body: &str) -> HashMap<String, ItemInfo> {
@@ -157,7 +141,6 @@ pub fn parse_items(body: &str) -> HashMap<String, ItemInfo> {
             let info = ItemInfo {
                 title: item.title.clone(),
                 cover_url: cover_url(&item),
-                store_url: store_url(&item),
                 is_game: is_game(&item),
             };
             (id, info)
@@ -181,27 +164,6 @@ fn cover_url(item: &CatalogItem) -> Option<String> {
             .find(|image| image.kind.as_deref() == Some(*wanted))
             .and_then(|image| image.url.clone())
     })
-}
-
-/// The page of the copy in the store.
-///
-/// `catalogNs` is the mapping the store itself publishes and it is the one to
-/// trust. `productSlug` is the old one and it carries a `/home` suffix that
-/// belongs to a store layout that no longer exists: pasted as is, the address
-/// answers 404.
-fn store_url(item: &CatalogItem) -> Option<String> {
-    let slug = item
-        .catalog_ns
-        .as_ref()
-        .and_then(|namespace| namespace.mappings.first())
-        .and_then(|mapping| mapping.page_slug.clone())
-        .or_else(|| item.product_slug.clone())?;
-
-    let slug = slug.trim_end_matches("/home").trim_matches('/');
-    if slug.is_empty() {
-        return None;
-    }
-    Some(format!("{STORE_PAGE}{slug}"))
 }
 
 /// Turns what Epic says into library entries.
@@ -239,7 +201,9 @@ pub fn to_entries(
                     .and_then(|item| item.title.clone())
                     .unwrap_or_else(|| format!("Epic {}", asset.app_name)),
                 cover_url: item.and_then(|item| item.cover_url.clone()),
-                store_url: item.and_then(|item| item.store_url.clone()),
+                // Epic is the only store of the three whose copy has no page to
+                // point at. The module documentation says why, with the count.
+                store_url: None,
                 // Epic publishes neither played time nor purchase date on the
                 // launcher assets. The date does travel in the library service,
                 // which needs one more request per page and gives nothing else
@@ -309,33 +273,9 @@ mod tests {
     }
 
     #[test]
-    fn the_store_page_drops_the_home_suffix() {
-        // `productSlug` arrives as `game/home`, from a store layout that no
-        // longer exists: pasted as is the address answers 404.
-        let items = parse_items(r#"{"abc":{"title":"X","productSlug":"cardpocalypse/home"}}"#);
-        assert_eq!(
-            items["abc"].store_url.as_deref(),
-            Some("https://store.epicgames.com/p/cardpocalypse")
-        );
-    }
-
-    #[test]
-    fn the_mapping_of_the_store_wins_over_the_old_slug() {
-        let items = parse_items(
-            r#"{"abc":{"title":"X","productSlug":"viejo/home",
-                 "catalogNs":{"mappings":[{"pageSlug":"nuevo","pageType":"productHome"}]}}}"#,
-        );
-        assert_eq!(
-            items["abc"].store_url.as_deref(),
-            Some("https://store.epicgames.com/p/nuevo")
-        );
-    }
-
-    #[test]
-    fn an_item_without_images_or_slug_does_not_break() {
+    fn an_item_without_images_does_not_break() {
         let items = parse_items(r#"{"abc":{"title":"X"}}"#);
         assert_eq!(items["abc"].cover_url, None);
-        assert_eq!(items["abc"].store_url, None);
         assert!(items["abc"].is_game);
     }
 

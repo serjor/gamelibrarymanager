@@ -40,10 +40,35 @@
 //!   a dead endpoint, and it is one more reason for the login to happen in a
 //!   webview and not in code of this project.
 //!
-//! The shape of a catalogue item was checked against
-//! `store-site-backend-static.ak.epicgames.com/freeGamesPromotions`, which
-//! answers the same items without credentials. From there come the `/home`
-//! suffix of `productSlug` and the names of the image types.
+//! ## Why a copy on Epic has no page of the store (measured on 2026-08-15)
+//!
+//! Steam and GOG hand over the page of each copy, and the review queue uses it
+//! to let a person compare against the IGDB card. Epic does not, and the two
+//! ways of getting one were both tried against a real account of 318 games:
+//!
+//! - **The catalogue item does not carry it.** The store *offer* does —it has
+//!   `productSlug` and `catalogNs.mappings[].pageSlug`, which is what
+//!   `freeGamesPromotions` answers without credentials— but the item that
+//!   `catalog/api/…/bulk/items` returns is not the offer. Of the 318 games,
+//!   318 got a title and a cover from it, and **zero** got a slug.
+//! - **Guessing the slug from the title fails half the time.** It is what
+//!   Heroic does as a fallback. Over 25 real titles of that library, cleaned
+//!   the way Heroic cleans them, 13 slugs exist and 12 do not.
+//!
+//! Heroic gets the real slug from `launcher.store.epicgames.com/graphql`, which
+//! answers `catalogNs.mappings` for a namespace. That endpoint is behind a bot
+//! check: it answered a challenge to this project's own user agent **and** to a
+//! plain browser one, and only let through the one that says
+//! `EpicGamesLauncher`. Getting past a bot check by claiming to be the client
+//! of the store is not something this connector does.
+//!
+//! So the field stays empty. A link that lands on the wrong page in the very
+//! screen that exists for comparing is worse than no link, and it is the same
+//! call the GOG connector makes about the wish list.
+//!
+//! The names of the image types and the rest of the item shape were checked
+//! against `store-site-backend-static.ak.epicgames.com/freeGamesPromotions`,
+//! and confirmed afterwards against the real library.
 
 mod parse;
 

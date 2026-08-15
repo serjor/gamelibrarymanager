@@ -230,22 +230,18 @@ async fn reads_the_library_without_dlc_or_unreal_assets() {
     assert_eq!(entries[0].title, "Cardpocalypse");
     assert_eq!(entries[1].title, "Kena: Bridge of Spirits");
 
-    // The cover and the store page are what let a person compare against the
-    // IGDB card when the queue asks.
+    // The cover is what lets a person compare against the IGDB card when the
+    // queue asks.
     assert_eq!(
         entries[0].cover_url.as_deref(),
         Some("https://cdn1.epicgames.com/offer/cards_tall-1200x1600")
     );
-    assert_eq!(
-        entries[0].store_url.as_deref(),
-        Some("https://store.epicgames.com/p/cardpocalypse")
-    );
-    // This one has no `catalogNs`, so the address comes from the old slug with
-    // its `/home` suffix taken off.
-    assert_eq!(
-        entries[1].store_url.as_deref(),
-        Some("https://store.epicgames.com/p/kena-bridge-of-spirits")
-    );
+
+    // And no page of the store, which is not an oversight. The item does not
+    // carry the slug —318 games of a real library, 318 titles, zero slugs— and
+    // guessing it from the title lands on the wrong page half the time. In the
+    // screen that exists for comparing, that is worse than no link.
+    assert!(entries.iter().all(|entry| entry.store_url.is_none()));
 }
 
 #[tokio::test]

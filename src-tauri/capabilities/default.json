@@ -16,8 +16,7 @@
         { "url": "https://github.com/legendary-gl/legendary/blob/master/legendary/api/egs.py" },
         { "url": "https://www.igdb.com/games/*" },
         { "url": "https://store.steampowered.com/app/*" },
-        { "url": "https://www.gog.com/game/*" },
-        { "url": "https://store.epicgames.com/p/*" }
+        { "url": "https://www.gog.com/game/*" }
       ]
     }
   ]
