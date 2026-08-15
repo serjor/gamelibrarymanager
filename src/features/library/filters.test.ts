@@ -5,8 +5,8 @@ import { applyFilters, collectGenres, collectStores, EMPTY_FILTERS } from "./fil
 function row(overrides: Partial<LibraryRow>): LibraryRow {
   return {
     game_id: crypto.randomUUID(),
-    title: "Juego",
-    sort_title: "juego",
+    title: "Game",
+    sort_title: "game",
     cover_url: null,
     summary: null,
     release_year: null,
@@ -24,31 +24,31 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
   };
 }
 
-const biblioteca = [
-  row({ title: "Pokémon Rojo", genres: ["RPG"], owned_stores: ["steam"], status: "playing" }),
+const library = [
+  row({ title: "Pokémon Red", genres: ["RPG"], owned_stores: ["steam"], status: "playing" }),
   row({ title: "Doom", genres: ["Shooter"], owned_stores: ["gog"], status: null }),
   row({ title: "Doom Eternal", genres: ["Shooter"], owned_stores: ["steam", "gog"] }),
 ];
 
-describe("filtros de biblioteca", () => {
-  it("busca sin acentos ni mayúsculas", () => {
-    const found = applyFilters(biblioteca, { ...EMPTY_FILTERS, search: "pokemon" });
-    expect(found.map((r) => r.title)).toEqual(["Pokémon Rojo"]);
+describe("the library filters", () => {
+  it("searches with no accents and no capitals", () => {
+    const found = applyFilters(library, { ...EMPTY_FILTERS, search: "pokemon" });
+    expect(found.map((r) => r.title)).toEqual(["Pokémon Red"]);
   });
 
-  it("filtra por tienda contando los juegos que están en varias", () => {
-    const gog = applyFilters(biblioteca, { ...EMPTY_FILTERS, store: "gog" });
+  it("filters by store and counts the games that are in more than one", () => {
+    const gog = applyFilters(library, { ...EMPTY_FILTERS, store: "gog" });
     expect(gog.map((r) => r.title)).toEqual(["Doom", "Doom Eternal"]);
   });
 
-  it("distingue «sin marcar» de «cualquier estado»", () => {
-    const sinMarcar = applyFilters(biblioteca, { ...EMPTY_FILTERS, status: "unset" });
-    expect(sinMarcar.map((r) => r.title)).toEqual(["Doom", "Doom Eternal"]);
-    expect(applyFilters(biblioteca, EMPTY_FILTERS)).toHaveLength(3);
+  it("tells \"not marked\" from \"any status\"", () => {
+    const notMarked = applyFilters(library, { ...EMPTY_FILTERS, status: "unset" });
+    expect(notMarked.map((r) => r.title)).toEqual(["Doom", "Doom Eternal"]);
+    expect(applyFilters(library, EMPTY_FILTERS)).toHaveLength(3);
   });
 
-  it("combina búsqueda y género", () => {
-    const found = applyFilters(biblioteca, {
+  it("combines a search and a genre", () => {
+    const found = applyFilters(library, {
       ...EMPTY_FILTERS,
       search: "doom",
       genre: "Shooter",
@@ -56,21 +56,21 @@ describe("filtros de biblioteca", () => {
     expect(found).toHaveLength(2);
   });
 
-  it("recoge tiendas y géneros sin repetir y ordenados", () => {
-    expect(collectStores(biblioteca)).toEqual(["gog", "steam"]);
-    expect(collectGenres(biblioteca)).toEqual(["RPG", "Shooter"]);
+  it("collects the stores and the genres with no repeats and sorted", () => {
+    expect(collectStores(library)).toEqual(["gog", "steam"]);
+    expect(collectGenres(library)).toEqual(["RPG", "Shooter"]);
   });
 
-  it("aguanta mil juegos en cada pulsación sin despeinarse", () => {
-    const grande = Array.from({ length: 1000 }, (_, i) =>
-      row({ title: `Juego ${i}`, genres: [i % 2 ? "RPG" : "Shooter"] }),
+  it("holds one thousand games at each key press with no difficulty", () => {
+    const large = Array.from({ length: 1000 }, (_, i) =>
+      row({ title: `Game ${i}`, genres: [i % 2 ? "RPG" : "Shooter"] }),
     );
     const started = performance.now();
-    for (const needle of ["j", "ju", "jue", "juego 9", "juego 99"]) {
-      applyFilters(grande, { ...EMPTY_FILTERS, search: needle });
+    for (const needle of ["g", "ga", "gam", "game 9", "game 99"]) {
+      applyFilters(large, { ...EMPTY_FILTERS, search: needle });
     }
-    // Cinco pulsaciones sobre mil filas tienen que costar milisegundos: si esto
-    // se dispara, la búsqueda se nota al teclear.
+    // Five key presses over one thousand rows must cost milliseconds: if this
+    // grows, the user feels the search while they type.
     expect(performance.now() - started).toBeLessThan(100);
   });
 });

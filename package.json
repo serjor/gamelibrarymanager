@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint src",
     "tauri": "tauri",
-    "visual": "bun test/visual/mirar.ts"
+    "visual": "bun test/visual/look.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

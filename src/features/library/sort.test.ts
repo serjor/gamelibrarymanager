@@ -5,8 +5,8 @@ import { applySort, DEFAULT_SORT } from "./sort";
 function row(overrides: Partial<LibraryRow>): LibraryRow {
   return {
     game_id: crypto.randomUUID(),
-    title: "Juego",
-    sort_title: "juego",
+    title: "Game",
+    sort_title: "game",
     cover_url: null,
     summary: null,
     release_year: null,
@@ -24,74 +24,75 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
   };
 }
 
-const titulos = (rows: LibraryRow[]) => rows.map((r) => r.title);
+const titles = (rows: LibraryRow[]) => rows.map((r) => r.title);
 
-describe("ordenación de la biblioteca", () => {
-  it("por horas, de más a menos, deja al final lo que no se ha jugado", () => {
-    const biblioteca = [
-      row({ title: "Sin abrir", sort_title: "sin abrir", playtime_minutes: 0 }),
-      row({ title: "Mucho", sort_title: "mucho", playtime_minutes: 3000 }),
-      row({ title: "Poco", sort_title: "poco", playtime_minutes: 120 }),
+describe("the sort of the library", () => {
+  it("by hours, from most to least, puts the games not played last", () => {
+    const library = [
+      row({ title: "Never opened", sort_title: "never opened", playtime_minutes: 0 }),
+      row({ title: "Many", sort_title: "many", playtime_minutes: 3000 }),
+      row({ title: "Few", sort_title: "few", playtime_minutes: 120 }),
     ];
 
-    expect(titulos(applySort(biblioteca, { field: "hours", desc: true }))).toEqual([
-      "Mucho",
-      "Poco",
-      "Sin abrir",
+    expect(titles(applySort(library, { field: "hours", desc: true }))).toEqual([
+      "Many",
+      "Few",
+      "Never opened",
     ]);
   });
 
-  it("y de menos a más también, porque «sin dato» no es «pocas horas»", () => {
-    // Es la regla que más cuesta creerse y la que más se agradece: dar la
-    // vuelta al orden para ver lo que menos has jugado no debería llenar la
-    // pantalla de lo que no has abierto nunca.
-    const biblioteca = [
-      row({ title: "Sin abrir", sort_title: "sin abrir", playtime_minutes: 0 }),
-      row({ title: "Mucho", sort_title: "mucho", playtime_minutes: 3000 }),
-      row({ title: "Poco", sort_title: "poco", playtime_minutes: 120 }),
+  it('and from least to most too, because "no data" is not "few hours"', () => {
+    // It is the rule that is hardest to believe and the most useful: to invert
+    // the order to see the games that you have played least must not fill the
+    // screen with the games that you have never opened.
+    const library = [
+      row({ title: "Never opened", sort_title: "never opened", playtime_minutes: 0 }),
+      row({ title: "Many", sort_title: "many", playtime_minutes: 3000 }),
+      row({ title: "Few", sort_title: "few", playtime_minutes: 120 }),
     ];
 
-    expect(titulos(applySort(biblioteca, { field: "hours", desc: false }))).toEqual([
-      "Poco",
-      "Mucho",
-      "Sin abrir",
+    expect(titles(applySort(library, { field: "hours", desc: false }))).toEqual([
+      "Few",
+      "Many",
+      "Never opened",
     ]);
   });
 
-  it("por última partida deja al final lo que ninguna tienda sabe", () => {
-    // Un juego solo de GOG no tiene última partida aunque se haya jugado: la
-    // tienda no la publica. No es «hace mucho», es «no hay dato».
-    const biblioteca = [
-      row({ title: "Solo en GOG", sort_title: "solo en gog", last_played_at: null }),
-      row({ title: "Reciente", sort_title: "reciente", last_played_at: 1_750_000_000 }),
-      row({ title: "Antiguo", sort_title: "antiguo", last_played_at: 1_400_000_000 }),
+  it("by the last game played puts last what no store knows", () => {
+    // A game that is only in GOG has no last game played even if you played it:
+    // the store does not publish it. It is not "a long time ago", it is "no
+    // data".
+    const library = [
+      row({ title: "Only in GOG", sort_title: "only in gog", last_played_at: null }),
+      row({ title: "Recent", sort_title: "recent", last_played_at: 1_750_000_000 }),
+      row({ title: "Old", sort_title: "old", last_played_at: 1_400_000_000 }),
     ];
 
-    expect(titulos(applySort(biblioteca, { field: "last", desc: true }))).toEqual([
-      "Reciente",
-      "Antiguo",
-      "Solo en GOG",
+    expect(titles(applySort(library, { field: "last", desc: true }))).toEqual([
+      "Recent",
+      "Old",
+      "Only in GOG",
     ]);
   });
 
-  it("el título desempata para que el orden no baile entre dos aperturas", () => {
-    const biblioteca = [
+  it("the title breaks the tie so that the order stays between two starts", () => {
+    const library = [
       row({ title: "Zelda", sort_title: "zelda", release_year: 2017 }),
       row({ title: "Alba", sort_title: "alba", release_year: 2017 }),
     ];
 
-    expect(titulos(applySort(biblioteca, { field: "year", desc: false }))).toEqual([
+    expect(titles(applySort(library, { field: "year", desc: false }))).toEqual([
       "Alba",
       "Zelda",
     ]);
-    expect(titulos(applySort(biblioteca, { field: "year", desc: true }))).toEqual([
+    expect(titles(applySort(library, { field: "year", desc: true }))).toEqual([
       "Alba",
       "Zelda",
     ]);
   });
 
-  it("por estado sigue el recorrido de un juego, no el alfabeto", () => {
-    const biblioteca = [
+  it("by status it follows the path of a game, not the alphabet", () => {
+    const library = [
       row({ title: "D", sort_title: "d", status: "abandoned" }),
       row({ title: "A", sort_title: "a", status: "backlog" }),
       row({ title: "C", sort_title: "c", status: "finished" }),
@@ -99,7 +100,7 @@ describe("ordenación de la biblioteca", () => {
       row({ title: "E", sort_title: "e", status: null }),
     ];
 
-    expect(titulos(applySort(biblioteca, { field: "status", desc: false }))).toEqual([
+    expect(titles(applySort(library, { field: "status", desc: false }))).toEqual([
       "A",
       "B",
       "C",
@@ -108,12 +109,12 @@ describe("ordenación de la biblioteca", () => {
     ]);
   });
 
-  it("ordena sin tocar la lista que recibe", () => {
-    const biblioteca = [
+  it("sorts and does not touch the list that it receives", () => {
+    const library = [
       row({ title: "B", sort_title: "b" }),
       row({ title: "A", sort_title: "a" }),
     ];
-    applySort(biblioteca, DEFAULT_SORT);
-    expect(titulos(biblioteca)).toEqual(["B", "A"]);
+    applySort(library, DEFAULT_SORT);
+    expect(titles(library)).toEqual(["B", "A"]);
   });
 });

@@ -199,6 +199,6 @@ mod tests {
         // page is what arrives if Epic ever stops redirecting.
         assert_eq!(code_from_eval(""), None);
         assert_eq!(code_from_eval("null"), None);
-        assert_eq!(code_from_eval(r#""<html>Iniciar sesión</html>""#), None);
+        assert_eq!(code_from_eval(r#""<html>Sign in</html>""#), None);
     }
 }

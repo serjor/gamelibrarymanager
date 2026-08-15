@@ -95,7 +95,7 @@ mod tests {
         let second = GameId::new();
         assert!(
             first.as_uuid() < second.as_uuid(),
-            "UUIDv7 debe ser ordenable por tiempo"
+            "a UUIDv7 must sort by time"
         );
     }
 

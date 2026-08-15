@@ -76,7 +76,7 @@ async fn a_broken_epic_leaves_a_reason_behind_and_does_not_touch_steam() {
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");
-    let secrets = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "contraseña larga")
+    let secrets = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "a long passphrase")
         .expect("open the store");
 
     let steam = account(&db, StoreId::Steam, "76561197960287930").await;
@@ -146,7 +146,7 @@ async fn a_broken_epic_leaves_a_reason_behind_and_does_not_touch_steam() {
         epic_state
             .last_error
             .as_deref()
-            .is_some_and(|reason| reason.contains("vuelve a conectar")),
+            .is_some_and(|reason| reason.contains("connect the account again")),
         "the message has to say what to do, not only what failed: {:?}",
         epic_state.last_error
     );
@@ -164,7 +164,7 @@ async fn a_switched_off_epic_is_not_even_asked_and_steam_carries_on() {
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");
-    let secrets = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "contraseña larga")
+    let secrets = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "a long passphrase")
         .expect("open the store");
 
     let steam = account(&db, StoreId::Steam, "76561197960287930").await;

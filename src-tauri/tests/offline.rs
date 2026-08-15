@@ -1,6 +1,6 @@
-//! Los dos «done when» de la fase 5 que no son de interfaz: lo que escribe el
-//! usuario no lo pisa nadie, y sin red la biblioteca sigue estando ahí.
-
+//! The two "done when" of phase 5 that are not about the interface: nobody
+//! overwrites what the user writes, and with no network the library is still
+//! there.
 use connectors::SteamConnector;
 use domain::{
     EntryKind, Game, GameId, GameLink, LinkMethod, PlayStatus, StoreAccount, StoreAccountId,
@@ -24,7 +24,7 @@ const DETAILS: &str = include_str!("../../crates/connectors/tests/fixtures/steam
 async fn escenario(dir: &std::path::Path) -> (Database, EncryptedFileStore, StoreAccount) {
     let db = Database::open(&dir.join("library.db"))
         .await
-        .expect("abrir base");
+        .expect("open the database");
 
     let account = StoreAccount {
         id: StoreAccountId::new(),
@@ -37,11 +37,11 @@ async fn escenario(dir: &std::path::Path) -> (Database, EncryptedFileStore, Stor
     let id = StoreAccountRepository(&db)
         .upsert(&account)
         .await
-        .expect("cuenta");
+        .expect("account");
     let account = StoreAccount { id, ..account };
 
     let store =
-        EncryptedFileStore::open(&dir.join("secrets.bin"), "contraseña larga").expect("almacén");
+        EncryptedFileStore::open(&dir.join("secrets.bin"), "a long passphrase").expect("store");
     store
         .set(&credential_key(&account), r#"{"api_key":"CLAVE"}"#)
         .expect("credencial");
@@ -66,7 +66,7 @@ async fn steam_server() -> MockServer {
 }
 
 #[tokio::test]
-async fn el_estado_del_usuario_sobrevive_a_una_sincronizacion_completa() {
+async fn the_user_status_survives_a_complete_synchronisation() {
     let dir = tempfile::tempdir().expect("temporal");
     let (db, secrets, account) = escenario(dir.path()).await;
     let server = steam_server().await;
@@ -81,18 +81,18 @@ async fn el_estado_del_usuario_sobrevive_a_una_sincronizacion_completa() {
         &mut SyncReport::default(),
     )
     .await
-    .expect("primera sincronización");
+    .expect("the first synchronisation");
 
-    // Se empareja a mano una de las entradas y el usuario la marca.
-    let entrada = StoreEntryRepository(&db)
+    // One of the entries is matched by hand and the user marks it.
+    let entry = StoreEntryRepository(&db)
         .active(EntryKind::Owned)
         .await
-        .expect("entradas")
+        .expect("entries")
         .into_iter()
         .next()
-        .expect("hay entradas");
+        .expect("there are entries");
 
-    let ficha = Game {
+    let record = Game {
         id: GameId::new(),
         canonical_title: "Disco Elysium".to_owned(),
         sort_title: "disco elysium".to_owned(),
@@ -102,11 +102,11 @@ async fn el_estado_del_usuario_sobrevive_a_una_sincronizacion_completa() {
         released_at: None,
         genres: vec!["RPG".to_owned()],
     };
-    GameRepository(&db).upsert(&ficha).await.expect("ficha");
+    GameRepository(&db).upsert(&record).await.expect("record");
     GameLinkRepository(&db)
         .set_manual(&GameLink {
-            game_id: ficha.id,
-            store_entry_id: entrada.id,
+            game_id: record.id,
+            store_entry_id: entry.id,
             confidence: 1.0,
             method: LinkMethod::Manual,
         })
@@ -115,17 +115,17 @@ async fn el_estado_del_usuario_sobrevive_a_una_sincronizacion_completa() {
 
     UserStateRepository(&db)
         .save(&UserState {
-            game_id: ficha.id,
+            game_id: record.id,
             status: Some(PlayStatus::Playing),
             rating: Some(9),
-            notes: Some("por el capítulo 3".to_owned()),
+            notes: Some("at chapter 3".to_owned()),
             started_at: None,
             finished_at: None,
         })
         .await
-        .expect("estado");
+        .expect("status");
 
-    // Y ahora se sincroniza otras dos veces, enteras.
+    // And now it synchronises two more times, completely.
     for _ in 0..2 {
         sync_account(
             &db,
@@ -135,26 +135,26 @@ async fn el_estado_del_usuario_sobrevive_a_una_sincronizacion_completa() {
             &mut SyncReport::default(),
         )
         .await
-        .expect("re-sincronización");
+        .expect("a new synchronisation");
     }
 
-    let rows = LibraryRepository(&db).all().await.expect("biblioteca");
+    let rows = LibraryRepository(&db).all().await.expect("library");
     let row = rows
         .iter()
-        .find(|r| r.game_id == ficha.id)
-        .expect("la ficha sigue ahí");
+        .find(|r| r.game_id == record.id)
+        .expect("the record stays there");
     assert_eq!(row.status, Some(PlayStatus::Playing));
     assert_eq!(row.rating, Some(9));
-    assert_eq!(row.notes.as_deref(), Some("por el capítulo 3"));
+    assert_eq!(row.notes.as_deref(), Some("at chapter 3"));
     assert_eq!(row.owned_stores, vec!["steam".to_owned()]);
 }
 
 #[tokio::test]
-async fn sin_red_la_biblioteca_se_ve_y_lo_que_falla_es_solo_sincronizar() {
+async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fails() {
     let dir = tempfile::tempdir().expect("temporal");
     let (db, secrets, account) = escenario(dir.path()).await;
 
-    // Se llena la biblioteca con la red disponible.
+    // The library is filled while the network is available.
     let server = steam_server().await;
     let connector =
         SteamConnector::new(reqwest::Client::new()).with_bases(server.uri(), server.uri());
@@ -166,13 +166,13 @@ async fn sin_red_la_biblioteca_se_ve_y_lo_que_falla_es_solo_sincronizar() {
         &mut SyncReport::default(),
     )
     .await
-    .expect("sincronización inicial");
+    .expect("the initial synchronisation");
 
-    let entradas = StoreEntryRepository(&db)
+    let entries = StoreEntryRepository(&db)
         .active(EntryKind::Owned)
         .await
-        .expect("entradas");
-    let ficha = Game {
+        .expect("entries");
+    let record = Game {
         id: GameId::new(),
         canonical_title: "Disco Elysium".to_owned(),
         sort_title: "disco elysium".to_owned(),
@@ -182,35 +182,35 @@ async fn sin_red_la_biblioteca_se_ve_y_lo_que_falla_es_solo_sincronizar() {
         released_at: None,
         genres: vec![],
     };
-    GameRepository(&db).upsert(&ficha).await.expect("ficha");
+    GameRepository(&db).upsert(&record).await.expect("record");
     GameLinkRepository(&db)
         .rebuild_auto(&[GameLink {
-            game_id: ficha.id,
-            store_entry_id: entradas[0].id,
+            game_id: record.id,
+            store_entry_id: entries[0].id,
             confidence: 1.0,
             method: LinkMethod::Auto,
         }])
         .await
         .expect("enlace");
 
-    // Se cae la red: el servidor deja de existir.
+    // The network goes down: the server stops existing.
     drop(server);
-    let caido = SteamConnector::new(reqwest::Client::new())
+    let down = SteamConnector::new(reqwest::Client::new())
         .with_bases("http://127.0.0.1:1", "http://127.0.0.1:1");
 
-    let error = sync_account(&db, &secrets, &caido, &account, &mut SyncReport::default())
+    let error = sync_account(&db, &secrets, &down, &account, &mut SyncReport::default())
         .await
         .expect_err("sin red, sincronizar falla");
     assert!(
-        error.to_string().contains("no se pudo contactar"),
-        "el error debe decir que es la red: {error}"
+        error.to_string().contains("could not contact"),
+        "the error must say that it is the network: {error}"
     );
 
-    // Y aun así la biblioteca se lee entera, que es lo que ve el usuario.
+    // And the library still reads completely, which is what the user sees.
     let rows = LibraryRepository(&db)
         .all()
         .await
-        .expect("biblioteca sin red");
+        .expect("the library with no network");
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].title, "Disco Elysium");
 }

@@ -1,51 +1,52 @@
-//! Comprobación del keyring **real** del sistema.
+//! A test of the **real** keyring of the system.
 //!
-//! Está marcada `#[ignore]` a propósito: CI y los contenedores no tienen
-//! secret-service, y ahí el resultado correcto es justamente el contrario del
-//! que se afirma aquí. Se ejecuta a mano en una sesión de escritorio:
+//! It is marked `#[ignore]` deliberately: CI and the containers have no
+//! secret-service, and there the correct result is exactly the opposite of what
+//! this file declares. You run it by hand in a desktop session:
 //!
 //! ```sh
 //! cargo test -p secrets --test keyring_real -- --ignored --nocapture
 //! ```
 //!
-//! Existe porque el camino del keyring nativo se escribió en un contenedor
-//! headless, donde `detect` siempre elegía el fichero cifrado: hasta la primera
-//! ejecución en un escritorio de verdad, nadie había comprobado la otra rama.
+//! It exists because the path of the native keyring was written in a headless
+//! container, where `detect` always selected the encrypted file: until the first
+//! run on a real desktop, nobody had examined the other branch.
 
 use secrets::{Backend, KeyringStore, SecretStore};
 
-/// Servicio propio para no ensuciar el del usuario si la prueba se corta a
-/// mitad.
+/// A service of its own, so that the service of the user does not become dirty
+/// if the test stops in the middle.
 const SERVICE: &str = "com.serjor.gamelibrarymanager.test";
 
 #[test]
-#[ignore = "necesita una sesión de escritorio con secret-service"]
-fn detecta_el_keyring_y_guarda_y_lee() {
+#[ignore = "it needs a desktop session with secret-service"]
+fn it_detects_the_keyring_and_keeps_and_reads() {
     assert_eq!(
         secrets::detect(SERVICE),
         Backend::Keyring,
-        "en un escritorio con secret-service la detección debe elegir el keyring"
+        "on a desktop with secret-service the detection must select the keyring"
     );
 
     let store = KeyringStore::new(SERVICE);
     let key = "prueba:credencial";
-    let value = "valor-de-ida-y-vuelta";
+    let value = "a-value-that-goes-and-comes-back";
 
     store.set(key, value).expect("guardar en el keyring");
     assert_eq!(
         store.get(key).expect("leer del keyring").as_deref(),
         Some(value),
-        "lo leído tiene que ser exactamente lo guardado"
+        "what is read must be exactly what was saved"
     );
 
     store.delete(key).expect("borrar del keyring");
     assert_eq!(
         store.get(key).expect("leer tras borrar"),
         None,
-        "borrar tiene que dejar la entrada sin valor, no fallar"
+        "a delete must leave the entry with no value, not fail"
     );
 
-    // Borrar algo que no existe es correcto y no un error: la sincronización
-    // llama a `delete` sin saber si había credencial previa.
-    store.delete(key).expect("borrar dos veces es idempotente");
+    // To delete something that does not exist is correct and not an error: the
+    // synchronisation calls `delete` without it knows whether there was an
+    // earlier credential.
+    store.delete(key).expect("a second delete is idempotent");
 }

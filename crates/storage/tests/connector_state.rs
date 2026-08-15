@@ -41,7 +41,7 @@ async fn recovering_from_an_error_does_not_switch_a_connector_back_on() {
     let connectors = ConnectorStateRepository(&db);
 
     connectors
-        .record_error(StoreId::Epic, Some("credenciales inválidas"))
+        .record_error(StoreId::Epic, Some("invalid credentials"))
         .await
         .expect("write the error");
     connectors
@@ -72,10 +72,7 @@ async fn switching_a_connector_off_keeps_the_reason_it_was_switched_off_for() {
     let connectors = ConnectorStateRepository(&db);
 
     connectors
-        .record_error(
-            StoreId::Epic,
-            Some("Epic ha cambiado su forma de autorizar"),
-        )
+        .record_error(StoreId::Epic, Some("Epic has changed how it authorises"))
         .await
         .expect("write the error");
     connectors
@@ -86,7 +83,7 @@ async fn switching_a_connector_off_keeps_the_reason_it_was_switched_off_for() {
     let states = connectors.all().await.expect("read");
     assert_eq!(
         states[0].last_error.as_deref(),
-        Some("Epic ha cambiado su forma de autorizar"),
+        Some("Epic has changed how it authorises"),
         "the reason is what explains the switch a month from now"
     );
 }

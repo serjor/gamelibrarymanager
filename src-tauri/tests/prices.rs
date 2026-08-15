@@ -1,6 +1,6 @@
-//! El ciclo completo de la fase 8 contra un ITAD de mentira y una base de datos
-//! de verdad: identificar cada deseado, pedir los precios en un solo lote, y no
-//! volver a preguntar quién es un juego que ya se sabía.
+//! The complete cycle of phase 8 against a pretend ITAD and a real database: to
+//! identify each wished-for game, to ask for the prices in one batch, and not to
+//! ask again who a game is when that is already known.
 
 use domain::{
     EntryKind, Game, GameId, GameLink, LinkMethod, StoreAccount, StoreAccountId, StoreEntry,
@@ -27,13 +27,13 @@ fn lookup(id: &str, slug: &str, title: &str) -> String {
     )
 }
 
-fn precios(id: &str, tienda: &str, cents: i64, cut: i64) -> String {
+fn prices(id: &str, store: &str, cents: i64, cut: i64) -> String {
     format!(
         r#"{{"id":"{id}",
              "historyLow":{{"all":{{"amount":8.99,"amountInt":899,"currency":"EUR"}},
                             "y1":{{"amount":13.49,"amountInt":1349,"currency":"EUR"}},
                             "m3":null}},
-             "deals":[{{"shop":{{"id":61,"name":"{tienda}"}},
+             "deals":[{{"shop":{{"id":61,"name":"{store}"}},
                         "price":{{"amount":0.0,"amountInt":{cents},"currency":"EUR"}},
                         "regular":{{"amount":39.99,"amountInt":3999,"currency":"EUR"}},
                         "cut":{cut},
@@ -41,8 +41,8 @@ fn precios(id: &str, tienda: &str, cents: i64, cut: i64) -> String {
     )
 }
 
-/// Un ITAD que conoce Disco Elysium por su appid y Hollow Knight por su título,
-/// y que no conoce nada más.
+/// An ITAD that knows Disco Elysium by its appid and Hollow Knight by its title,
+/// and that knows nothing else.
 async fn itad_server() -> MockServer {
     let server = MockServer::start().await;
 
@@ -64,7 +64,7 @@ async fn itad_server() -> MockServer {
         ))
         .mount(&server)
         .await;
-    // Lo demás no lo conoce, y eso no es un error.
+    // It does not know the others, and that is not an error.
     Mock::given(method("GET"))
         .and(path("/games/lookup/v1"))
         .respond_with(
@@ -78,8 +78,8 @@ async fn itad_server() -> MockServer {
         .respond_with(ResponseTemplate::new(200).set_body_raw(
             format!(
                 "[{},{}]",
-                precios(DISCO, "GOG", 1599, 60),
-                precios(HOLLOW, "Steam", 749, 50)
+                prices(DISCO, "GOG", 1599, 60),
+                prices(HOLLOW, "Steam", 749, 50)
             ),
             "application/json",
         ))
@@ -92,27 +92,28 @@ async fn itad_server() -> MockServer {
 fn credentials() -> ItadCredentials {
     ItadCredentials {
         key: "clave".to_owned(),
-        country: "ES".to_owned(),
+        country: "GB".to_owned(),
     }
 }
 
-async fn cuenta(db: &Database, store: StoreId) -> StoreAccountId {
+async fn account(db: &Database, store: StoreId) -> StoreAccountId {
     StoreAccountRepository(db)
         .upsert(&StoreAccount {
             id: StoreAccountId::new(),
             store,
-            account_ref: format!("cuenta-{}", store.as_str()),
+            account_ref: format!("account-{}", store.as_str()),
             display_name: None,
             connected_at: OffsetDateTime::now_utc(),
             last_sync_at: None,
         })
         .await
-        .expect("alta de cuenta")
+        .expect("add the account")
 }
 
-/// Un deseado con su ficha: una copia de tipo `wishlist` y el enlace que las une.
-async fn deseado(db: &Database, store: StoreId, app_id: &str, title: &str) -> GameId {
-    let account_id = cuenta(db, store).await;
+/// A wished-for game with its record: a copy of the `wishlist` kind and the link
+/// that joins them.
+async fn wished(db: &Database, store: StoreId, app_id: &str, title: &str) -> GameId {
+    let account_id = account(db, store).await;
     let entry = StoreEntry {
         id: StoreEntryId::new(),
         account_id,
@@ -129,7 +130,7 @@ async fn deseado(db: &Database, store: StoreId, app_id: &str, title: &str) -> Ga
     StoreEntryRepository(db)
         .upsert_many(std::slice::from_ref(&entry))
         .await
-        .expect("volcar entrada");
+        .expect("write the entry");
 
     let game = Game {
         id: GameId::new(),
@@ -141,9 +142,9 @@ async fn deseado(db: &Database, store: StoreId, app_id: &str, title: &str) -> Ga
         released_at: None,
         genres: Vec::new(),
     };
-    GameRepository(db).upsert(&game).await.expect("ficha");
+    GameRepository(db).upsert(&game).await.expect("record");
 
-    let mut links = GameLinkRepository(db).all().await.expect("enlaces");
+    let mut links = GameLinkRepository(db).all().await.expect("links");
     links.push(GameLink {
         game_id: game.id,
         store_entry_id: entry.id,
@@ -158,37 +159,37 @@ async fn deseado(db: &Database, store: StoreId, app_id: &str, title: &str) -> Ga
     game.id
 }
 
-async fn peticiones(server: &MockServer, ruta: &str) -> usize {
+async fn requests(server: &MockServer, ruta: &str) -> usize {
     server
         .received_requests()
         .await
-        .expect("peticiones")
+        .expect("requests")
         .iter()
         .filter(|peticion| peticion.url.path() == ruta)
         .count()
 }
 
 #[tokio::test]
-async fn cada_deseado_acaba_con_su_mejor_precio_y_su_minimo_historico() {
-    let db = Database::in_memory().await.expect("base");
-    let disco = deseado(&db, StoreId::Steam, "632470", "Disco Elysium").await;
-    let hollow = deseado(&db, StoreId::Gog, "1207658930", "Hollow Knight").await;
+async fn each_wished_for_game_ends_with_its_best_price_and_its_all_time_low() {
+    let db = Database::in_memory().await.expect("database");
+    let disco = wished(&db, StoreId::Steam, "632470", "Disco Elysium").await;
+    let hollow = wished(&db, StoreId::Gog, "1207658930", "Hollow Knight").await;
 
     let server = itad_server().await;
     let itad = ItadClient::new(reqwest::Client::new()).with_base(server.uri());
 
     let report = refresh_prices(&db, &itad, &credentials(), &Silent)
         .await
-        .expect("precios");
+        .expect("prices");
 
     assert_eq!(report.priced, 2);
     assert_eq!(report.unknown, 0);
 
-    let rows = PriceRepository(&db).all().await.expect("consultar precios");
+    let rows = PriceRepository(&db).all().await.expect("consultar prices");
     let de = |game_id: GameId| {
         rows.iter()
             .find(|row| row.game_id == game_id)
-            .expect("el juego tiene precio")
+            .expect("el game tiene price")
     };
 
     assert_eq!(de(disco).shop, "GOG");
@@ -196,23 +197,23 @@ async fn cada_deseado_acaba_con_su_mejor_precio_y_su_minimo_historico() {
     assert_eq!(de(disco).cut, 60);
     assert_eq!(de(disco).low_all_time, Some(899));
     assert_eq!(de(disco).low_year, Some(1349));
-    // El enlace de la ficha sale del slug, que es lo único que la ventana tiene
-    // permiso para abrir: la oferta apunta a la tienda que sea.
+    // The link of the record comes from the slug, which is the only address that
+    // the window has permission to open: the offer points to any store.
     assert_eq!(de(disco).itad_slug.as_deref(), Some("disco-elysium"));
     assert_eq!(de(hollow).shop, "Steam");
     assert_eq!(de(hollow).amount, 749);
 
-    // Un solo lote para los dos juegos: una petición por deseado es lo que se
-    // come la cuota de una lista larga.
-    assert_eq!(peticiones(&server, "/games/prices/v3").await, 1);
+    // One batch for the two games: one request for each wished-for game is what
+    // uses all of the quota of a long list.
+    assert_eq!(requests(&server, "/games/prices/v3").await, 1);
 }
 
-/// La segunda pasada no vuelve a preguntar quién es cada juego: el
-/// identificador quedó anotado en la ficha.
+/// The second pass does not ask again who each game is: the identifier was
+/// written in the record.
 #[tokio::test]
-async fn refrescar_dos_veces_no_repite_las_busquedas() {
-    let db = Database::in_memory().await.expect("base");
-    deseado(&db, StoreId::Steam, "632470", "Disco Elysium").await;
+async fn a_second_refresh_does_not_repeat_the_searches() {
+    let db = Database::in_memory().await.expect("database");
+    wished(&db, StoreId::Steam, "632470", "Disco Elysium").await;
 
     let server = itad_server().await;
     let itad = ItadClient::new(reqwest::Client::new()).with_base(server.uri());
@@ -220,35 +221,35 @@ async fn refrescar_dos_veces_no_repite_las_busquedas() {
     for _ in 0..3 {
         refresh_prices(&db, &itad, &credentials(), &Silent)
             .await
-            .expect("precios");
+            .expect("prices");
     }
 
     assert_eq!(
-        peticiones(&server, "/games/lookup/v1").await,
+        requests(&server, "/games/lookup/v1").await,
         1,
-        "la búsqueda se hace una vez en la vida del juego"
+        "the search is made one time in the life of the game"
     );
-    assert_eq!(peticiones(&server, "/games/prices/v3").await, 3);
+    assert_eq!(requests(&server, "/games/prices/v3").await, 3);
 
-    let rows = PriceRepository(&db).all().await.expect("consultar precios");
-    assert_eq!(rows.len(), 1, "refrescar no duplica el precio");
+    let rows = PriceRepository(&db).all().await.expect("consultar prices");
+    assert_eq!(rows.len(), 1, "a refresh does not duplicate the price");
     assert_eq!(rows[0].shops, 1);
 }
 
-/// Un juego que ITAD no conoce se cuenta aparte y no arrastra a los demás. Es la
-/// misma regla que con las tiendas: lo que falla, falla solo.
+/// A game that ITAD does not know is counted apart and does not affect the
+/// others. It is the same rule as with the stores: what fails, fails alone.
 #[tokio::test]
-async fn un_juego_que_itad_no_conoce_no_deja_sin_precio_a_los_demas() {
-    let db = Database::in_memory().await.expect("base");
-    deseado(&db, StoreId::Steam, "632470", "Disco Elysium").await;
-    deseado(&db, StoreId::Gog, "9999", "Un juego que no existe").await;
+async fn a_game_that_itad_does_not_know_does_not_leave_the_others_with_no_price() {
+    let db = Database::in_memory().await.expect("database");
+    wished(&db, StoreId::Steam, "632470", "Disco Elysium").await;
+    wished(&db, StoreId::Gog, "9999", "A game that does not exist").await;
 
     let server = itad_server().await;
     let itad = ItadClient::new(reqwest::Client::new()).with_base(server.uri());
 
     let report = refresh_prices(&db, &itad, &credentials(), &Silent)
         .await
-        .expect("precios");
+        .expect("prices");
 
     assert_eq!(report.unknown, 1);
     assert_eq!(report.priced, 1);
@@ -256,35 +257,35 @@ async fn un_juego_que_itad_no_conoce_no_deja_sin_precio_a_los_demas() {
         PriceRepository(&db)
             .all()
             .await
-            .expect("consultar precios")
+            .expect("consultar prices")
             .len(),
         1
     );
 }
 
-/// Comprar un juego lo saca de la lista de deseados, y su precio deja de tener
-/// sentido. La siguiente pasada lo olvida.
+/// To buy a game takes it out of the wishlist, and its price stops having a
+/// meaning. The next pass forgets it.
 #[tokio::test]
-async fn comprar_un_deseado_borra_su_precio_en_la_siguiente_pasada() {
-    let db = Database::in_memory().await.expect("base");
-    let disco = deseado(&db, StoreId::Steam, "632470", "Disco Elysium").await;
+async fn to_buy_a_wished_for_game_deletes_its_price_at_the_next_pass() {
+    let db = Database::in_memory().await.expect("database");
+    let disco = wished(&db, StoreId::Steam, "632470", "Disco Elysium").await;
 
     let server = itad_server().await;
     let itad = ItadClient::new(reqwest::Client::new()).with_base(server.uri());
     refresh_prices(&db, &itad, &credentials(), &Silent)
         .await
-        .expect("precios");
-    assert_eq!(PriceRepository(&db).all().await.expect("precios").len(), 1);
+        .expect("prices");
+    assert_eq!(PriceRepository(&db).all().await.expect("prices").len(), 1);
 
-    // Deja de estar deseado: la copia se da de baja como haría la sincronización
-    // el día que el usuario lo compre.
+    // It stops being wished for: the copy is deleted logically as the
+    // synchronisation would do on the day that the user buys it.
     let account = StoreAccountRepository(&db)
         .active()
         .await
         .expect("cuentas")
         .into_iter()
         .next()
-        .expect("hay cuenta");
+        .expect("there is an account");
     StoreEntryRepository(&db)
         .soft_delete_missing(account.id, EntryKind::Wishlist, &[])
         .await
@@ -292,22 +293,18 @@ async fn comprar_un_deseado_borra_su_precio_en_la_siguiente_pasada() {
 
     refresh_prices(&db, &itad, &credentials(), &Silent)
         .await
-        .expect("precios");
+        .expect("prices");
 
     assert!(
-        PriceRepository(&db)
-            .all()
-            .await
-            .expect("precios")
-            .is_empty(),
-        "un juego que ya no se desea no tiene precio que enseñar"
+        PriceRepository(&db).all().await.expect("prices").is_empty(),
+        "a game that is no longer wished for has no price to show"
     );
-    // La ficha sigue entera: olvidar un precio no toca nada más.
+    // The record stays complete: to forget a price touches nothing else.
     assert!(
         GameRepository(&db)
             .find(disco)
             .await
-            .expect("ficha")
+            .expect("record")
             .is_some()
     );
 }

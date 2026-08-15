@@ -1,10 +1,10 @@
-//! Conector de GOG contra respuestas grabadas. Ningún test de esta suite toca
-//! la red real.
+//! The GOG connector against recorded answers. No test of this suite touches
+//! the real network.
 //!
-//! Las fixtures de `products` y de la forma de la biblioteca se tomaron de las
-//! respuestas reales del 2026-08-14, después de comprobar que los endpoints que
-//! documentaba el plan —los de `embed.gog.com`— ya solo devuelven una
-//! redirección a la pantalla de login.
+//! The fixtures of `products` and of the shape of the library were taken from
+//! the real answers of 2026-08-14, after it was found that the endpoints in the
+//! plan — those of `embed.gog.com` — now only give back a redirect to the login
+//! screen.
 
 use connectors::GogConnector;
 use domain::{
@@ -16,9 +16,9 @@ use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 const TOKEN: &str = include_str!("fixtures/gog_token.json");
-const TOKEN_REFRESCADO: &str = include_str!("fixtures/gog_token_refrescado.json");
+const TOKEN_REFRESCADO: &str = include_str!("fixtures/gog_token_refreshed.json");
 const RELEASES: &str = include_str!("fixtures/gog_releases.json");
-const RELEASES_2: &str = include_str!("fixtures/gog_releases_pagina2.json");
+const RELEASES_2: &str = include_str!("fixtures/gog_releases_page2.json");
 const PRODUCTS: &str = include_str!("fixtures/gog_products.json");
 const USER: &str = include_str!("fixtures/gog_user.json");
 
@@ -27,7 +27,7 @@ const USER_ID: &str = "51000000000000000";
 fn client() -> ClientCredentials {
     ClientCredentials {
         client_id: "46899977096215655".to_owned(),
-        client_secret: "SECRETO_QUE_APORTA_EL_USUARIO".to_owned(),
+        client_secret: "SECRET_THAT_THE_USER_SUPPLIES".to_owned(),
     }
 }
 
@@ -35,11 +35,11 @@ fn connector(server: &MockServer) -> GogConnector {
     GogConnector::new(reqwest::Client::new()).with_bases(&server.uri())
 }
 
-/// Credencial ya guardada, con la caducidad que pida el test.
+/// A credential already kept, with the expiry that the test asks for.
 fn credencial(expires_at: i64) -> String {
     format!(
-        r#"{{"client_id":"46899977096215655","client_secret":"SECRETO_QUE_APORTA_EL_USUARIO",
-             "access_token":"TOKEN_DE_ACCESO_DE_PRUEBA","refresh_token":"TOKEN_DE_REFRESCO_DE_PRUEBA",
+        r#"{{"client_id":"46899977096215655","client_secret":"SECRET_THAT_THE_USER_SUPPLIES",
+             "access_token":"TEST_ACCESS_TOKEN","refresh_token":"TEST_REFRESH_TOKEN",
              "user_id":"{USER_ID}","expires_at":{expires_at}}}"#
     )
 }
@@ -62,12 +62,12 @@ async fn mock(server: &MockServer, route: &str, body: &'static str) {
         .await;
 }
 
-/// La biblioteca paginada: página 1 con testigo, página 2 sin él.
+/// The library in pages: page 1 with a token, page 2 with no token.
 async fn mock_biblioteca(server: &MockServer) {
     let route = format!("/users/{USER_ID}/releases");
     Mock::given(method("GET"))
         .and(path(route.clone()))
-        .and(query_param("page_token", "PAGINA_2"))
+        .and(query_param("page_token", "PAGE_2"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(RELEASES_2, "application/json"))
         .mount(server)
         .await;
@@ -80,38 +80,38 @@ async fn mock_biblioteca(server: &MockServer) {
 }
 
 #[tokio::test]
-async fn canjea_el_codigo_por_un_token() {
+async fn it_exchanges_the_code_for_a_token() {
     let server = MockServer::start().await;
     mock(&server, "/token", TOKEN).await;
     mock(&server, &format!("/users/{USER_ID}"), USER).await;
 
     let session = connector(&server)
         .authenticate(&AuthContext::AuthCode {
-            code: "CODIGO_DE_LA_REDIRECCION".to_owned(),
+            code: "CODE_OF_THE_REDIRECT".to_owned(),
             client: client(),
         })
         .await
-        .expect("canjear el código");
+        .expect("exchange the code");
 
     assert_eq!(session.store, StoreId::Gog);
     assert_eq!(session.account_ref, USER_ID);
     assert_eq!(session.display_name.as_deref(), Some("serjor"));
     assert!(
-        session.credential.contains("TOKEN_DE_REFRESCO_DE_PRUEBA"),
-        "el token de refresco tiene que guardarse: sin él habría que volver a \
-         pasar por el login en cada caducidad"
+        session.credential.contains("TEST_REFRESH_TOKEN"),
+        "the refresh token must be kept: without it the user would have to go \
+         through the login again at each expiry"
     );
     assert!(
-        session.credential.contains("SECRETO_QUE_APORTA_EL_USUARIO"),
-        "las credenciales de cliente viajan con la credencial porque el \
-         refresco las necesita"
+        session.credential.contains("SECRET_THAT_THE_USER_SUPPLIES"),
+        "the client credentials go with the credential because the refresh \
+         needs them"
     );
 }
 
 #[tokio::test]
-async fn un_codigo_caducado_pide_volver_a_conectar() {
+async fn an_expired_code_asks_you_to_connect_again() {
     let server = MockServer::start().await;
-    // GOG responde 400 con `invalid_grant` a un código ya usado o caducado.
+    // GOG answers 400 with `invalid_grant` to a code already used or expired.
     Mock::given(method("GET"))
         .and(path("/token"))
         .respond_with(ResponseTemplate::new(400).set_body_raw(
@@ -127,13 +127,13 @@ async fn un_codigo_caducado_pide_volver_a_conectar() {
             client: client(),
         })
         .await
-        .expect_err("un código gastado no autentica");
+        .expect_err("a spent code does not authenticate");
 
     assert!(matches!(error, ConnectorError::Unauthorized));
 }
 
 #[tokio::test]
-async fn lee_la_biblioteca_paginada_y_descarta_lo_ajeno() {
+async fn it_reads_the_library_in_pages_and_drops_what_is_not_its_own() {
     let server = MockServer::start().await;
     mock_biblioteca(&server).await;
 
@@ -142,16 +142,16 @@ async fn lee_la_biblioteca_paginada_y_descarta_lo_ajeno() {
         .await
         .expect("leer biblioteca");
 
-    // De las cuatro entradas que hay entre las dos páginas solo dos son juegos
-    // de GOG en propiedad: la de Steam la lista Galaxy porque el usuario tiene
-    // esa tienda conectada, y la otra no se posee.
+    // Of the four entries in the two pages only two are owned GOG games: Galaxy
+    // lists the Steam one because the user has that store connected, and the
+    // other one is not owned.
     assert_eq!(entries.len(), 2);
 
     let ids: Vec<&str> = entries.iter().map(|e| e.store_app_id.as_str()).collect();
     assert_eq!(ids, vec!["1495134320", "1207658930"]);
     assert!(
         entries.iter().all(|e| e.store == StoreId::Gog),
-        "ninguna entrada puede salir de aquí marcada como de otra tienda"
+        "no entry can come out of here marked as from a different store"
     );
 
     assert_eq!(
@@ -164,8 +164,8 @@ async fn lee_la_biblioteca_paginada_y_descarta_lo_ajeno() {
     );
     assert!(entries[0].acquired_at.is_some(), "owned_since se conserva");
 
-    // La portada y la página de la tienda son lo que permite comparar contra la
-    // ficha de IGDB al revisar un emparejamiento dudoso.
+    // The cover and the store page are what let you compare against the IGDB
+    // record when you examine an unsure match.
     assert_eq!(
         entries[0].store_url.as_deref(),
         Some("https://www.gog.com/game/the_witcher_3_wild_hunt_game_of_the_year_edition_game")
@@ -175,18 +175,18 @@ async fn lee_la_biblioteca_paginada_y_descarta_lo_ajeno() {
             .cover_url
             .as_deref()
             .is_some_and(|url| url.starts_with("https://images-4.gog-statics.com/")),
-        "GOG sirve la imagen sin esquema y hay que completarla: {:?}",
+        "GOG gives the image with no scheme and it must be completed: {:?}",
         entries[0].cover_url
     );
 }
 
 #[tokio::test]
-async fn sin_titulo_la_copia_sigue_llegando() {
+async fn with_no_title_the_copy_still_comes() {
     let server = MockServer::start().await;
     let route = format!("/users/{USER_ID}/releases");
     Mock::given(method("GET"))
         .and(path(route.clone()))
-        .and(query_param("page_token", "PAGINA_2"))
+        .and(query_param("page_token", "PAGE_2"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(RELEASES_2, "application/json"))
         .mount(&server)
         .await;
@@ -195,8 +195,9 @@ async fn sin_titulo_la_copia_sigue_llegando() {
         .respond_with(ResponseTemplate::new(200).set_body_raw(RELEASES, "application/json"))
         .mount(&server)
         .await;
-    // GOG no conoce el título de todo lo que Galaxy lista: quedarse sin la copia
-    // por no saber su nombre sería peor que enseñarla con uno provisional.
+    // GOG does not know the title of each game that Galaxy lists: to lose all of
+    // the copy because its name is unknown would be worse than to show it with a
+    // temporary name.
     Mock::given(method("GET"))
         .and(path("/products"))
         .respond_with(ResponseTemplate::new(404))
@@ -206,17 +207,17 @@ async fn sin_titulo_la_copia_sigue_llegando() {
     let entries = connector(&server)
         .owned(&session(futuro()), StoreAccountId::new())
         .await
-        .expect("un fallo de títulos no invalida la sincronización");
+        .expect("a failure of the titles does not make the synchronisation invalid");
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0].title, "GOG 1495134320");
 }
 
 #[tokio::test]
-async fn con_el_token_vivo_no_gasta_ni_una_peticion() {
+async fn with_the_token_still_live_it_uses_no_request() {
     let server = MockServer::start().await;
-    // Si el conector pidiese token teniendo uno válido, esta expectativa de
-    // cero llamadas fallaría al cerrarse el servidor.
+    // If the connector asked for a token while it had a valid one, this
+    // expectation of zero calls would fail when the server closes.
     Mock::given(method("GET"))
         .and(path("/token"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(TOKEN, "application/json"))
@@ -229,18 +230,18 @@ async fn con_el_token_vivo_no_gasta_ni_una_peticion() {
             credential: credencial(futuro()),
         })
         .await
-        .expect("reconstruir la sesión");
+        .expect("build the session again");
 
     assert_eq!(session.account_ref, USER_ID);
 }
 
 #[tokio::test]
-async fn refresca_el_token_cuando_el_de_acceso_caduca() {
+async fn it_refreshes_the_token_when_the_access_token_expires() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/token"))
         .and(query_param("grant_type", "refresh_token"))
-        .and(query_param("refresh_token", "TOKEN_DE_REFRESCO_DE_PRUEBA"))
+        .and(query_param("refresh_token", "TEST_REFRESH_TOKEN"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(TOKEN_REFRESCADO, "application/json"))
         .expect(1)
         .mount(&server)
@@ -254,22 +255,22 @@ async fn refresca_el_token_cuando_el_de_acceso_caduca() {
         .expect("refrescar el token caducado");
 
     assert!(
-        session.credential.contains("TOKEN_DE_ACCESO_RENOVADO"),
-        "la sesión tiene que salir con el token nuevo"
+        session.credential.contains("RENEWED_ACCESS_TOKEN"),
+        "the session must come out with the new token"
     );
     assert!(
-        session.credential.contains("TOKEN_DE_REFRESCO_ROTADO"),
-        "GOG rota el token de refresco: guardar el viejo dejaría la cuenta \
+        session.credential.contains("ROTATED_REFRESH_TOKEN"),
+        "GOG changes the refresh token: to keep the old one would leave the \
          muerta en la siguiente caducidad"
     );
     assert!(
-        session.credential.contains("SECRETO_QUE_APORTA_EL_USUARIO"),
-        "el refresco no puede perder las credenciales de cliente"
+        session.credential.contains("SECRET_THAT_THE_USER_SUPPLIES"),
+        "the refresh cannot lose the client credentials"
     );
 }
 
 #[tokio::test]
-async fn un_refresco_rechazado_pide_volver_a_conectar() {
+async fn a_refused_refresh_asks_you_to_connect_again() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/token"))
@@ -282,24 +283,24 @@ async fn un_refresco_rechazado_pide_volver_a_conectar() {
             credential: credencial(pasado()),
         })
         .await
-        .expect_err("un refresh_token revocado no se puede salvar solo");
+        .expect_err("a revoked refresh_token cannot recover alone");
 
     assert!(matches!(error, ConnectorError::Unauthorized));
 }
 
 #[tokio::test]
-async fn los_deseados_de_gog_no_son_accesibles_y_no_se_inventan() {
+async fn the_gog_wishlist_is_not_accessible_and_is_not_invented() {
     let server = MockServer::start().await;
 
     let entries = connector(&server)
         .wishlist(&session(futuro()), StoreAccountId::new())
         .await
-        .expect("los deseados no pueden hacer fallar la sincronización");
+        .expect("the wishes cannot make the synchronisation fail");
 
     assert!(
         entries.is_empty(),
-        "GOG no expone los deseados a un token de Galaxy; la lista vacía es \
-         honesta y el scraping con la sesión web del usuario no es una opción"
+        "GOG does not give the wishes to a Galaxy token; the empty list is \
+         honest and a scrape with the web session of the user is not an option"
     );
 }
 

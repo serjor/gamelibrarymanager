@@ -1,10 +1,10 @@
-//! ITAD contra respuestas grabadas. Ningún test toca la API real: haría falta
-//! una clave de un usuario, y los precios cambian cada hora, así que un test
-//! contra la de verdad no podría afirmar nada.
+//! ITAD against recorded answers. No test touches the real API: that would need
+//! the key of a user, and the prices change each hour, thus a test against the
+//! real API could declare nothing.
 //!
-//! Las fixtures reproducen la forma de la respuesta documentada el 2026-08-15,
-//! con los casos que de verdad rompen: un juego sin ninguna oferta y otro que
-//! nunca ha estado de rebajas, que es distinto de costar cero.
+//! The fixtures repeat the shape of the answer recorded on 2026-08-15, with the
+//! conditions that really break: a game with no offer and a game that has never
+//! been discounted, which is different from a cost of zero.
 
 use metadata::MetadataError;
 use metadata::itad::{ItadClient, ItadCredentials};
@@ -18,7 +18,7 @@ const PRICES: &str = include_str!("fixtures/itad_prices.json");
 fn credentials() -> ItadCredentials {
     ItadCredentials {
         key: "MI_CLAVE".to_owned(),
-        country: "ES".to_owned(),
+        country: "GB".to_owned(),
     }
 }
 
@@ -27,30 +27,30 @@ fn client(server: &MockServer) -> ItadClient {
 }
 
 #[tokio::test]
-async fn el_appid_de_steam_da_el_juego_de_itad() {
+async fn the_steam_appid_gives_the_itad_game() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/games/lookup/v1"))
-        // La clave va en la cabecera y no en la URL: una clave en la dirección
-        // acaba en cualquier registro por el que pase la petición.
+        // The key goes in the header and not in the URL: a key in the address
+        // goes into each log through which the request passes.
         .and(header("ITAD-API-Key", "MI_CLAVE"))
         .and(query_param("appid", "632470"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(LOOKUP, "application/json"))
         .mount(&server)
         .await;
 
-    let juego = client(&server)
+    let game = client(&server)
         .lookup_by_steam_app_id(&credentials(), "632470")
         .await
         .expect("consulta")
-        .expect("el juego existe");
+        .expect("the game exists");
 
-    assert_eq!(juego.id, "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c");
-    assert_eq!(juego.slug, "disco-elysium");
+    assert_eq!(game.id, "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c");
+    assert_eq!(game.slug, "disco-elysium");
 }
 
 #[tokio::test]
-async fn un_juego_que_itad_no_conoce_no_es_un_error() {
+async fn a_game_that_itad_does_not_know_is_not_an_error() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/games/lookup/v1"))
@@ -69,16 +69,16 @@ async fn un_juego_que_itad_no_conoce_no_es_un_error() {
 }
 
 #[tokio::test]
-async fn los_precios_llegan_en_centimos_con_el_minimo_historico() {
+async fn the_prices_come_in_cents_with_the_all_time_low() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games/prices/v3"))
-        .and(query_param("country", "ES"))
+        .and(query_param("country", "GB"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(PRICES, "application/json"))
         .mount(&server)
         .await;
 
-    let precios = client(&server)
+    let prices = client(&server)
         .prices(
             &credentials(),
             &["018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c".to_owned()],
@@ -86,7 +86,7 @@ async fn los_precios_llegan_en_centimos_con_el_minimo_historico() {
         .await
         .expect("consulta");
 
-    let disco = &precios[0];
+    let disco = &prices[0];
     assert_eq!(disco.deals.len(), 2);
     assert_eq!(disco.deals[0].shop, "Steam");
     assert_eq!(disco.deals[0].price.cents, 1799);
@@ -97,11 +97,11 @@ async fn los_precios_llegan_en_centimos_con_el_minimo_historico() {
     assert_eq!(disco.low_year.as_ref().map(|m| m.cents), Some(1349));
 }
 
-/// Un juego que no vende nadie y que nunca ha estado de oferta llega con las
-/// listas vacías y sin mínimos. No tener precio no es costar cero, y la
-/// diferencia se pierde en cuanto se rellena con un valor por defecto.
+/// A game that nobody sells and that has never been on offer comes with empty
+/// lists and with no lows. To have no price is not to cost zero, and the
+/// difference goes away as soon as you fill it with a default value.
 #[tokio::test]
-async fn un_juego_sin_ofertas_llega_sin_precio_y_sin_minimos() {
+async fn a_game_with_no_offer_comes_with_no_price_and_no_lows() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games/prices/v3"))
@@ -109,21 +109,21 @@ async fn un_juego_sin_ofertas_llega_sin_precio_y_sin_minimos() {
         .mount(&server)
         .await;
 
-    let precios = client(&server)
+    let prices = client(&server)
         .prices(&credentials(), &["da-igual".to_owned()])
         .await
         .expect("consulta");
 
-    let sin_ofertas = &precios[1];
-    assert!(sin_ofertas.deals.is_empty());
-    assert_eq!(sin_ofertas.low_all_time, None);
-    assert_eq!(sin_ofertas.low_year, None);
+    let with_no_offer = &prices[1];
+    assert!(with_no_offer.deals.is_empty());
+    assert_eq!(with_no_offer.low_all_time, None);
+    assert_eq!(with_no_offer.low_year, None);
 }
 
-/// Doscientos por petición es lo que admite ITAD. Con una lista de deseados
-/// larga, mandarlos todos de golpe devuelve un error y no medio resultado.
+/// Two hundred for each request is what ITAD accepts. With a long wishlist, to
+/// send all of them together gives an error and not one half of a result.
 #[tokio::test]
-async fn una_lista_larga_se_parte_en_lotes_de_doscientos() {
+async fn a_long_list_is_divided_into_batches_of_two_hundred() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games/prices/v3"))
@@ -135,22 +135,19 @@ async fn una_lista_larga_se_parte_en_lotes_de_doscientos() {
         .mount(&server)
         .await;
 
-    let ids: Vec<String> = (0..450).map(|i| format!("juego-{i}")).collect();
+    let ids: Vec<String> = (0..450).map(|i| format!("game-{i}")).collect();
     client(&server)
         .prices(&credentials(), &ids)
         .await
         .expect("consulta");
 
-    assert_eq!(
-        server.received_requests().await.expect("peticiones").len(),
-        3
-    );
+    assert_eq!(server.received_requests().await.expect("requests").len(), 3);
 }
 
 #[tokio::test]
-async fn una_clave_que_no_vale_se_nota_en_la_primera_consulta() {
+async fn a_key_that_is_not_valid_is_found_at_the_first_query() {
     let server = MockServer::start().await;
-    // ITAD contesta 403, no 401, cuando falta la clave o no sirve.
+    // ITAD answers 403, not 401, when the key is absent or is not usable.
     Mock::given(method("GET"))
         .and(path("/games/lookup/v1"))
         .respond_with(ResponseTemplate::new(403))
@@ -166,7 +163,7 @@ async fn una_clave_que_no_vale_se_nota_en_la_primera_consulta() {
 }
 
 #[tokio::test]
-async fn el_429_tiene_su_propio_error() {
+async fn the_429_has_an_error_of_its_own() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games/prices/v3"))

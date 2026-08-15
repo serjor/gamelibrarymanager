@@ -362,7 +362,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn reconoce_el_code_de_la_redireccion() {
+    fn it_recognises_the_code_of_the_redirect() {
         let code = GogConnector::code_from_redirect(
             "https://embed.gog.com/on_login_success?origin=client&code=ABC123",
         );
@@ -370,9 +370,9 @@ mod tests {
     }
 
     #[test]
-    fn ignora_las_paginas_del_propio_login() {
-        // Mientras el usuario escribe su contraseña se navega por muchas
-        // páginas de GOG: ninguna de ellas puede confundirse con el final.
+    fn it_ignores_the_pages_of_the_login() {
+        // While the user writes their password, the window goes through many GOG
+        // pages: none of them can be mistaken for the last one.
         assert_eq!(
             GogConnector::code_from_redirect("https://login.gog.com/auth?client_id=1&code=no"),
             None
@@ -386,14 +386,14 @@ mod tests {
     }
 
     #[test]
-    fn la_url_de_login_lleva_la_redireccion_escapada() {
+    fn the_login_address_carries_the_redirect_escaped() {
         let url = GogConnector::authorize_url(DEFAULT_AUTH, "123");
         assert!(url.contains("client_id=123"));
         assert!(
             url.contains(
                 "redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient"
             ),
-            "sin escapar, GOG corta la redirección en el primer & y devuelve invalid_request: {url}"
+            "unescaped, GOG cuts the redirect at the first & and answers invalid_request: {url}"
         );
     }
 }

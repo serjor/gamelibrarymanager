@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { LibraryRow } from "../../lib/api";
-import { destacado, estanterias } from "./shelves";
+import { featured, shelves } from "./shelves";
 
 function row(overrides: Partial<LibraryRow>): LibraryRow {
-  const title = overrides.title ?? "Juego";
+  const title = overrides.title ?? "Game";
   return {
     game_id: crypto.randomUUID(),
     title,
@@ -25,104 +25,105 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
   };
 }
 
-/** Un instante fijo: las reglas cortan por «hace seis meses». */
-const AHORA = 1_760_000_000;
-const DIA = 86_400;
+/** A fixed moment: the rules divide at "six months ago". */
+const NOW = 1_760_000_000;
+const DAY = 86_400;
 
-const titulos = (rows: LibraryRow[]) => rows.map((r) => r.title);
-const ids = (rows: LibraryRow[]) => estanterias(rows, AHORA).map((e) => e.id);
+const titles = (rows: LibraryRow[]) => rows.map((r) => r.title);
+const ids = (rows: LibraryRow[]) => shelves(rows, NOW).map((e) => e.id);
 
-describe("estanterías de Hoy", () => {
-  it("una biblioteca vacía no devuelve ninguna estantería", () => {
-    // No es lo mismo que devolver estanterías vacías: la pantalla pinta lo que
-    // haya, y una lista de encabezados sin nada debajo no informa de nada.
-    expect(estanterias([], AHORA)).toEqual([]);
-    expect(destacado([], AHORA)).toBeNull();
+describe("the shelves of Today", () => {
+  it("an empty library gives back no shelf", () => {
+    // That is not the same as empty shelves: the screen shows what there is, and
+    // a list of headings with nothing below them tells you nothing.
+    expect(shelves([], NOW)).toEqual([]);
+    expect(featured([], NOW)).toBeNull();
   });
 
-  it("un deseado no se propone: no se puede jugar hoy", () => {
-    const deseado = [row({ title: "Deseado", owned_stores: [], wishlist_stores: ["steam"] })];
-    expect(estanterias(deseado, AHORA)).toEqual([]);
-    expect(destacado(deseado, AHORA)).toBeNull();
+  it("a wished-for game is not proposed: you cannot play it today", () => {
+    const wished = [row({ title: "Wished", owned_stores: [], wishlist_stores: ["steam"] })];
+    expect(shelves(wished, NOW)).toEqual([]);
+    expect(featured(wished, NOW)).toBeNull();
   });
 
-  it("solo devuelve las estanterías que tienen algo dentro", () => {
-    // Nada empezado y nada en dos tiendas: esas dos no salen.
-    const biblioteca = [
-      row({ title: "Sin abrir" }),
-      row({ title: "Aparcado", playtime_minutes: 600, last_played_at: AHORA - 400 * DIA }),
+  it("it gives back only the shelves that have something in them", () => {
+    // Nothing started and nothing in two stores: those two do not appear.
+    const library = [
+      row({ title: "Never opened" }),
+      row({ title: "Left", playtime_minutes: 600, last_played_at: NOW - 400 * DAY }),
     ];
-    expect(ids(biblioteca)).toEqual(["sin-tocar", "sin-estrenar"]);
+    expect(ids(library)).toEqual(["not-touched", "never-started"]);
   });
 
-  it("«hace mucho que no lo tocas» empieza por el que lleva más tiempo", () => {
-    const biblioteca = [
-      row({ title: "Hace un año", playtime_minutes: 600, last_played_at: AHORA - 370 * DIA }),
-      row({ title: "Hace tres años", playtime_minutes: 600, last_played_at: AHORA - 1100 * DIA }),
-      // Justo por debajo del corte: no entra.
-      row({ title: "Hace un mes", playtime_minutes: 600, last_played_at: AHORA - 30 * DIA }),
+  it('"you have not touched it for a long time" starts with the oldest', () => {
+    const library = [
+      row({ title: "One year ago", playtime_minutes: 600, last_played_at: NOW - 370 * DAY }),
+      row({ title: "Three years ago", playtime_minutes: 600, last_played_at: NOW - 1100 * DAY }),
+      // Exactly below the limit: it does not come in.
+      row({ title: "One month ago", playtime_minutes: 600, last_played_at: NOW - 30 * DAY }),
     ];
-    const estante = estanterias(biblioteca, AHORA).find((e) => e.id === "sin-tocar");
-    expect(titulos(estante?.juegos ?? [])).toEqual(["Hace tres años", "Hace un año"]);
+    const shelf = shelves(library, NOW).find((e) => e.id === "not-touched");
+    expect(titles(shelf?.games ?? [])).toEqual(["Three years ago", "One year ago"]);
   });
 
-  it("lo terminado y lo abandonado no vuelve a proponerse", () => {
-    // Es una decisión ya tomada, y «Hoy» no la reabre. Sí sigue contando para
-    // «lo tienes dos veces», que no es una propuesta sino un dato de la copia.
-    const biblioteca = [
+  it("the finished and abandoned games are not proposed again", () => {
+    // It is a decision already made, and "Today" does not open it again. It does
+    // still count for "you have it two times", which is not a proposal but data
+    // about the copy.
+    const library = [
       row({
-        title: "Terminado",
+        title: "Finished",
         status: "finished",
         playtime_minutes: 600,
-        last_played_at: AHORA - 400 * DIA,
+        last_played_at: NOW - 400 * DAY,
       }),
-      row({ title: "Abandonado", status: "abandoned", owned_stores: ["steam", "gog"] }),
+      row({ title: "Abandoned", status: "abandoned", owned_stores: ["steam", "gog"] }),
     ];
-    expect(ids(biblioteca)).toEqual(["dos-veces"]);
+    expect(ids(library)).toEqual(["two-times"]);
   });
 
-  it("un juego solo de GOG no cuenta como «sin estrenar» si lo has jugado", () => {
-    // GOG no publica la última partida, así que llega sin fecha. Lo que se
-    // puede afirmar son las horas: con horas jugadas, estrenado está.
-    const biblioteca = [
-      row({ title: "De GOG jugado", owned_stores: ["gog"], playtime_minutes: 240 }),
-      row({ title: "De GOG sin abrir", owned_stores: ["gog"] }),
+  it('a game only in GOG does not count as "never started" if you played it', () => {
+    // GOG does not publish the last game played, thus it comes with no date.
+    // What you can declare is the hours: with hours played, it is started.
+    const library = [
+      row({ title: "From GOG played", owned_stores: ["gog"], playtime_minutes: 240 }),
+      row({ title: "From GOG never opened", owned_stores: ["gog"] }),
     ];
-    const estante = estanterias(biblioteca, AHORA).find((e) => e.id === "sin-estrenar");
-    expect(titulos(estante?.juegos ?? [])).toEqual(["De GOG sin abrir"]);
+    const shelf = shelves(library, NOW).find((e) => e.id === "never-started");
+    expect(titles(shelf?.games ?? [])).toEqual(["From GOG never opened"]);
   });
 });
 
-describe("la propuesta de Hoy", () => {
-  it("lo que estabas jugando gana a cualquier cosa por empezar", () => {
-    // Proponer algo nuevo mientras tienes uno a medias es lo que hace crecer
-    // la pila, que es justo lo que esta pantalla intenta deshacer.
-    const biblioteca = [
-      row({ title: "Sin estrenar" }),
-      row({ title: "A medias", status: "playing", playtime_minutes: 300 }),
+describe("the proposal of Today", () => {
+  it("the game that you were playing wins against anything to start", () => {
+    // To propose something new while you have a game half done is what makes the
+    // pile grow, which is exactly what this screen tries to undo.
+    const library = [
+      row({ title: "Never started" }),
+      row({ title: "Half done", status: "playing", playtime_minutes: 300 }),
     ];
-    expect(destacado(biblioteca, AHORA)?.juego.title).toBe("A medias");
-    expect(destacado(biblioteca, AHORA)?.motivo).toBe("Lo tienes a medias");
+    expect(featured(library, NOW)?.game.title).toBe("Half done");
+    expect(featured(library, NOW)?.reason).toBe("You have it half done");
   });
 
-  it("entre varios empezados, el de la partida más reciente", () => {
-    const biblioteca = [
-      row({ title: "Antiguo", status: "playing", last_played_at: AHORA - 100 * DIA }),
-      row({ title: "Reciente", status: "playing", last_played_at: AHORA - 2 * DIA }),
-      row({ title: "Sin fecha", status: "playing" }),
+  it("between several started games, the one with the most recent game", () => {
+    const library = [
+      row({ title: "Old", status: "playing", last_played_at: NOW - 100 * DAY }),
+      row({ title: "Recent", status: "playing", last_played_at: NOW - 2 * DAY }),
+      row({ title: "With no date", status: "playing" }),
     ];
-    expect(destacado(biblioteca, AHORA)?.juego.title).toBe("Reciente");
+    expect(featured(library, NOW)?.game.title).toBe("Recent");
   });
 
-  it("sin nada empezado, la elección cambia con el día pero no dentro del día", () => {
-    // Una recomendación que cambia cada vez que se pinta la pantalla es una
-    // tragaperras, no una recomendación.
-    const biblioteca = [row({ title: "Uno" }), row({ title: "Dos" }), row({ title: "Tres" })];
+  it("with nothing started, the selection changes with the day and not in the day", () => {
+    // A proposal that changes each time that the screen is shown is a slot
+    // machine, not a proposal.
+    const library = [row({ title: "One" }), row({ title: "Two" }), row({ title: "Three" })];
 
-    const hoy = destacado(biblioteca, AHORA)?.juego.title;
-    expect(destacado(biblioteca, AHORA + 3600)?.juego.title).toBe(hoy!);
+    const today = featured(library, NOW)?.game.title;
+    expect(featured(library, NOW + 3600)?.game.title).toBe(today!);
 
-    const proximos = [1, 2, 3].map((d) => destacado(biblioteca, AHORA + d * DIA)?.juego.title);
-    expect(new Set([hoy, ...proximos]).size).toBe(3);
+    const next = [1, 2, 3].map((d) => featured(library, NOW + d * DAY)?.game.title);
+    expect(new Set([today, ...next]).size).toBe(3);
   });
 });

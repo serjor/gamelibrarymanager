@@ -1,6 +1,6 @@
-//! El ciclo completo de la fase 4 contra un IGDB de mentira y una base de datos
-//! de verdad: appid exacto, título dudoso, y la garantía de que re-emparejar no
-//! toca lo que el usuario decidió a mano.
+//! The complete cycle of phase 4 against a pretend IGDB and a real database:
+//! an exact appid, an unsure title, and the guarantee that a new match does not
+//! touch what the user decided by hand.
 
 use domain::{
     EntryKind, GameLink, LinkMethod, StoreAccount, StoreAccountId, StoreEntry, StoreEntryId,
@@ -47,15 +47,15 @@ async fn igdb_server(search_body: &'static str) -> MockServer {
         .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
         .mount(&server)
         .await;
-    // Cualquier otro appid es desconocido para IGDB.
+    // Every other appid is unknown to IGDB.
     Mock::given(method("POST"))
         .and(path("/external_games"))
         .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
         .mount(&server)
         .await;
 
-    // La ficha concreta y la búsqueda comparten endpoint: las distingue el
-    // cuerpo de la consulta.
+    // The concrete record and the search share an endpoint: the body of the
+    // query tells them apart.
     Mock::given(method("POST"))
         .and(path("/games"))
         .and(body_string_contains("where id = 115653"))
@@ -77,21 +77,21 @@ async fn igdb_server(search_body: &'static str) -> MockServer {
     server
 }
 
-async fn cuenta(db: &Database, store: StoreId) -> StoreAccountId {
+async fn account(db: &Database, store: StoreId) -> StoreAccountId {
     StoreAccountRepository(db)
         .upsert(&StoreAccount {
             id: StoreAccountId::new(),
             store,
-            account_ref: format!("cuenta-{}", store.as_str()),
+            account_ref: format!("account-{}", store.as_str()),
             display_name: None,
             connected_at: OffsetDateTime::now_utc(),
             last_sync_at: None,
         })
         .await
-        .expect("alta de cuenta")
+        .expect("add the account")
 }
 
-fn entrada(account_id: StoreAccountId, store: StoreId, app_id: &str, title: &str) -> StoreEntry {
+fn entry(account_id: StoreAccountId, store: StoreId, app_id: &str, title: &str) -> StoreEntry {
     StoreEntry {
         id: StoreEntryId::new(),
         account_id,
@@ -108,17 +108,17 @@ fn entrada(account_id: StoreAccountId, store: StoreId, app_id: &str, title: &str
 }
 
 #[tokio::test]
-async fn el_appid_de_steam_enlaza_sin_preguntar_y_el_titulo_dudoso_va_a_la_cola() {
-    let db = Database::in_memory().await.expect("base");
-    let steam = cuenta(&db, StoreId::Steam).await;
-    let gog = cuenta(&db, StoreId::Gog).await;
+async fn the_steam_appid_links_with_no_question_and_the_unsure_title_goes_to_the_queue() {
+    let db = Database::in_memory().await.expect("database");
+    let steam = account(&db, StoreId::Steam).await;
+    let gog = account(&db, StoreId::Gog).await;
 
-    let exacto = entrada(steam, StoreId::Steam, "632470", "Disco Elysium");
-    let dudoso = entrada(gog, StoreId::Gog, "1234", "Doom");
+    let exacto = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    let unsure = entry(gog, StoreId::Gog, "1234", "Doom");
     StoreEntryRepository(&db)
-        .upsert_many(&[exacto.clone(), dudoso.clone()])
+        .upsert_many(&[exacto.clone(), unsure.clone()])
         .await
-        .expect("volcar entradas");
+        .expect("write the entries");
 
     let server = igdb_server(SEARCH_AMBIGUO).await;
     let igdb = IgdbClient::new(reqwest::Client::new())
@@ -126,45 +126,45 @@ async fn el_appid_de_steam_enlaza_sin_preguntar_y_el_titulo_dudoso_va_a_la_cola(
 
     let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
-        .expect("emparejar");
+        .expect("match");
 
-    assert_eq!(report.linked, 1, "el appid exacto se enlaza solo");
+    assert_eq!(report.linked, 1, "the exact appid links alone");
     assert_eq!(
         report.review, 1,
-        "dos Doom con el mismo nombre no se deciden solos"
+        "two Doom with the same name are not decided alone"
     );
 
-    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 1);
     assert_eq!(links[0].store_entry_id, exacto.id);
     assert_eq!(
         links[0].confidence, 1.0,
-        "un identificador externo no admite grados de confianza"
+        "an external identifier accepts no degrees of confidence"
     );
 
-    // La ficha se creó con los metadatos de IGDB, no con el título de la tienda.
-    let games = GameRepository(&db).all().await.expect("fichas");
+    // The record was made with the IGDB metadata, not with the store title.
+    let games = GameRepository(&db).all().await.expect("records");
     assert_eq!(games.len(), 1);
     assert_eq!(games[0].igdb_id, Some(115653));
     assert!(games[0].cover_url.is_some(), "la portada viene de IGDB");
 
-    // Y lo dudoso quedó en la cola con sus candidatos, listo para el usuario.
-    let candidatos = MatchCandidateRepository(&db)
-        .for_entry(dudoso.id)
+    // And the unsure entry stayed in the queue with its candidates, for the user.
+    let candidates = MatchCandidateRepository(&db)
+        .for_entry(unsure.id)
         .await
-        .expect("candidatos");
-    assert_eq!(candidatos.len(), 2);
+        .expect("candidates");
+    assert_eq!(candidates.len(), 2);
 }
 
 #[tokio::test]
-async fn reemparejar_no_altera_ningun_enlace_manual() {
-    let db = Database::in_memory().await.expect("base");
-    let gog = cuenta(&db, StoreId::Gog).await;
-    let dudoso = entrada(gog, StoreId::Gog, "1234", "Doom");
+async fn a_new_match_does_not_change_a_manual_link() {
+    let db = Database::in_memory().await.expect("database");
+    let gog = account(&db, StoreId::Gog).await;
+    let unsure = entry(gog, StoreId::Gog, "1234", "Doom");
     StoreEntryRepository(&db)
-        .upsert_many(std::slice::from_ref(&dudoso))
+        .upsert_many(std::slice::from_ref(&unsure))
         .await
-        .expect("volcar entrada");
+        .expect("write the entry");
 
     let server = igdb_server(SEARCH_AMBIGUO).await;
     let igdb = IgdbClient::new(reqwest::Client::new())
@@ -173,17 +173,17 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
     // Primera pasada: a la cola.
     resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
-        .expect("emparejar");
+        .expect("match");
     assert!(
         GameLinkRepository(&db)
             .all()
             .await
-            .expect("enlaces")
+            .expect("links")
             .is_empty()
     );
 
-    // El usuario decide: es el Doom de 2016.
-    let elegido = domain::Game {
+    // The user decides: it is the Doom of 2016.
+    let chosen = domain::Game {
         id: domain::GameId::new(),
         canonical_title: "Doom".to_owned(),
         sort_title: "doom".to_owned(),
@@ -193,56 +193,56 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
         released_at: None,
         genres: Vec::new(),
     };
-    GameRepository(&db).upsert(&elegido).await.expect("ficha");
+    GameRepository(&db).upsert(&chosen).await.expect("record");
     GameLinkRepository(&db)
         .set_manual(&GameLink {
-            game_id: elegido.id,
-            store_entry_id: dudoso.id,
+            game_id: chosen.id,
+            store_entry_id: unsure.id,
             confidence: 1.0,
             method: LinkMethod::Manual,
         })
         .await
         .expect("enlace manual");
 
-    // Se vuelve a emparejar, dos veces más.
+    // It matches again, two more times.
     for _ in 0..2 {
         resolve(&db, &igdb, &credentials(), &token(), &Silent)
             .await
-            .expect("re-emparejar");
+            .expect("match again");
     }
 
-    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 1);
-    assert_eq!(links[0].method, LinkMethod::Manual, "sigue siendo manual");
+    assert_eq!(links[0].method, LinkMethod::Manual, "stays siendo manual");
     assert_eq!(
-        links[0].game_id, elegido.id,
-        "y sigue apuntando a lo que eligió el usuario"
+        links[0].game_id, chosen.id,
+        "and it still points at what the user selected"
     );
 }
 
-/// Un corte de IGDB a mitad no puede tirar la pasada entera.
+/// A stop from IGDB in the middle cannot lose all of the pass.
 ///
-/// Es lo que pasaba: los enlaces se escribían solo al final, así que un 429 en
-/// el juego trescientos —cinco minutos de límite de peticiones— dejaba la base
-/// exactamente como estaba. La pasada ahora se para donde le corten, guarda lo
-/// de atrás y dice por qué.
+/// That is what occurred: the links were written only at the end, thus a 429 at
+/// game three hundred — five minutes of request limit — left the database
+/// exactly as it was. The pass now stops where the provider stops it, keeps the
+/// earlier work and says why.
 #[tokio::test]
-async fn un_corte_de_igdb_no_tira_lo_que_ya_se_habia_emparejado() {
-    let db = Database::in_memory().await.expect("base");
-    let steam = cuenta(&db, StoreId::Steam).await;
-    let gog = cuenta(&db, StoreId::Gog).await;
+async fn a_stop_from_igdb_does_not_lose_the_matches_already_made() {
+    let db = Database::in_memory().await.expect("database");
+    let steam = account(&db, StoreId::Steam).await;
+    let gog = account(&db, StoreId::Gog).await;
 
-    // «Disco Elysium» va antes que «Doom» por título, que es el orden en que
-    // llegan: la primera se empareja por appid y la segunda corta la pasada.
-    let exacto = entrada(steam, StoreId::Steam, "632470", "Disco Elysium");
-    let que_corta = entrada(gog, StoreId::Gog, "1234", "Doom");
+    // "Disco Elysium" goes before "Doom" by title, which is the order in which
+    // they come: the first matches by appid and the second stops the pass.
+    let exacto = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    let que_corta = entry(gog, StoreId::Gog, "1234", "Doom");
     StoreEntryRepository(&db)
         .upsert_many(&[exacto.clone(), que_corta.clone()])
         .await
-        .expect("volcar entradas");
+        .expect("write the entries");
 
     let server = MockServer::start().await;
-    // El cruce va por lotes: el appid viaja dentro de `uid = (…)`, no suelto.
+    // The join goes in batches: the appid goes inside `uid = (…)`, not alone.
     Mock::given(method("POST"))
         .and(path("/external_games"))
         .and(body_string_contains("\"632470\""))
@@ -260,7 +260,7 @@ async fn un_corte_de_igdb_no_tira_lo_que_ya_se_habia_emparejado() {
         .respond_with(ResponseTemplate::new(200).set_body_raw(GAME_115653, "application/json"))
         .mount(&server)
         .await;
-    // La búsqueda por título es la que se encuentra el límite.
+    // The search by title is what meets the limit.
     Mock::given(method("POST"))
         .and(path("/games"))
         .and(body_string_contains("search"))
@@ -273,38 +273,33 @@ async fn un_corte_de_igdb_no_tira_lo_que_ya_se_habia_emparejado() {
 
     let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
-        .expect("un corte del proveedor es un resultado, no un error");
+        .expect("a stop from the provider is a result, not an error");
 
     assert_eq!(report.linked, 1);
     assert!(
         report
             .stopped
             .as_deref()
-            .is_some_and(|motivo| motivo.contains("límite")),
-        "la pasada tiene que decir por qué se paró: {:?}",
+            .is_some_and(|reason| reason.contains("limit")),
+        "the pass must say why it stopped: {:?}",
         report.stopped
     );
 
-    // Y lo de antes del corte está escrito, que es todo el asunto.
-    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    // And the work before the stop is written, which is all of the point.
+    let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 1);
     assert_eq!(links[0].store_entry_id, exacto.id);
 }
 
 #[tokio::test]
-async fn un_juego_que_igdb_no_conoce_se_cuenta_aparte_y_no_se_inventa_ficha() {
-    let db = Database::in_memory().await.expect("base");
-    let gog = cuenta(&db, StoreId::Gog).await;
-    let raro = entrada(
-        gog,
-        StoreId::Gog,
-        "9999",
-        "Un juego que no existe en ningún sitio",
-    );
+async fn a_game_that_igdb_does_not_know_is_counted_apart_and_gets_no_invented_record() {
+    let db = Database::in_memory().await.expect("database");
+    let gog = account(&db, StoreId::Gog).await;
+    let raro = entry(gog, StoreId::Gog, "9999", "A game that exists in no place");
     StoreEntryRepository(&db)
         .upsert_many(std::slice::from_ref(&raro))
         .await
-        .expect("volcar entrada");
+        .expect("write the entry");
 
     let server = igdb_server("[]").await;
     let igdb = IgdbClient::new(reqwest::Client::new())
@@ -312,35 +307,35 @@ async fn un_juego_que_igdb_no_conoce_se_cuenta_aparte_y_no_se_inventa_ficha() {
 
     let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
-        .expect("emparejar");
+        .expect("match");
 
     assert_eq!(report.unknown, 1);
     assert_eq!(report.linked, 0);
     assert!(
-        GameRepository(&db).all().await.expect("fichas").is_empty(),
-        "sin candidatos no se inventa una ficha: lo decide el usuario"
+        GameRepository(&db).all().await.expect("records").is_empty(),
+        "with no candidates it does not invent a record: the user decides"
     );
 }
 
-/// GOG y Epic también tienen identificador exacto, y desde que lo tienen no
-/// pasan por la búsqueda por título.
+/// GOG and Epic also have an exact identifier, and since they have it they do
+/// not go through the search by title.
 ///
-/// Cada tienda pregunta por su propia fuente de `external_games`: el
-/// `external_id` de Galaxy para GOG y la oferta de la tienda para Epic, que
-/// viaja en `raw` porque no está en la copia del lanzador.
+/// Each store asks for its own source of `external_games`: the `external_id` of
+/// Galaxy for GOG and the store offer for Epic, which goes in `raw` because it
+/// is not in the copy of the launcher.
 #[tokio::test]
-async fn gog_y_epic_enlazan_por_identificador_y_no_llegan_a_buscar_por_titulo() {
-    let db = Database::in_memory().await.expect("base");
-    let gog = cuenta(&db, StoreId::Gog).await;
-    let epic = cuenta(&db, StoreId::Epic).await;
+async fn gog_and_epic_link_by_identifier_and_never_search_by_title() {
+    let db = Database::in_memory().await.expect("database");
+    let gog = account(&db, StoreId::Gog).await;
+    let epic = account(&db, StoreId::Epic).await;
 
-    let de_gog = entrada(gog, StoreId::Gog, "1207658930", "The Witcher 3");
-    let mut de_epic = entrada(epic, StoreId::Epic, "Heron", "Alan Wake");
-    de_epic.raw = serde_json::json!({ "offerId": "OFERTA_ALAN_WAKE" });
+    let from_gog = entry(gog, StoreId::Gog, "1207658930", "The Witcher 3");
+    let mut from_epic = entry(epic, StoreId::Epic, "Heron", "Alan Wake");
+    from_epic.raw = serde_json::json!({ "offerId": "OFERTA_ALAN_WAKE" });
     StoreEntryRepository(&db)
-        .upsert_many(&[de_gog.clone(), de_epic.clone()])
+        .upsert_many(&[from_gog.clone(), from_epic.clone()])
         .await
-        .expect("volcar entradas");
+        .expect("write the entries");
 
     let server = MockServer::start().await;
     for (fuente, cuerpo) in [
@@ -362,8 +357,8 @@ async fn gog_y_epic_enlazan_por_identificador_y_no_llegan_a_buscar_por_titulo() 
         .mount(&server)
         .await;
 
-    // Si alguna de las dos copias llegara a la búsqueda por título, esta
-    // expectativa de cero llamadas fallaría al soltar el servidor.
+    // If one of the two copies reached the search by title, this expectation of
+    // zero calls would fail when the server is dropped.
     Mock::given(method("POST"))
         .and(path("/games"))
         .and(body_string_contains("search"))
@@ -385,19 +380,16 @@ async fn gog_y_epic_enlazan_por_identificador_y_no_llegan_a_buscar_por_titulo() 
 
     let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
-        .expect("emparejar");
+        .expect("match");
 
-    assert_eq!(
-        report.linked, 2,
-        "las dos copias tienen identificador exacto"
-    );
+    assert_eq!(report.linked, 2, "the two copies have an exact identifier");
     assert_eq!(report.review, 0);
 
-    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 2);
     assert!(
         links.iter().all(|link| link.confidence == 1.0),
-        "un identificador externo no se puntúa: vale 1.0 o no vale"
+        "an external identifier gets no score: it is 1.0 or it is nothing"
     );
 
     drop(server);

@@ -1,5 +1,5 @@
-//! Conector de Steam contra respuestas grabadas. Ningún test de esta suite
-//! toca la red real: las fixtures son respuestas reales congeladas.
+//! The Steam connector against recorded answers. No test of this suite touches
+//! the real network: the fixtures are real answers held unchanged.
 
 use connectors::SteamConnector;
 use domain::{AuthContext, ConnectorError, StoreAccountId, StoreConnector, StoreId, StoreSession};
@@ -10,12 +10,12 @@ const OWNED: &str = include_str!("fixtures/steam_owned_games.json");
 const PRIVATE: &str = include_str!("fixtures/steam_owned_private.json");
 const WISHLIST: &str = include_str!("fixtures/steam_wishlist.json");
 const SUMMARIES: &str = include_str!("fixtures/steam_player_summaries.json");
-/// `appdetails` con un solo appid. Con dos, la tienda contesta `null` a la
-/// petición entera, y esa respuesta también está grabada: es la que hacía que
-/// ningún deseado llegara con nombre.
+/// `appdetails` with one appid. With two, the store answers `null` to all of the
+/// request, and that answer is also recorded: it is the answer that made each
+/// wished-for game come with no name.
 const APP_DETAILS: &str = include_str!("fixtures/steam_app_details.json");
 const APP_DETAILS_RDR2: &str = include_str!("fixtures/steam_app_details_rdr2.json");
-const APP_DETAILS_VARIOS: &str = include_str!("fixtures/steam_app_details_varios.json");
+const APP_DETAILS_VARIOS: &str = include_str!("fixtures/steam_app_details_many.json");
 
 fn session() -> StoreSession {
     StoreSession {
@@ -40,7 +40,7 @@ async fn mock(server: &MockServer, route: &str, body: &'static str) {
 }
 
 #[tokio::test]
-async fn lee_la_biblioteca() {
+async fn it_reads_the_library() {
     let server = MockServer::start().await;
     mock(&server, "/IPlayerService/GetOwnedGames/v1/", OWNED).await;
 
@@ -55,16 +55,17 @@ async fn lee_la_biblioteca() {
     assert_eq!(disco.title, "Disco Elysium");
     assert_eq!(disco.playtime_minutes, Some(1240));
     assert_eq!(disco.store, StoreId::Steam);
-    // La respuesta original se conserva para poder re-emparejar sin volver a
-    // preguntar a la tienda.
+    // The initial answer is kept so that you can match again without a new
+    // request to the store.
     assert_eq!(disco.raw["appid"], 632470);
 }
 
 #[tokio::test]
-async fn pide_los_parametros_que_hacen_falta() {
+async fn it_asks_for_the_necessary_parameters() {
     let server = MockServer::start().await;
-    // Sin include_appinfo no vienen los nombres, y sin include_played_free_games
-    // faltan los free-to-play jugados: el conector debe pedir ambos.
+    // With no include_appinfo the names do not come, and with no
+    // include_played_free_games the free-to-play games played are absent: the
+    // connector must ask for both.
     Mock::given(method("GET"))
         .and(path("/IPlayerService/GetOwnedGames/v1/"))
         .and(query_param("include_appinfo", "1"))
@@ -82,27 +83,27 @@ async fn pide_los_parametros_que_hacen_falta() {
 }
 
 #[tokio::test]
-async fn distingue_un_perfil_privado_de_una_biblioteca_vacia() {
+async fn it_tells_a_private_profile_from_an_empty_library() {
     let server = MockServer::start().await;
     mock(&server, "/IPlayerService/GetOwnedGames/v1/", PRIVATE).await;
 
     let error = connector(&server)
         .owned(&session(), StoreAccountId::new())
         .await
-        .expect_err("un perfil privado no es una biblioteca vacía");
+        .expect_err("a private profile is not an empty library");
 
     assert!(matches!(error, ConnectorError::Private));
 }
 
 #[tokio::test]
-async fn lee_los_deseados_y_completa_los_titulos() {
+async fn it_reads_the_wishlist_and_completes_the_titles() {
     let server = MockServer::start().await;
     mock(&server, "/IWishlistService/GetWishlist/v1/", WISHLIST).await;
 
-    // Un appid por petición, que es lo único que la tienda contesta. La
-    // respuesta a una petición con varios —`null`— se monta la última, de
-    // catch-all: si el conector volviera a pedirlos por lotes, los deseados se
-    // quedarían sin nombre y este test lo vería.
+    // One appid for each request, which is the only form that the store
+    // answers. The answer to a request with more than one — `null` — is mounted
+    // last, as a catch-all: if the connector asked in batches again, the
+    // wished-for games would come with no name and this test would see it.
     Mock::given(method("GET"))
         .and(path("/api/appdetails"))
         .and(query_param("appids", "1145360"))
@@ -120,35 +121,35 @@ async fn lee_los_deseados_y_completa_los_titulos() {
     let entries = connector(&server)
         .wishlist(&session(), StoreAccountId::new())
         .await
-        .expect("leer deseados");
+        .expect("leer wishes");
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0].title, "Hades");
     assert_eq!(entries[1].title, "Red Dead Redemption 2");
     assert!(entries[0].acquired_at.is_some(), "date_added se conserva");
 
-    // Y se comprueba lo que se manda, no solo lo que se recibe: dos appids en
-    // la misma petición es exactamente el fallo que dejó 84 deseados llamándose
-    // «Steam 115800».
-    for peticion in server.received_requests().await.expect("peticiones") {
-        if peticion.url.path() != "/api/appdetails" {
+    // And the test examines what is sent, not only what comes back: two appids
+    // in the same request is exactly the defect that left 84 wished-for games
+    // named "Steam 115800".
+    for request in server.received_requests().await.expect("requests") {
+        if request.url.path() != "/api/appdetails" {
             continue;
         }
-        let appids = peticion
+        let appids = request
             .url
             .query_pairs()
             .find(|(clave, _)| clave == "appids")
-            .map(|(_, valor)| valor.to_string())
+            .map(|(_, value)| value.to_string())
             .unwrap_or_default();
         assert!(
             !appids.contains(','),
-            "appdetails contesta `null` a una petición con varios appids, y esta lleva {appids}"
+            "appdetails answers `null` to a request with more than one appid, and this carries {appids}"
         );
     }
 }
 
 #[tokio::test]
-async fn los_deseados_siguen_llegando_aunque_falten_los_titulos() {
+async fn the_wishlist_still_comes_when_the_titles_are_absent() {
     let server = MockServer::start().await;
     mock(&server, "/IWishlistService/GetWishlist/v1/", WISHLIST).await;
     Mock::given(method("GET"))
@@ -160,14 +161,14 @@ async fn los_deseados_siguen_llegando_aunque_falten_los_titulos() {
     let entries = connector(&server)
         .wishlist(&session(), StoreAccountId::new())
         .await
-        .expect("un fallo de títulos no invalida la sincronización");
+        .expect("a failure of the titles does not make the synchronisation invalid");
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0].title, "Steam 1145360");
 }
 
 #[tokio::test]
-async fn valida_la_clave_al_conectar() {
+async fn it_examines_the_key_at_the_connection() {
     let server = MockServer::start().await;
     mock(&server, "/ISteamUser/GetPlayerSummaries/v2/", SUMMARIES).await;
 
@@ -183,12 +184,12 @@ async fn valida_la_clave_al_conectar() {
     assert_eq!(session.store, StoreId::Steam);
     assert!(
         session.credential.contains("CLAVE_DE_PRUEBA"),
-        "la clave viaja dentro del bloque opaco de credenciales"
+        "the key goes inside the opaque block of credentials"
     );
 }
 
 #[tokio::test]
-async fn una_clave_invalida_se_detecta_al_conectar() {
+async fn an_invalid_key_is_found_at_the_connection() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/ISteamUser/GetPlayerSummaries/v2/"))
@@ -202,13 +203,13 @@ async fn una_clave_invalida_se_detecta_al_conectar() {
             account_ref: "76561197960287930".to_owned(),
         })
         .await
-        .expect_err("403 es una clave mala");
+        .expect_err("403 is an incorrect key");
 
     assert!(matches!(error, ConnectorError::Unauthorized));
 }
 
 #[tokio::test]
-async fn el_limite_de_peticiones_tiene_su_propio_error() {
+async fn the_request_limit_has_an_error_of_its_own() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/IPlayerService/GetOwnedGames/v1/"))

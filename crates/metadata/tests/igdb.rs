@@ -1,5 +1,5 @@
-//! IGDB contra respuestas grabadas. Ningún test toca la API real: además de
-//! ser lento y frágil, haría falta una aplicación de Twitch para ejecutarlos.
+//! IGDB against recorded answers. No test touches the real API: as well as slow
+//! and fragile, that would need a Twitch application to run the tests.
 
 use metadata::MetadataError;
 use metadata::igdb::{ExternalSource, IgdbClient, IgdbCredentials, IgdbToken};
@@ -32,7 +32,7 @@ fn client(server: &MockServer) -> IgdbClient {
 }
 
 #[tokio::test]
-async fn consigue_un_token_con_las_credenciales_del_usuario() {
+async fn it_gets_a_token_with_the_credentials_of_the_user() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/oauth2/token"))
@@ -47,7 +47,7 @@ async fn consigue_un_token_con_las_credenciales_del_usuario() {
 }
 
 #[tokio::test]
-async fn unas_credenciales_malas_se_notan_al_pedir_el_token() {
+async fn incorrect_credentials_are_found_when_the_token_is_requested() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/oauth2/token"))
@@ -62,15 +62,15 @@ async fn unas_credenciales_malas_se_notan_al_pedir_el_token() {
 }
 
 #[tokio::test]
-async fn el_appid_de_steam_da_la_ficha_exacta() {
+async fn the_steam_appid_gives_the_exact_record() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/external_games"))
         .and(header("Client-ID", "MI_CLIENT_ID"))
         .and(header("Authorization", "Bearer TOKEN_DE_APLICACION"))
-        // La fuente 1 es Steam: sin ese filtro vendrían cruces de otras
-        // tiendas. Y es `external_game_source`, no `category`, que IGDB marca
-        // como obsoleto.
+        // Source 1 is Steam: with no such filter, joins of other stores would
+        // come. And it is `external_game_source`, not `category`, which IGDB
+        // marks as obsolete.
         .and(body_string_contains("external_game_source = 1"))
         .and(body_string_contains("uid = (\"632470\")"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
@@ -91,10 +91,10 @@ async fn el_appid_de_steam_da_la_ficha_exacta() {
 }
 
 #[tokio::test]
-async fn cada_tienda_pregunta_por_su_propia_fuente() {
+async fn each_store_asks_for_its_own_source() {
     let server = MockServer::start().await;
-    // GOG es la fuente 5 y Epic la 26. Preguntar por la fuente equivocada
-    // devolvería la ficha de otro juego que comparte identificador.
+    // GOG is source 5 and Epic is source 26. A question to the incorrect source
+    // would give back the record of a different game that shares an identifier.
     Mock::given(method("POST"))
         .and(path("/external_games"))
         .and(body_string_contains("external_game_source = 5"))
@@ -116,7 +116,7 @@ async fn cada_tienda_pregunta_por_su_propia_fuente() {
 }
 
 #[tokio::test]
-async fn un_appid_desconocido_no_es_un_error() {
+async fn an_unknown_appid_is_not_an_error() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/external_games"))
@@ -138,10 +138,10 @@ async fn un_appid_desconocido_no_es_un_error() {
     );
 }
 
-/// El lote es lo que convierte una biblioteca grande en dos peticiones. Si
-/// alguien vuelve a preguntar copia a copia, este test lo dice.
+/// The batch is what turns a large library into two requests. If
+/// somebody asks one copy at a time again, this test says so.
 #[tokio::test]
-async fn mil_identificadores_caben_en_dos_peticiones() {
+async fn one_thousand_identifiers_fit_in_two_requests() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/external_games"))
@@ -156,12 +156,12 @@ async fn mil_identificadores_caben_en_dos_peticiones() {
         .await
         .expect("consulta");
 
-    // `expect(2)` se comprueba al soltar el servidor.
+    // `expect(2)` is examined when the server is dropped.
     drop(server);
 }
 
 #[tokio::test]
-async fn la_busqueda_devuelve_candidatos_con_nombres_alternativos_y_ano() {
+async fn the_search_gives_candidates_with_alternative_names_and_a_year() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games"))
@@ -172,7 +172,7 @@ async fn la_busqueda_devuelve_candidatos_con_nombres_alternativos_y_ano() {
     let candidates = client(&server)
         .search(&credentials(), &token(), "Disco Elysium")
         .await
-        .expect("búsqueda");
+        .expect("search");
 
     assert_eq!(candidates.len(), 2);
     assert_eq!(candidates[0].igdb_id, 115653);
@@ -184,7 +184,7 @@ async fn la_busqueda_devuelve_candidatos_con_nombres_alternativos_y_ano() {
 }
 
 #[tokio::test]
-async fn la_ficha_trae_portada_construida_desde_el_image_id() {
+async fn the_record_carries_a_cover_built_from_the_image_id() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games"))
@@ -196,7 +196,7 @@ async fn la_ficha_trae_portada_construida_desde_el_image_id() {
         .game(&credentials(), &token(), 115653)
         .await
         .expect("consulta")
-        .expect("la ficha existe");
+        .expect("the record exists");
 
     assert_eq!(game.name, "Disco Elysium");
     assert_eq!(
@@ -211,7 +211,7 @@ async fn la_ficha_trae_portada_construida_desde_el_image_id() {
 }
 
 #[tokio::test]
-async fn el_429_tiene_su_propio_error() {
+async fn the_429_has_an_error_of_its_own() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games"))
@@ -228,7 +228,7 @@ async fn el_429_tiene_su_propio_error() {
 }
 
 #[tokio::test]
-async fn no_se_pasa_de_cuatro_peticiones_por_segundo() {
+async fn it_does_not_go_over_four_requests_each_second() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games"))
@@ -240,15 +240,15 @@ async fn no_se_pasa_de_cuatro_peticiones_por_segundo() {
     let started = std::time::Instant::now();
     for i in 0..6 {
         client
-            .search(&credentials(), &token(), &format!("juego {i}"))
+            .search(&credentials(), &token(), &format!("game {i}"))
             .await
-            .expect("búsqueda");
+            .expect("search");
     }
 
-    // Cuatro caben en la primera ventana; las dos siguientes tienen que esperar
-    // a que se libere hueco.
+    // Four fit in the first window; the next two must wait until a slot
+    // becomes free.
     assert!(
         started.elapsed() >= std::time::Duration::from_millis(900),
-        "seis peticiones no pueden salir en menos de un segundo"
+        "six requests cannot go out in less than one second"
     );
 }

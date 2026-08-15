@@ -378,6 +378,6 @@ mod tests {
     #[test]
     fn a_namespace_without_a_base_game_is_not_an_identifier() {
         assert_eq!(parse_base_game_offer(r#"{"elements":[]}"#), None);
-        assert_eq!(parse_base_game_offer("no es json"), None);
+        assert_eq!(parse_base_game_offer("not json"), None);
     }
 }

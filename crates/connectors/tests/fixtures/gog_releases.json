@@ -28,5 +28,5 @@
       "certificate": "xxx"
     }
   ],
-  "next_page_token": "PAGINA_2"
+  "next_page_token": "PAGE_2"
 }

@@ -187,63 +187,63 @@ mod tests {
     use super::*;
 
     #[test]
-    fn descarta_lo_que_no_es_de_gog() {
-        // Galaxy lista también las tiendas conectadas: si esto no se filtra, el
-        // conector de GOG duplicaría la biblioteca de Steam.
+    fn it_drops_what_is_not_from_gog() {
+        // Galaxy also lists the connected stores: without this filter, the GOG
+        // connector would duplicate the Steam library.
         let body = r#"{"items":[
             {"platform_id":"gog","external_id":"1207658930","owned":true,"owned_since":1500000000},
             {"platform_id":"steam","external_id":"632470","owned":true,"owned_since":null}
         ],"next_page_token":null}"#;
 
-        let (releases, next) = parse_releases_page(body).expect("página válida");
+        let (releases, next) = parse_releases_page(body).expect("a valid page");
         assert_eq!(releases.len(), 1);
         assert_eq!(releases[0].external_id, "1207658930");
         assert_eq!(next, None);
     }
 
     #[test]
-    fn descarta_lo_que_no_se_posee() {
+    fn it_drops_what_is_not_owned() {
         let body = r#"{"items":[
             {"platform_id":"gog","external_id":"1","owned":false}
         ]}"#;
-        let (releases, _) = parse_releases_page(body).expect("página válida");
+        let (releases, _) = parse_releases_page(body).expect("a valid page");
         assert!(releases.is_empty());
     }
 
     #[test]
-    fn el_identificador_numerico_se_lee_como_texto() {
-        let productos = parse_products(r#"[{"id":1207658930,"title":"The Witcher 2"}]"#);
+    fn the_numeric_identifier_is_read_as_text() {
+        let products = parse_products(r#"[{"id":1207658930,"title":"The Witcher 2"}]"#);
         assert_eq!(
-            productos.get("1207658930").and_then(|p| p.title.as_deref()),
+            products.get("1207658930").and_then(|p| p.title.as_deref()),
             Some("The Witcher 2")
         );
     }
 
     #[test]
-    fn la_imagen_sin_esquema_se_completa() {
-        // GOG las sirve como `//images-4.gog-statics.com/…`. Tal cual, el
-        // webview las resolvería contra `tauri://` y no cargaría ninguna.
-        let productos = parse_products(
+    fn the_image_with_no_scheme_is_completed() {
+        // GOG gives them as `//images-4.gog-statics.com/…`. Unchanged, the
+        // webview would resolve them against `tauri://` and would load none.
+        let products = parse_products(
             r#"[{"id":1,"title":"X",
                  "images":{"logo":"//images-4.gog-statics.com/abc_glx_logo.jpg"},
                  "links":{"product_card":"https://www.gog.com/game/x"}}]"#,
         );
-        let producto = productos.get("1").expect("el producto");
+        let product = products.get("1").expect("the product");
         assert_eq!(
-            producto.cover_url.as_deref(),
+            product.cover_url.as_deref(),
             Some("https://images-4.gog-statics.com/abc_glx_logo.jpg")
         );
         assert_eq!(
-            producto.store_url.as_deref(),
+            product.store_url.as_deref(),
             Some("https://www.gog.com/game/x")
         );
     }
 
     #[test]
-    fn un_producto_sin_imagenes_ni_enlaces_no_rompe() {
-        let productos = parse_products(r#"[{"id":1,"title":"X"}]"#);
-        let producto = productos.get("1").expect("el producto");
-        assert_eq!(producto.cover_url, None);
-        assert_eq!(producto.store_url, None);
+    fn a_product_with_no_images_and_no_links_does_not_break() {
+        let products = parse_products(r#"[{"id":1,"title":"X"}]"#);
+        let product = products.get("1").expect("the product");
+        assert_eq!(product.cover_url, None);
+        assert_eq!(product.store_url, None);
     }
 }

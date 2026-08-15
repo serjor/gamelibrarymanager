@@ -61,7 +61,7 @@ impl LibraryRepository<'_> {
 /// of the library. When you make `game_link` control the plan, each subquery
 /// looks only at the copies of its own game and finds the entry by its key. With
 /// one thousand games that is 10 ms and not 839. The test
-/// `el_planificador_arranca_por_game_link` makes sure of it.
+/// `the_planner_starts_at_game_link` makes sure of it.
 const SQL: &str = "SELECT
                  g.id, g.canonical_title, g.sort_title, g.cover_url, g.released_at, g.genres,
                  g.summary,
@@ -155,16 +155,17 @@ mod tests {
     use crate::Database;
     use sqlx::Row;
 
-    /// Los `CROSS JOIN` de la consulta parecen un descuido y no lo son: quitarlos
-    /// no rompe ningún resultado, solo multiplica por ochenta lo que tarda, que
-    /// es la clase de regresión que no se ve en verde ni en rojo.
+    /// The `CROSS JOIN` clauses of the query look like a mistake and they are
+    /// not: to remove them breaks no result, it only multiplies the time by
+    /// eighty, which is the kind of regression that you see neither in green nor
+    /// in red.
     ///
-    /// Se comprueba la forma del plan y no el tiempo, por lo mismo que
-    /// `una_sola_consulta.rs` cuenta sentencias en vez de cronometrarlas: el
-    /// reloj mide la carga de la máquina tanto como el código.
+    /// The test examines the shape of the plan and not the time, for the same
+    /// reason that `one_query.rs` counts statements and does not measure their
+    /// time: a clock measures the load of the machine as much as the code.
     #[tokio::test]
-    async fn el_planificador_arranca_por_game_link() {
-        let db = Database::in_memory().await.expect("base");
+    async fn the_planner_starts_at_game_link() {
+        let db = Database::in_memory().await.expect("database");
 
         let plan: Vec<String> = sqlx::query(&format!("EXPLAIN QUERY PLAN {SQL}"))
             .fetch_all(db.pool())
@@ -174,17 +175,17 @@ mod tests {
             .map(|row| row.get::<String, _>("detail"))
             .collect();
 
-        // Arrancar por este índice significa recorrer, para cada juego, todas
-        // las copias de la biblioteca: `kind = 'owned'` no descarta nada.
-        let culpables: Vec<&String> = plan
+        // To start at this index means to go, for each game, through all of the
+        // copies of the library: `kind = 'owned'` removes nothing.
+        let guilty: Vec<&String> = plan
             .iter()
-            .filter(|paso| paso.contains("store_entry_by_kind"))
+            .filter(|step| step.contains("store_entry_by_kind"))
             .collect();
 
         assert!(
-            culpables.is_empty(),
-            "alguna subconsulta vuelve a arrancar por store_entry en vez de por \
-             game_link; revisa que no se haya perdido un CROSS JOIN:\n{culpables:#?}"
+            guilty.is_empty(),
+            "a subquery starts at store_entry again and not at game_link; \
+             examine whether a CROSS JOIN was lost:\n{guilty:#?}"
         );
     }
 }

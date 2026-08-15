@@ -20,18 +20,18 @@ const state = {
   summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
   queue: [] as ReviewItem[],
   rows: [] as LibraryRow[],
-  precios: [] as PriceRow[],
-  /** Lo que se ha escrito de verdad, para poder contarlo y mirarlo. */
-  guardados: [] as [string, PlayStatus | null, number | null, string | null][],
-  /** Los emparejamientos que ha llegado a confirmar el lote. */
-  confirmados: [] as [string, number][],
-  /** Cuántas veces se han pedido los precios de verdad. */
-  preciosPedidos: 0,
-  /** El motivo por el que el emparejamiento se paró, si se paró. */
-  emparejamientoParado: null as string | null,
+  prices: [] as PriceRow[],
+  /** What was really written, so that you can count it and look at it. */
+  saved: [] as [string, PlayStatus | null, number | null, string | null][],
+  /** The matches that the batch confirmed. */
+  confirmed: [] as [string, number][],
+  /** How many times the prices were really requested. */
+  priceRequests: 0,
+  /** The reason that the matching stopped, if it stopped. */
+  matchingStopped: null as string | null,
 };
 
-// El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
+// The event bus of Tauri does not exist out of the application window.
 mock.module("@tauri-apps/api/event", () => ({
   listen: () => Promise.resolve(() => {}),
 }));
@@ -50,9 +50,9 @@ mock.module("./lib/api", () => ({
     hasIgdbCredentials: () => Promise.resolve(state.hasIgdb),
     hasItadCredentials: () => Promise.resolve(state.hasItad),
     setItadCredentials: () => Promise.resolve(),
-    prices: () => Promise.resolve(state.precios),
+    prices: () => Promise.resolve(state.prices),
     refreshPrices: () => {
-      state.preciosPedidos += 1;
+      state.priceRequests += 1;
       return Promise.resolve({ priced: 0, unknown: 0, cancelled: false });
     },
     librarySummary: () => Promise.resolve(state.summary),
@@ -65,7 +65,7 @@ mock.module("./lib/api", () => ({
         review: 0,
         unknown: 0,
         cancelled: false,
-        stopped: state.emparejamientoParado,
+        stopped: state.matchingStopped,
       }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
@@ -74,7 +74,7 @@ mock.module("./lib/api", () => ({
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
     reviewConfirmMany: (decisions: [string, number][]) => {
-      state.confirmados.push(...decisions);
+      state.confirmed.push(...decisions);
       return Promise.resolve(decisions.length);
     },
     reviewWithoutMetadata: () => Promise.resolve(),
@@ -86,7 +86,7 @@ mock.module("./lib/api", () => ({
       rating: number | null,
       notes: string | null,
     ) => {
-      state.guardados.push([gameId, status, rating, notes]);
+      state.saved.push([gameId, status, rating, notes]);
       return Promise.resolve();
     },
   },
@@ -95,32 +95,32 @@ mock.module("./lib/api", () => ({
 
 const { App } = await import("./App");
 
-const cuentaSteam: Account = {
+const steamAccount: Account = {
   store: "steam",
   account_ref: "7656119",
   display_name: "serjor",
   last_sync_at: null,
 };
 
-const cuentaGog: Account = {
+const gogAccount: Account = {
   store: "gog",
   account_ref: "51000000000000000",
   display_name: "serjor",
   last_sync_at: null,
 };
 
-const cuentaEpic: Account = {
+const epicAccount: Account = {
   store: "epic",
   account_ref: "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7",
   display_name: "serjor",
   last_sync_at: null,
 };
 
-function fila(overrides: Partial<LibraryRow>): LibraryRow {
+function row(overrides: Partial<LibraryRow>): LibraryRow {
   return {
     game_id: crypto.randomUUID(),
-    title: "Juego",
-    sort_title: "juego",
+    title: "Game",
+    sort_title: "game",
     cover_url: null,
     summary: null,
     release_year: null,
@@ -139,42 +139,42 @@ function fila(overrides: Partial<LibraryRow>): LibraryRow {
 }
 
 /**
- * Cuatro filas y no más en los tests de tabla: sin layout de verdad, el
- * virtualizador mide el contenedor a cero y solo pinta su ventana de reserva.
- * Cuatro es lo que entra, y además es el tamaño de lote que pide el plan.
+ * Four rows and no more in the table tests: with no real layout, the virtual
+ * list measures the container as zero and shows only its reserve window. Four is
+ * what fits, and it is also the batch size that the plan asks for.
  */
-const CUATRO = [
-  fila({ title: "Celeste", sort_title: "celeste", playtime_minutes: 900, rating: 9, notes: "corto y redondo" }),
-  fila({ title: "Hades", sort_title: "hades", playtime_minutes: 3120, rating: 8 }),
-  fila({ title: "Outer Wilds", sort_title: "outer wilds", playtime_minutes: 0 }),
-  fila({ title: "Prey", sort_title: "prey", playtime_minutes: 120, rating: 6 }),
+const FOUR = [
+  row({ title: "Celeste", sort_title: "celeste", playtime_minutes: 900, rating: 9, notes: "short and complete" }),
+  row({ title: "Hades", sort_title: "hades", playtime_minutes: 3120, rating: 8 }),
+  row({ title: "Outer Wilds", sort_title: "outer wilds", playtime_minutes: 0 }),
+  row({ title: "Prey", sort_title: "prey", playtime_minutes: 120, rating: 6 }),
 ];
 
 /**
- * Una biblioteca con material para tres estanterías de «Hoy» a la vez: dos
- * empezados, uno sin estrenar y uno con copia en dos tiendas. Las fechas van
- * relativas al reloj porque los cortes de «Hoy» también.
+ * A library with material for three shelves of "Today" at the same time: two
+ * started, one never started and one with a copy in two stores. The dates are
+ * relative to the clock because the limits of "Today" are also relative.
  */
-const AHORA = Math.floor(Date.now() / 1000);
-const DIA = 86_400;
-const PARA_HOY = [
-  fila({ title: "Hades", sort_title: "hades", status: "playing", playtime_minutes: 3120, last_played_at: AHORA - 2 * DIA }),
-  fila({ title: "Celeste", sort_title: "celeste", status: "playing", playtime_minutes: 900, last_played_at: AHORA - 100 * DIA }),
-  fila({ title: "Prey", sort_title: "prey", owned_stores: ["steam", "gog"], playtime_minutes: 120, last_played_at: AHORA - 10 * DIA }),
-  fila({ title: "Outer Wilds", sort_title: "outer wilds" }),
+const NOW = Math.floor(Date.now() / 1000);
+const DAY = 86_400;
+const FOR_TODAY = [
+  row({ title: "Hades", sort_title: "hades", status: "playing", playtime_minutes: 3120, last_played_at: NOW - 2 * DAY }),
+  row({ title: "Celeste", sort_title: "celeste", status: "playing", playtime_minutes: 900, last_played_at: NOW - 100 * DAY }),
+  row({ title: "Prey", sort_title: "prey", owned_stores: ["steam", "gog"], playtime_minutes: 120, last_played_at: NOW - 10 * DAY }),
+  row({ title: "Outer Wilds", sort_title: "outer wilds" }),
 ];
 
 /**
- * Tres deseados: uno rebajado a su mínimo histórico, uno con una rebaja
- * cualquiera y uno que no vende nadie. Son los tres casos de la pantalla.
+ * Three wished-for games: one at its all-time low, one with any other discount
+ * and one that nobody sells. They are the three conditions of the screen.
  */
-const DESEADOS = [
-  fila({ title: "Blasphemous", sort_title: "blasphemous", owned_stores: [], wishlist_stores: ["gog"] }),
-  fila({ title: "Silksong", sort_title: "silksong", owned_stores: [], wishlist_stores: ["steam"] }),
-  fila({ title: "Tunic", sort_title: "tunic", owned_stores: [], wishlist_stores: ["steam"] }),
+const WISHES = [
+  row({ title: "Blasphemous", sort_title: "blasphemous", owned_stores: [], wishlist_stores: ["gog"] }),
+  row({ title: "Silksong", sort_title: "silksong", owned_stores: [], wishlist_stores: ["steam"] }),
+  row({ title: "Tunic", sort_title: "tunic", owned_stores: [], wishlist_stores: ["steam"] }),
 ];
 
-function precio(game_id: string, overrides: Partial<PriceRow> = {}): PriceRow {
+function price(game_id: string, overrides: Partial<PriceRow> = {}): PriceRow {
   return {
     game_id,
     shop: "GOG",
@@ -185,31 +185,33 @@ function precio(game_id: string, overrides: Partial<PriceRow> = {}): PriceRow {
     shops: 2,
     low_all_time: 899,
     low_year: 1349,
-    itad_slug: "un-juego",
+    itad_slug: "a-game",
     captured_at: 1_755_000_000,
     ...overrides,
   };
 }
 
-const marcaDe = (titulo: string) => screen.getByLabelText(`Seleccionar ${titulo}`) as HTMLInputElement;
+const checkOf = (title: string) => screen.getByLabelText(`Select ${title}`) as HTMLInputElement;
 
 /**
- * De qué juego es la ficha que hay abierta, sea acoplada o superpuesta.
+ * Which game the open record belongs to, beside the table or on top of the
+ * covers.
  *
- * Por el identificador al que apunta `aria-labelledby`, y no por «el segundo
- * encabezado de la pantalla»: «Hoy» también tiene uno para su propuesta.
+ * By the identifier to which `aria-labelledby` points, and not by "the second
+ * heading of the screen": "Today" also has one for its proposal.
  */
-const tituloDeLaFicha = () => document.getElementById("ficha-titulo");
-const fichaAbierta = () => tituloDeLaFicha()?.textContent ?? null;
+const recordTitle = () => document.getElementById("card-title");
+const openRecord = () => recordTitle()?.textContent ?? null;
 
 /**
- * Dentro de la ficha y no en toda la pantalla: el filtro de la barra también se
- * llama «Estado», y buscar por nombre a secas encuentra los dos.
+ * In the record and not in all of the screen: the filter of the bar is also
+ * called "Status", and a search by name alone finds the two.
  */
-const enLaFicha = () => within(tituloDeLaFicha()!.closest(".ficha") as HTMLElement);
+const inTheRecord = () => within(recordTitle()!.closest(".card") as HTMLElement);
 
-/** Dos fichas que puntúan igual: el motivo más común de acabar en la cola. */
-const EMPATE: ReviewItem = {
+/** Two records with the same score: the most common reason to come to the
+ *  queue. */
+const TIE: ReviewItem = {
   store_entry_id: "11111111-1111-7111-8111-111111111111",
   store: "steam",
   title: "LIMBO",
@@ -222,19 +224,19 @@ const EMPATE: ReviewItem = {
   ],
 };
 
-/** Una entrada en la que un candidato gana con holgura: viene ya elegido. */
-const HOLGADO: ReviewItem = {
+/** An entry in which one candidate wins clearly: it comes already selected. */
+const CLEAR: ReviewItem = {
   store_entry_id: "22222222-2222-7222-8222-222222222222",
   store: "gog",
-  title: "Otro juego",
+  title: "Another game",
   cover_url: null,
   store_url: null,
   tie: false,
   candidates: [
-    { igdb_id: 3, name: "Otro juego", score: 0.95, release_year: 2015, cover_url: null, slug: null },
+    { igdb_id: 3, name: "Another game", score: 0.95, release_year: 2015, cover_url: null, slug: null },
     {
       igdb_id: 4,
-      name: "Otro juego, pero de 2009",
+      name: "Another game, but of 2009",
       score: 0.72,
       release_year: 2009,
       cover_url: null,
@@ -244,20 +246,21 @@ const HOLGADO: ReviewItem = {
 };
 
 /**
- * Lo que dice la columna «se emparejará con» de una entrada.
+ * What the "will match with" column of an entry says.
  *
- * Se busca por el título de la tienda dentro de su celda, y no a secas: el
- * candidato elegido puede llamarse igual que la entrada —de hecho es lo normal
- * cuando el emparejamiento acierta— y entonces el título sale dos veces.
+ * The search uses the store title in its own cell, and not the title alone: the
+ * chosen candidate can have the same name as the entry — in fact that is usual
+ * when the matching is correct — and then the title appears two times.
  */
-const emparejaCon = (titulo: string) =>
-  screen.getByText(titulo, { selector: ".origen strong" }).closest("tr")?.cells[2]?.textContent;
+const matchesWith = (title: string) =>
+  screen.getByText(title, { selector: ".source strong" }).closest("tr")?.cells[2]?.textContent;
 
 /**
- * El ancho de la ventana es lo que decide entre inspector y hoja, así que aquí
- * hay que poder moverlo: happy-dom lo expone y `matchMedia` le hace caso.
+ * The width of the window is what decides between the inspector and the sheet,
+ * thus this file must be able to change it: happy-dom gives it and `matchMedia`
+ * obeys it.
  */
-function anchura(px: number) {
+function width(px: number) {
   (
     window as unknown as { happyDOM: { setViewport: (v: { width: number }) => void } }
   ).happyDOM.setViewport({ width: px });
@@ -265,9 +268,9 @@ function anchura(px: number) {
 
 describe("App", () => {
   beforeEach(() => {
-    // Ancha por defecto: es donde la biblioteca se ve entera, y la ventana
-    // estrecha es lo que se prueba aparte.
-    anchura(1400);
+    // Wide by default: that is where all of the library is visible, and the
+    // narrow window is tested separately.
+    width(1400);
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
     state.connectors = [];
@@ -276,155 +279,156 @@ describe("App", () => {
     state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
     state.queue = [];
     state.rows = [];
-    state.precios = [];
-    state.guardados = [];
-    state.confirmados = [];
-    state.preciosPedidos = 0;
-    state.emparejamientoParado = null;
+    state.prices = [];
+    state.saved = [];
+    state.confirmed = [];
+    state.priceRequests = 0;
+    state.matchingStopped = null;
   });
 
-  it("un emparejamiento que se para dice por qué y que lo hecho está guardado", async () => {
-    // Se para, no falla: escribe lo que llevaba y devuelve el motivo. Sin
-    // decirlo, el usuario ve el trabajo a medias sin saber qué ha pasado.
-    state.accounts = [cuentaSteam];
-    state.emparejamientoParado = "límite de peticiones alcanzado";
+  it("a matching that stops says why and that the work is kept", async () => {
+    // It stops, it does not fail: it writes its work and gives back the reason.
+    // Without that message, the user sees incomplete work and does not know why.
+    state.accounts = [steamAccount];
+    state.matchingStopped = "the request limit is reached";
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Emparejar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Match" }));
 
-    const aviso = await screen.findByRole("alert");
-    expect(aviso.textContent).toContain("límite de peticiones alcanzado");
-    expect(aviso.textContent).toContain("está guardado");
+    const message = await screen.findByRole("alert");
+    expect(message.textContent).toContain("the request limit is reached");
+    expect(message.textContent).toContain("is kept");
   });
 
-  it("sin cuentas conectadas lleva al asistente de Steam", async () => {
+  it("with no connected account it goes to the Steam setup screen", async () => {
     render(<App />);
-    expect(await screen.findByText("Conectar Steam")).toBeDefined();
+    expect(await screen.findByText("Connect Steam")).toBeDefined();
   });
 
-  it("sin llavero en el sistema pide la contraseña antes que nada", async () => {
+  it("with no keyring in the system it asks for the passphrase first", async () => {
     state.info = { version: "0.1.0", secrets_backend: "passphrase", unlocked: false };
     render(<App />);
-    expect(await screen.findByText("Contraseña del almacén")).toBeDefined();
+    expect(await screen.findByText("Passphrase of the store")).toBeDefined();
   });
 
-  it("sin IGDB avisa pero no bloquea la biblioteca", async () => {
-    // La ficha nace del emparejamiento, así que sin IGDB sale del título de la
-    // tienda. Es un aviso, no un error: cerrar la aplicación entera hasta tener
-    // credenciales de Twitch es demasiado duro en el primer arranque.
-    state.accounts = [cuentaSteam];
+  it("with no IGDB it gives a message and does not block the library", async () => {
+    // The record comes from the matching, thus with no IGDB it comes from the
+    // title of the store. It is a message, not an error: to block all of the
+    // application until the user has Twitch credentials is too hard at the first
+    // start.
+    state.accounts = [steamAccount];
     state.hasIgdb = false;
     render(<App />);
-    expect(await screen.findByText(/las fichas se crean con el título/)).toBeDefined();
-    expect(screen.getByRole("button", { name: "Sincronizar" })).toBeDefined();
+    expect(await screen.findByText(/the records are made with the title/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Synchronise" })).toBeDefined();
   });
 
-  it("desde el aviso se llega al asistente de IGDB", async () => {
-    state.accounts = [cuentaSteam];
+  it("from the message you reach the IGDB setup screen", async () => {
+    state.accounts = [steamAccount];
     state.hasIgdb = false;
     render(<App />);
-    (await screen.findByRole("button", { name: "Configurar IGDB" })).click();
-    expect(await screen.findByText("Metadatos: IGDB")).toBeDefined();
+    (await screen.findByRole("button", { name: "Configure IGDB" })).click();
+    expect(await screen.findByText("Metadata: IGDB")).toBeDefined();
   });
 
-  it("ofrece conectar GOG cuando aún no hay cuenta de GOG", async () => {
-    state.accounts = [cuentaSteam];
+  it("it offers to connect GOG when there is no GOG account yet", async () => {
+    state.accounts = [steamAccount];
     render(<App />);
-    (await screen.findByRole("button", { name: "Conectar GOG" })).click();
-    // Se busca algo que solo esté en el asistente: el encabezado se llama igual
-    // que el botón que lleva hasta él y no distinguiría nada.
+    (await screen.findByRole("button", { name: "Connect GOG" })).click();
+    // The search uses something that is only in the setup screen: the heading has
+    // the same name as the button that goes to it and would tell nothing apart.
     expect(await screen.findByLabelText("Client ID")).toBeDefined();
-    expect(screen.getByText(/Tu contraseña de GOG no pasa por aquí/)).toBeDefined();
+    expect(screen.getByText(/Your GOG password does not come through here/)).toBeDefined();
   });
 
-  it("con solo GOG conectado todavía se puede añadir Steam", async () => {
-    // La primera pantalla solo aparece sin ninguna cuenta: quien empezara por
-    // GOG se quedaba sin ninguna forma de llegar a Steam después.
-    state.accounts = [cuentaGog];
+  it("with only GOG connected you can still add Steam", async () => {
+    // The first screen appears only with no account: a user who started with GOG
+    // had no way to reach Steam later.
+    state.accounts = [gogAccount];
     render(<App />);
-    (await screen.findByRole("button", { name: "Conectar Steam" })).click();
-    expect(await screen.findByLabelText("Clave de API de Steam")).toBeDefined();
+    (await screen.findByRole("button", { name: "Connect Steam" })).click();
+    expect(await screen.findByLabelText("Steam API key")).toBeDefined();
   });
 
-  it("ofrece conectar Epic cuando aún no hay cuenta de Epic", async () => {
-    state.accounts = [cuentaSteam];
+  it("it offers to connect Epic when there is no Epic account yet", async () => {
+    state.accounts = [steamAccount];
     render(<App />);
-    (await screen.findByRole("button", { name: "Conectar Epic" })).click();
-    // Se busca algo que solo esté en el asistente: el encabezado se llama igual
-    // que el botón que lleva hasta él y no distinguiría nada.
+    (await screen.findByRole("button", { name: "Connect Epic" })).click();
+    // The search uses something that is only in the setup screen: the heading has
+    // the same name as the button that goes to it and would tell nothing apart.
     expect(await screen.findByLabelText("Client ID")).toBeDefined();
-    expect(screen.getByText(/Tu contraseña de Epic no pasa por aquí/)).toBeDefined();
+    expect(screen.getByText(/Your Epic password does not come through here/)).toBeDefined();
   });
 
-  it("con las tres tiendas conectadas ya no ofrece conectar ninguna", async () => {
-    state.accounts = [cuentaSteam, cuentaGog, cuentaEpic];
+  it("with the three stores connected it offers to connect none", async () => {
+    state.accounts = [steamAccount, gogAccount, epicAccount];
     render(<App />);
-    await screen.findByRole("button", { name: "Sincronizar" });
-    expect(screen.queryByRole("button", { name: "Conectar Steam" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Conectar GOG" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Conectar Epic" })).toBeNull();
+    await screen.findByRole("button", { name: "Synchronise" });
+    expect(screen.queryByRole("button", { name: "Connect Steam" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect GOG" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect Epic" })).toBeNull();
   });
 
-  it("una tienda que va bien no sale por ninguna parte", async () => {
-    // El estado del conector solo se enseña cuando hay algo que contar: una
-    // lista permanente de «todo bien» es ruido que nadie lee.
-    state.accounts = [cuentaSteam, cuentaEpic];
+  it("a store that operates correctly appears in no place", async () => {
+    // The state of the connector is shown only when there is something to say: a
+    // permanent list of "all correct" is noise that nobody reads.
+    state.accounts = [steamAccount, epicAccount];
     state.connectors = [{ store: "epic", enabled: true, last_error: null }];
     render(<App />);
-    await screen.findByRole("button", { name: "Sincronizar" });
-    expect(screen.queryByRole("button", { name: "Desactivar Epic" })).toBeNull();
+    await screen.findByRole("button", { name: "Synchronise" });
+    expect(screen.queryByRole("button", { name: "Switch Epic off" })).toBeNull();
   });
 
-  it("un conector que ha fallado dice por qué y se puede desactivar", async () => {
-    // Es el «done when» de la fase 7: Epic se rompe, se ve el motivo, y apagarlo
-    // no toca ni Steam ni GOG.
-    state.accounts = [cuentaSteam, cuentaEpic];
+  it("a connector that failed says why and you can switch it off", async () => {
+    // It is the "done when" of phase 7: Epic breaks, you see the reason, and to
+    // switch it off touches neither Steam nor GOG.
+    state.accounts = [steamAccount, epicAccount];
     state.connectors = [
-      { store: "epic", enabled: true, last_error: "credenciales inválidas o caducadas" },
+      { store: "epic", enabled: true, last_error: "invalid or expired credentials" },
     ];
     render(<App />);
 
-    expect(await screen.findByText(/credenciales inválidas o caducadas/)).toBeDefined();
-    (await screen.findByRole("button", { name: "Desactivar Epic" })).click();
+    expect(await screen.findByText(/invalid or expired credentials/)).toBeDefined();
+    (await screen.findByRole("button", { name: "Switch Epic off" })).click();
 
-    expect(await screen.findByRole("button", { name: "Reactivar Epic" })).toBeDefined();
-    // Y lo que importa: las demás siguen donde estaban.
-    expect(screen.getByRole("button", { name: "Sincronizar" })).toBeDefined();
+    expect(await screen.findByRole("button", { name: "Switch Epic on" })).toBeDefined();
+    // And what is important: the others stay where they were.
+    expect(screen.getByRole("button", { name: "Synchronise" })).toBeDefined();
     expect(screen.getByText(/steam/)).toBeDefined();
   });
 
-  it("un conector desactivado explica que lo suyo sigue en la biblioteca", async () => {
-    state.accounts = [cuentaSteam, cuentaEpic];
+  it("a connector switched off explains that its data stays in the library", async () => {
+    state.accounts = [steamAccount, epicAccount];
     state.connectors = [{ store: "epic", enabled: false, last_error: null }];
     render(<App />);
-    expect(await screen.findByText(/sigue en la biblioteca/)).toBeDefined();
+    expect(await screen.findByText(/stays in the library/)).toBeDefined();
   });
 
-  it("sin ninguna cuenta se puede empezar por GOG en vez de por Steam", async () => {
+  it("with no account you can start with GOG and not with Steam", async () => {
     render(<App />);
-    (await screen.findByRole("button", { name: "o empezar por GOG" })).click();
-    expect(await screen.findByRole("button", { name: /Iniciar sesión en GOG/ })).toBeDefined();
+    (await screen.findByRole("button", { name: "or start with GOG" })).click();
+    expect(await screen.findByRole("button", { name: /Sign in to GOG/ })).toBeDefined();
   });
 
-  it("sin ninguna cuenta también se puede empezar por Epic", async () => {
-    // Quien solo tenga Epic no puede quedarse en un callejón en la primera
-    // pantalla, que es justo lo que le pasaba a quien solo tenía GOG.
+  it("with no account you can also start with Epic", async () => {
+    // A user who has only Epic cannot be in a dead end on the first screen, which
+    // is exactly what occurred to a user who had only GOG.
     render(<App />);
-    (await screen.findByRole("button", { name: "o empezar por Epic" })).click();
-    expect(await screen.findByRole("button", { name: /Iniciar sesión en Epic/ })).toBeDefined();
+    (await screen.findByRole("button", { name: "or start with Epic" })).click();
+    expect(await screen.findByRole("button", { name: /Sign in to Epic/ })).toBeDefined();
   });
 
-  it("muestra el recuento de fichas, copias y pendientes", async () => {
-    state.accounts = [cuentaSteam];
+  it("it shows the count of records, copies and games to review", async () => {
+    state.accounts = [steamAccount];
     state.summary = { owned: 412, wishlist: 37, games: 400, pending_review: 12 };
     render(<App />);
-    expect(await screen.findByText(/400 fichas/)).toBeDefined();
-    expect(screen.getByText(/12 por revisar/)).toBeDefined();
+    expect(await screen.findByText(/400 records/)).toBeDefined();
+    expect(screen.getByText(/12 to review/)).toBeDefined();
   });
 
-  it("la biblioteca pinta las fichas con sus tiendas", async () => {
-    state.accounts = [cuentaSteam];
+  it("the library shows the records with their stores", async () => {
+    state.accounts = [steamAccount];
     state.rows = [
-      fila({
+      row({
         title: "Disco Elysium",
         sort_title: "disco elysium",
         release_year: 2019,
@@ -434,441 +438,446 @@ describe("App", () => {
       }),
     ];
     render(<App />);
-    // Cada juego es una fila, y en ella están las dos tiendas que lo tienen: es
-    // lo que distingue una copia duplicada de una sola.
-    const celda = await screen.findByRole("button", { name: "Disco Elysium" });
-    const filaDom = celda.closest("tr");
-    expect(filaDom?.textContent).toContain("steam");
-    expect(filaDom?.textContent).toContain("gog");
-    expect(filaDom?.textContent).toContain("21 h");
+    // Each game is one row, and in it are the two stores that have it: that is
+    // what tells a duplicate copy from one copy.
+    const cell = await screen.findByRole("button", { name: "Disco Elysium" });
+    const rowDom = cell.closest("tr");
+    expect(rowDom?.textContent).toContain("steam");
+    expect(rowDom?.textContent).toContain("gog");
+    expect(rowDom?.textContent).toContain("21 h");
   });
 
-  it("pulsar una columna ordena por ella, y volver a pulsarla da la vuelta", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("a click on a column sorts by it, and a second click inverts it", async () => {
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
 
-    const titulos = () =>
-      screen.getAllByRole("button").filter((b) => b.className === "celda").map((b) => b.textContent);
+    const titles = () =>
+      screen.getAllByRole("button").filter((b) => b.className === "cell").map((b) => b.textContent);
 
-    // De salida, por título.
+    // At the start, by title.
     expect(await screen.findByRole("button", { name: "Celeste" })).toBeDefined();
-    expect(titulos()).toEqual(["Celeste", "Hades", "Outer Wilds", "Prey"]);
+    expect(titles()).toEqual(["Celeste", "Hades", "Outer Wilds", "Prey"]);
 
-    fireEvent.click(screen.getByRole("button", { name: /Horas/ }));
-    // Ascendente, y lo que no se ha jugado al final aunque valga cero.
-    expect(titulos()).toEqual(["Prey", "Celeste", "Hades", "Outer Wilds"]);
+    fireEvent.click(screen.getByRole("button", { name: /Hours/ }));
+    // Ascending, and the games not played last even if their value is zero.
+    expect(titles()).toEqual(["Prey", "Celeste", "Hades", "Outer Wilds"]);
 
-    fireEvent.click(screen.getByRole("button", { name: /Horas/ }));
-    expect(titulos()).toEqual(["Hades", "Celeste", "Prey", "Outer Wilds"]);
+    fireEvent.click(screen.getByRole("button", { name: /Hours/ }));
+    expect(titles()).toEqual(["Hades", "Celeste", "Prey", "Outer Wilds"]);
   });
 
-  it("con mayúsculas se selecciona el rango entero, no una fila", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("with the shift key it selects all of the range, not one row", async () => {
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
 
-    fireEvent.click(marcaDe("Celeste"));
-    expect(marcaDe("Celeste").checked).toBe(true);
-    expect(marcaDe("Prey").checked).toBe(false);
+    fireEvent.click(checkOf("Celeste"));
+    expect(checkOf("Celeste").checked).toBe(true);
+    expect(checkOf("Prey").checked).toBe(false);
 
-    fireEvent.click(marcaDe("Prey"), { shiftKey: true });
-    for (const titulo of ["Celeste", "Hades", "Outer Wilds", "Prey"]) {
-      expect(marcaDe(titulo).checked).toBe(true);
+    fireEvent.click(checkOf("Prey"), { shiftKey: true });
+    for (const title of ["Celeste", "Hades", "Outer Wilds", "Prey"]) {
+      expect(checkOf(title).checked).toBe(true);
     }
   });
 
-  it("cambiar de vista no cambia qué juegos hay delante", async () => {
-    // Filtro y orden se aplican en un solo sitio y las dos vistas pintan el
-    // resultado. La comprobación es que no hay dos sitios donde divergir.
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("a change of view does not change which games are in front of you", async () => {
+    // The filter and the sort are applied in one place and the two views show the
+    // result. The test is that there are not two places to become different.
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
 
-    const conjunto = () =>
+    const set = () =>
       screen
-        .getAllByLabelText(/^Seleccionar /)
+        .getAllByLabelText(/^Select /)
         .map((e) => e.getAttribute("aria-label"))
         .sort();
 
-    fireEvent.change(screen.getByPlaceholderText("Buscar en la biblioteca"), {
+    fireEvent.change(screen.getByPlaceholderText("Search in the library"), {
       target: { value: "out" },
     });
-    expect(conjunto()).toEqual(["Seleccionar Outer Wilds"]);
+    expect(set()).toEqual(["Select Outer Wilds"]);
 
-    fireEvent.click(screen.getByRole("button", { name: "Portadas" }));
-    expect(conjunto()).toEqual(["Seleccionar Outer Wilds"]);
-    // Y sigue siendo la pared, no la tabla disfrazada.
+    fireEvent.click(screen.getByRole("button", { name: "Covers" }));
+    expect(set()).toEqual(["Select Outer Wilds"]);
+    // And it is still the wall, not the table in different clothes.
     expect(screen.queryByRole("columnheader")).toBeNull();
   });
 
-  it("lo seleccionado en la tabla sigue seleccionado en las portadas", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("what is selected in the table stays selected in the covers", async () => {
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
 
-    fireEvent.click(marcaDe("Celeste"));
-    fireEvent.click(marcaDe("Hades"), { shiftKey: true });
+    fireEvent.click(checkOf("Celeste"));
+    fireEvent.click(checkOf("Hades"), { shiftKey: true });
 
-    fireEvent.click(screen.getByRole("button", { name: "Portadas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Covers" }));
 
-    expect(marcaDe("Celeste").checked).toBe(true);
-    expect(marcaDe("Hades").checked).toBe(true);
-    expect(marcaDe("Prey").checked).toBe(false);
-    // La barra de lote no se entera de que ha cambiado la vista.
-    expect(screen.getByText("2 seleccionados")).toBeDefined();
+    expect(checkOf("Celeste").checked).toBe(true);
+    expect(checkOf("Hades").checked).toBe(true);
+    expect(checkOf("Prey").checked).toBe(false);
+    // The bulk bar does not see that the view changed.
+    expect(screen.getByText("2 selected")).toBeDefined();
   });
 
-  it("el lote escribe una vez por juego y no se lleva por delante lo escrito", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("the batch writes one time for each game and does not delete the text", async () => {
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
 
-    fireEvent.click(marcaDe("Celeste"));
-    fireEvent.click(marcaDe("Prey"), { shiftKey: true });
+    fireEvent.click(checkOf("Celeste"));
+    fireEvent.click(checkOf("Prey"), { shiftKey: true });
 
-    fireEvent.change(screen.getByLabelText("Marcar como"), { target: { value: "abandoned" } });
-    fireEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    fireEvent.change(screen.getByLabelText("Mark as"), { target: { value: "abandoned" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
-    // Una llamada por juego, ni una más: el lote no puede escribir dos veces
-    // sobre el mismo ni saltarse uno.
-    await waitFor(() => expect(state.guardados).toHaveLength(4));
-    expect(state.guardados.every(([, estado]) => estado === "abandoned")).toBe(true);
-    // La nota y el texto se devuelven tal cual: `set_user_state` reescribe la
-    // fila entera, y sin esto un cambio de estado en lote borraría en silencio
-    // lo único que la aplicación sabe del usuario.
-    const celeste = state.guardados.find(([id]) => id === CUATRO[0]!.game_id);
+    // One call for each game, and no more: the batch cannot write two times on
+    // the same game and cannot miss one.
+    await waitFor(() => expect(state.saved).toHaveLength(4));
+    expect(state.saved.every(([, status]) => status === "abandoned")).toBe(true);
+    // The rating and the notes are given back unchanged: `set_user_state` writes
+    // all of the row again, and without this a bulk change of status would
+    // quietly delete the only data that the application knows about the user.
+    const celeste = state.saved.find(([id]) => id === FOUR[0]!.game_id);
     expect(celeste?.[2]).toBe(9);
-    expect(celeste?.[3]).toBe("corto y redondo");
+    expect(celeste?.[3]).toBe("short and complete");
   });
 
-  it("desde la tabla la ficha se abre acoplada, y con ↑↓ se recorre la lista", async () => {
-    // Es la razón de que el inspector exista: comparar juegos de uno en uno sin
-    // volver a la tabla a buscar el siguiente ni perder la ficha al hacerlo.
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("from the table the record opens beside it, and ↑↓ goes through the list", async () => {
+    // It is the reason that the inspector exists: to compare games one at a time
+    // without you go back to the table to find the next one and lose the record.
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
 
-    expect(fichaAbierta()).toBe("Celeste");
+    expect(openRecord()).toBe("Celeste");
     expect(screen.queryByRole("dialog")).toBeNull();
 
     fireEvent.keyDown(window, { key: "ArrowDown" });
-    expect(fichaAbierta()).toBe("Hades");
+    expect(openRecord()).toBe("Hades");
     fireEvent.keyDown(window, { key: "ArrowUp" });
-    expect(fichaAbierta()).toBe("Celeste");
+    expect(openRecord()).toBe("Celeste");
 
-    // Y en el extremo no se cierra ni salta al otro lado: se queda donde está.
+    // And at the end it does not close and does not go to the other end: it
+    // stays where it is.
     fireEvent.keyDown(window, { key: "ArrowUp" });
-    expect(fichaAbierta()).toBe("Celeste");
+    expect(openRecord()).toBe("Celeste");
   });
 
-  it("escribiendo una nota, ↑↓ mueve el cursor y no de juego", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("while you write a note, ↑↓ moves the cursor and not the game", async () => {
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
 
-    fireEvent.keyDown(enLaFicha().getByLabelText("Notas"), { key: "ArrowDown" });
-    expect(fichaAbierta()).toBe("Celeste");
+    fireEvent.keyDown(inTheRecord().getByLabelText("Notes"), { key: "ArrowDown" });
+    expect(openRecord()).toBe("Celeste");
   });
 
-  it("en una ventana estrecha la ficha de la tabla se abre en hoja", async () => {
-    // Por debajo de su rango el inspector no cabe al lado de la tabla, y
-    // dejarlo ahí recortaría el título justo cuando estás comparando fichas.
-    anchura(1000);
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it("in a narrow window the record of the table opens as a sheet", async () => {
+    // Below its range the inspector does not fit beside the table, and to keep it
+    // there would cut the title exactly when you compare records.
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
 
     expect(screen.getByRole("dialog")).toBeDefined();
-    expect(fichaAbierta()).toBe("Celeste");
+    expect(openRecord()).toBe("Celeste");
   });
 
-  it("desde las portadas la ficha se abre en hoja, con el arte de la tienda", async () => {
-    state.accounts = [cuentaSteam];
+  it("from the covers the record opens as a sheet, with the store art", async () => {
+    state.accounts = [steamAccount];
     state.rows = [
-      fila({
+      row({
         title: "Celeste",
         sort_title: "celeste",
-        summary: "Ayuda a Madeline a sobrevivir a sus demonios.",
+        summary: "Help Madeline to survive her own demons.",
         store_cover_url: "https://cdn.cloudflare.steamstatic.com/steam/apps/504230/header.jpg",
       }),
     ];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Portadas" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Covers" }));
     fireEvent.click(screen.getByRole("button", { name: /^Celeste/ }));
 
     expect(screen.getByRole("dialog")).toBeDefined();
-    expect(screen.getByText(/sobrevivir a sus demonios/)).toBeDefined();
-    // Decorativa —el título va debajo—, así que no tiene rol y se busca por lo
-    // que es: la imagen apaisada de la tienda, que es lo que la hoja añade.
-    const arte = document.querySelector(".hoja-arte");
-    expect(arte?.tagName).toBe("IMG");
-    expect(arte?.getAttribute("src")).toContain("header.jpg");
+    expect(screen.getByText(/survive her own demons/)).toBeDefined();
+    // Decoration — the title is below — thus it has no role and the search uses
+    // what it is: the wide image of the store, which is what the sheet adds.
+    const art = document.querySelector(".sheet-art");
+    expect(art?.tagName).toBe("IMG");
+    expect(art?.getAttribute("src")).toContain("header.jpg");
   });
 
-  it("sin portada de tienda y sin resumen la hoja se abre igual", async () => {
-    // El caso de quien no ha configurado IGDB, que es el que promete el aviso
-    // de la cabecera: la ficha tiene menos que enseñar, no menos que funcionar.
-    anchura(1000);
-    state.accounts = [cuentaSteam];
-    state.rows = [fila({ title: "Celeste", sort_title: "celeste" })];
+  it("with no store cover and no summary the sheet still opens", async () => {
+    // The condition of a user who has not configured IGDB, which is what the
+    // message in the header promises: the record has less to show, not less to
+    // do.
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = [row({ title: "Celeste", sort_title: "celeste" })];
     render(<App />);
     fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
 
     expect(screen.getByRole("dialog")).toBeDefined();
-    expect(screen.getByText(/Sin resumen/)).toBeDefined();
-    expect(document.querySelector(".hoja-arte")?.tagName).toBe("DIV");
-    expect(enLaFicha().getByLabelText("Notas")).toBeDefined();
+    expect(screen.getByText(/No summary/)).toBeDefined();
+    expect(document.querySelector(".sheet-art")?.tagName).toBe("DIV");
+    expect(inTheRecord().getByLabelText("Notes")).toBeDefined();
   });
 
-  it("guardar desde la hoja escribe lo mismo que guardar desde el inspector", async () => {
-    // Un solo formulario y un solo guardado: la presentación no puede cambiar
-    // lo que llega a la base de datos.
-    state.accounts = [cuentaSteam];
-    state.rows = [fila({ title: "Celeste", sort_title: "celeste", rating: 9 })];
+  it("a save from the sheet writes the same as a save from the inspector", async () => {
+    // One form and one save: the presentation cannot change what reaches the
+    // database.
+    state.accounts = [steamAccount];
+    state.rows = [row({ title: "Celeste", sort_title: "celeste", rating: 9 })];
 
-    for (const [ancho, esperado] of [
+    for (const [px, expected] of [
       [1400, null],
       [1000, "dialog"],
     ] as const) {
-      anchura(ancho);
+      width(px);
       const { unmount } = render(<App />);
       fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
-      expect(screen.queryByRole("dialog") === null ? null : "dialog").toBe(esperado);
+      expect(screen.queryByRole("dialog") === null ? null : "dialog").toBe(expected);
 
-      fireEvent.change(enLaFicha().getByLabelText("Estado"), { target: { value: "finished" } });
-      fireEvent.click(enLaFicha().getByRole("button", { name: "Guardar" }));
-      await waitFor(() => expect(state.guardados).toHaveLength(1));
+      fireEvent.change(inTheRecord().getByLabelText("Status"), { target: { value: "finished" } });
+      fireEvent.click(inTheRecord().getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(state.saved).toHaveLength(1));
 
-      expect(state.guardados[0]).toEqual([state.rows[0]!.game_id, "finished", 9, null]);
-      state.guardados = [];
+      expect(state.saved[0]).toEqual([state.rows[0]!.game_id, "finished", 9, null]);
+      state.saved = [];
       unmount();
     }
   });
 
-  it("«Hoy» propone lo que tienes a medias, y no lo repite en las estanterías", async () => {
-    // Proponer algo nuevo mientras tienes uno empezado es lo que hace crecer la
-    // pila, que es justo lo que esta pantalla intenta deshacer.
-    state.accounts = [cuentaSteam];
-    state.rows = PARA_HOY;
+  it('"Today" proposes the game half done and does not repeat it on the shelves', async () => {
+    // To propose something new while you have a game started is what makes the
+    // pile grow, which is exactly what this screen tries to undo.
+    state.accounts = [steamAccount];
+    state.rows = FOR_TODAY;
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Today" }));
 
     expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe("Hades");
-    expect(screen.getByText("Lo tienes a medias")).toBeDefined();
+    expect(screen.getByText("You have it half done")).toBeDefined();
 
-    // Cada estantería con su motivo, y solo las que tienen algo dentro: «hace
-    // mucho que no lo tocas» no sale porque nada llega a los seis meses.
+    // Each shelf with its reason, and only the shelves that have something in
+    // them: "you have not touched it for a long time" does not appear because
+    // nothing reaches six months.
     expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
-      "Lo dejaste a medias",
-      "Sin estrenar",
-      "Lo tienes dos veces",
+      "You stopped in the middle",
+      "Never started",
+      "You have it two times",
     ]);
 
-    // Y el destacado no vuelve a salir abajo: verlo dos veces en la misma
-    // pantalla hace pensar que son dos juegos.
+    // And the featured game does not appear again below: to see it two times on
+    // the same screen makes you think that they are two games.
     expect(screen.queryAllByRole("button", { name: /^Hades/ })).toHaveLength(0);
     expect(screen.getByRole("button", { name: /^Celeste/ })).toBeDefined();
   });
 
-  it("«Hoy» no enseña estanterías vacías ni revienta con la biblioteca vacía", async () => {
-    state.accounts = [cuentaSteam];
+  it('"Today" shows no empty shelf and does not break with an empty library', async () => {
+    state.accounts = [steamAccount];
     state.rows = [];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Today" }));
 
-    expect(await screen.findByText(/Todavía no hay ningún juego en propiedad/)).toBeDefined();
+    expect(await screen.findByText(/There is not yet an owned game/)).toBeDefined();
     expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
   });
 
-  it("«Hoy» hace sus propios cortes y no hereda los filtros de la biblioteca", async () => {
-    // Es lo que separa «Hoy» de un tercer modo de vista: la tabla y la pared
-    // comparten contrato —filtras y las dos enseñan lo filtrado—, y esta
-    // pantalla propone lo suyo.
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it('"Today" makes its own divisions and does not take the library filters', async () => {
+    // It is what separates "Today" from a third view mode: the table and the wall
+    // share a contract — you filter and the two show the filtered games — and
+    // this screen makes its own proposal.
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
 
-    fireEvent.change(screen.getByPlaceholderText("Buscar en la biblioteca"), {
+    fireEvent.change(screen.getByPlaceholderText("Search in the library"), {
       target: { value: "celeste" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Hoy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
 
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Outer Wilds");
   });
 
-  it("desde «Hoy» la ficha se abre en hoja aunque la ventana sea ancha", async () => {
-    // Aquí no hay una lista al lado que mantener a la vista, y lo que se está
-    // mirando es el arte.
-    state.accounts = [cuentaSteam];
-    state.rows = CUATRO;
+  it('from "Today" the record opens as a sheet even in a wide window', async () => {
+    // Here there is no list beside it to keep in view, and what you look at is
+    // the art.
+    state.accounts = [steamAccount];
+    state.rows = FOUR;
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
-    fireEvent.click(screen.getByRole("button", { name: "Abrir la ficha" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open the record" }));
 
     expect(screen.getByRole("dialog")).toBeDefined();
-    expect(fichaAbierta()).toBe("Outer Wilds");
+    expect(openRecord()).toBe("Outer Wilds");
   });
 
-  it("los deseados salen ordenados por descuento, con el mínimo histórico al lado", async () => {
-    // Es el «done when» de la fase 8: un −60 % no significa nada por su cuenta,
-    // y ordenar por título convierte la lista en buenas intenciones.
-    state.accounts = [cuentaSteam];
-    state.rows = DESEADOS;
-    state.precios = [
-      precio(DESEADOS[0]!.game_id, { cut: 40, amount: 2399 }),
-      precio(DESEADOS[1]!.game_id, { cut: 75, amount: 899, shop: "Steam" }),
+  it("the wished-for games come sorted by discount, with the all-time low beside", async () => {
+    // It is the "done when" of phase 8: a −60 % means nothing alone, and a sort
+    // by title turns the list into good intentions.
+    state.accounts = [steamAccount];
+    state.rows = WISHES;
+    state.prices = [
+      price(WISHES[0]!.game_id, { cut: 40, amount: 2399 }),
+      price(WISHES[1]!.game_id, { cut: 75, amount: 899, shop: "Steam" }),
     ];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
-    const titulos = () =>
-      screen.getAllByText(/./, { selector: ".deseado-titulo" }).map((e) => e.textContent);
-    // Lo más rebajado primero, y lo que no tiene precio al final: eso no es
-    // «barato», es que no hay dato.
-    expect(titulos()).toEqual(["Silksong", "Blasphemous", "Tunic"]);
+    const titles = () =>
+      screen.getAllByText(/./, { selector: ".wish-title" }).map((e) => e.textContent);
+    // The largest discount first, and the games with no price last: that is not
+    // "inexpensive", it is that there is no data.
+    expect(titles()).toEqual(["Silksong", "Blasphemous", "Tunic"]);
 
     const silksong = screen.getByText("Silksong").closest("tr");
-    expect(silksong?.textContent).toContain("8,99");
+    expect(silksong?.textContent).toContain("8.99");
     expect(silksong?.textContent).toContain("−75%");
     expect(silksong?.textContent).toContain("Steam");
-    // Está en su mínimo histórico, que es la única pregunta que se hace quien
-    // mira esta pantalla.
-    expect(silksong?.textContent).toContain("en su mínimo");
+    // It is at its all-time low, which is the only question that a person who
+    // looks at this screen asks.
+    expect(silksong?.textContent).toContain("at its low");
 
     const blasphemous = screen.getByText("Blasphemous").closest("tr");
-    expect(blasphemous?.textContent).not.toContain("en su mínimo");
-    expect(screen.getByText("Tunic").closest("tr")?.textContent).toContain("sin precio");
+    expect(blasphemous?.textContent).not.toContain("at its low");
+    expect(screen.getByText("Tunic").closest("tr")?.textContent).toContain("no price");
   });
 
-  it("un juego en propiedad no se cuela en los deseados", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = [...DESEADOS, fila({ title: "Hades", sort_title: "hades" })];
+  it("an owned game does not come into the wishlist", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [...WISHES, row({ title: "Hades", sort_title: "hades" })];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
     expect(screen.queryByText("Hades")).toBeNull();
   });
 
-  it("sin clave de ITAD la lista sigue, y desde ella se llega al asistente", async () => {
-    // El mismo trato que IGDB: sin la clave hay menos que enseñar, no menos que
-    // funcionar.
-    state.accounts = [cuentaSteam];
+  it("with no ITAD key the list continues, and from it you reach the setup", async () => {
+    // The same treatment as IGDB: with no key there is less to show, not less to
+    // do.
+    state.accounts = [steamAccount];
     state.hasItad = false;
-    state.rows = DESEADOS;
+    state.rows = WISHES;
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
     expect(screen.getByText("Silksong")).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Actualizar precios" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Update the prices" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Configurar ITAD" }));
-    expect(await screen.findByText("Precios: IsThereAnyDeal")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Configure ITAD" }));
+    expect(await screen.findByText("Prices: IsThereAnyDeal")).toBeDefined();
   });
 
-  it("sin ningún deseado todavía se puede configurar ITAD", async () => {
-    // La clave se guarda antes de tener deseados, no después: esconder el
-    // enlace hasta que hubiera lista dejaba sin ninguna forma de configurarla a
-    // quien acababa de instalar la aplicación.
-    state.accounts = [cuentaSteam];
+  it("with no wished-for game you can still configure ITAD", async () => {
+    // The key is kept before there are wished-for games, not after: to hide the
+    // link until there was a list left a user who had just installed the
+    // application with no way to configure it.
+    state.accounts = [steamAccount];
     state.hasItad = false;
     state.rows = [];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
-    expect(screen.getByText(/No hay ningún juego en tu lista de deseados/)).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Configurar ITAD" }));
-    expect(await screen.findByText("Precios: IsThereAnyDeal")).toBeDefined();
+    expect(screen.getByText(/There is no game in your wishlist/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Configure ITAD" }));
+    expect(await screen.findByText("Prices: IsThereAnyDeal")).toBeDefined();
   });
 
-  it("con deseados sin ficha explica por qué la pantalla sale vacía", async () => {
-    // El caso que desconcierta: la cabecera dice «84 deseados» porque cuenta
-    // copias, y esta pantalla enseña fichas. Sin explicación, parece un fallo.
-    state.accounts = [cuentaSteam];
+  it("with wished-for games and no record it says why the screen is empty", async () => {
+    // The condition that confuses: the header says "84 wished for" because it
+    // counts copies, and this screen shows records. With no explanation, it looks
+    // like a defect.
+    state.accounts = [steamAccount];
     state.summary = { owned: 0, wishlist: 84, games: 0, pending_review: 84 };
     state.rows = [];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
-    expect(screen.getByText(/84 copias deseadas/)).toBeDefined();
-    expect(screen.getByText(/Pulsa «Emparejar»/)).toBeDefined();
+    expect(screen.getByText(/84 wished-for copies/)).toBeDefined();
+    expect(screen.getByText(/Click/)).toBeDefined();
   });
 
-  it("sin deseados no se ofrece actualizar unos precios que no existen", async () => {
-    state.accounts = [cuentaSteam];
+  it("with no wished-for game it does not offer to update prices that do not exist", async () => {
+    state.accounts = [steamAccount];
     state.rows = [];
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
-    expect(screen.queryByRole("button", { name: "Actualizar precios" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Update the prices" })).toBeNull();
   });
 
-  it("actualizar precios pide los precios y no sincroniza nada", async () => {
-    state.accounts = [cuentaSteam];
-    state.rows = DESEADOS;
+  it("an update of the prices asks for the prices and synchronises nothing", async () => {
+    state.accounts = [steamAccount];
+    state.rows = WISHES;
     render(<App />);
-    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar precios" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Update the prices" }));
 
-    await waitFor(() => expect(state.preciosPedidos).toBe(1));
+    await waitFor(() => expect(state.priceRequests).toBe(1));
   });
 
-  it("lo que gana con holgura viene ya elegido, y lo que empata no", async () => {
-    // La asimetría es la cola entera: repetir con un clic lo que la pantalla ya
-    // dice es trabajo inventado, y elegir por el usuario en un empate es
-    // exactamente lo que el umbral se negó a hacer.
-    state.accounts = [cuentaSteam];
-    state.queue = [EMPATE, HOLGADO];
+  it("what wins clearly comes already selected, and what is equal does not", async () => {
+    // The difference is all of the queue: to repeat with a click what the screen
+    // already says is work that nobody needs, and to select for the user in a tie
+    // is exactly what the threshold refused to do.
+    state.accounts = [steamAccount];
+    state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(2\)/ })).click();
+    (await screen.findByRole("button", { name: /To review \(2\)/ })).click();
 
-    await screen.findByText("Empates (1)");
-    expect(emparejaCon("LIMBO")).toBe("sin elegir");
-    expect(emparejaCon("Otro juego")).toContain("Otro juego");
-    // Y el lote solo se lleva el que viene puesto.
-    expect(screen.getByRole("button", { name: /Confirmar 1 emparejamiento$/ })).toBeDefined();
+    await screen.findByText("Equal scores (1)");
+    expect(matchesWith("LIMBO")).toBe("not chosen");
+    expect(matchesWith("Another game")).toContain("Another game");
+    // And the batch takes only the entry that comes selected.
+    expect(screen.getByRole("button", { name: /Confirm 1 match$/ })).toBeDefined();
   });
 
-  it("el lote escribe lo que enseña la columna, no lo que se tocó", async () => {
-    state.accounts = [cuentaSteam];
-    state.queue = [HOLGADO];
+  it("the batch writes what the column shows, not what was touched", async () => {
+    state.accounts = [steamAccount];
+    state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
 
-    // Se cambia por la otra ficha: la elegida y la descartada se intercambian.
-    fireEvent.click(await screen.findByRole("button", { name: /^Otro juego, pero de 2009/ }));
-    expect(emparejaCon("Otro juego")).toContain("Otro juego, pero de 2009");
+    // The other record is selected: the chosen one and the other one exchange.
+    fireEvent.click(await screen.findByRole("button", { name: /^Another game, but of 2009/ }));
+    expect(matchesWith("Another game")).toContain("Another game, but of 2009");
 
-    fireEvent.click(screen.getByRole("button", { name: /Confirmar 1 emparejamiento$/ }));
-    await waitFor(() => expect(state.confirmados).toHaveLength(1));
-    expect(state.confirmados[0]).toEqual([HOLGADO.store_entry_id, 4]);
+    fireEvent.click(screen.getByRole("button", { name: /Confirm 1 match$/ }));
+    await waitFor(() => expect(state.confirmed).toHaveLength(1));
+    expect(state.confirmed[0]).toEqual([CLEAR.store_entry_id, 4]);
   });
 
-  it("quitar la ficha que venía puesta deja la entrada fuera del lote", async () => {
-    // Es la única forma de decir «esta no» sin decir cuál sí, y hace falta para
-    // dejar una entrada sin resolver mientras se confirman las demás.
-    state.accounts = [cuentaSteam];
-    state.queue = [HOLGADO];
+  it("to remove the record that came selected leaves the entry out of the batch", async () => {
+    // It is the only way to say "not this one" without you say which one, and it
+    // is necessary to leave one entry unresolved while the others are confirmed.
+    state.accounts = [steamAccount];
+    state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
 
-    // El elegido va sin año ni parecido —los dos tienen su columna—, así que
-    // su nombre accesible es el título a secas y no se confunde con el otro.
-    fireEvent.click(await screen.findByRole("button", { name: "Otro juego" }));
-    expect(emparejaCon("Otro juego")).toBe("sin elegir");
-    expect(screen.queryByRole("button", { name: /Confirmar/ })).toBeNull();
+    // The chosen candidate comes with no year and no similarity — the two have a
+    // column of their own — thus its accessible name is the title alone and it is
+    // not confused with the other one.
+    fireEvent.click(await screen.findByRole("button", { name: "Another game" }));
+    expect(matchesWith("Another game")).toBe("not chosen");
+    expect(screen.queryByRole("button", { name: /Confirm/ })).toBeNull();
   });
 
-  it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {
-    state.accounts = [cuentaSteam];
+  it("the review queue offers the candidates and the way out with no record", async () => {
+    state.accounts = [steamAccount];
     state.queue = [
       {
         store_entry_id: "11111111-1111-7111-8111-111111111111",
@@ -898,39 +907,39 @@ describe("App", () => {
       },
     ];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
     expect(await screen.findByText(/Disco Elysium: The Final Cut/)).toBeDefined();
-    expect(screen.getByText(/crear ficha con el título de la tienda/)).toBeDefined();
+    expect(screen.getByText(/make a record with the title of the store/)).toBeDefined();
   });
 
-  it("los empates van agrupados y aparte del resto", async () => {
-    // Es el motivo más común de acabar en la cola: IGDB repite fichas y las
-    // ediciones se normalizan al mismo título. Agruparlos es lo que hace la
-    // revisión llevadera sin tocar el umbral.
-    state.accounts = [cuentaSteam];
-    state.queue = [EMPATE, HOLGADO];
+  it("the equal scores come in a group and apart from the others", async () => {
+    // It is the most common reason to come to the queue: IGDB repeats records and
+    // the editions normalise to the same title. To group them is what makes the
+    // review acceptable with no change to the threshold.
+    state.accounts = [steamAccount];
+    state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(2\)/ })).click();
-    expect(await screen.findByText(/Empates \(1\)/)).toBeDefined();
-    expect(screen.getByText(/El resto \(1\)/)).toBeDefined();
-    // El año es lo que distingue dos fichas que se llaman igual.
+    (await screen.findByRole("button", { name: /To review \(2\)/ })).click();
+    expect(await screen.findByText(/Equal scores \(1\)/)).toBeDefined();
+    expect(screen.getByText(/The remainder \(1\)/)).toBeDefined();
+    // The year is what tells two records with the same name apart.
     expect(screen.getByText(/2010/)).toBeDefined();
-    // Y para las que ni así, el enlace a la ficha de IGDB. Solo aparece cuando
-    // IGDB publicó un slug: sin él no hay página a la que ir.
-    expect(screen.getByRole("button", { name: "Ver Limbo en IGDB" })).toBeDefined();
-    expect(screen.getAllByRole("button", { name: /en IGDB$/ })).toHaveLength(1);
+    // And for the records that even the year does not separate, the link to the
+    // IGDB record. It appears only when IGDB published a slug: without it there
+    // is no page to go to.
+    expect(screen.getByRole("button", { name: "See Limbo in IGDB" })).toBeDefined();
+    expect(screen.getAllByRole("button", { name: /in IGDB$/ })).toHaveLength(1);
   });
 
-  it("elegir candidatos ofrece confirmarlos en lote", async () => {
-    state.accounts = [cuentaSteam];
-    state.queue = [EMPATE];
+  it("to select candidates offers to confirm them in a batch", async () => {
+    state.accounts = [steamAccount];
+    state.queue = [TIE];
     render(<App />);
-    (await screen.findByRole("button", { name: /Por revisar \(1\)/ })).click();
-    // Sin nada elegido no hay botón de lote: nada que confirmar.
-    expect(screen.queryByRole("button", { name: /Confirmar 1 emparejamiento/ })).toBeNull();
+    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
+    // With nothing selected there is no batch button: there is nothing to
+    // confirm.
+    expect(screen.queryByRole("button", { name: /Confirm 1 match/ })).toBeNull();
     (await screen.findByRole("button", { name: /Limbo · 2010/ })).click();
-    expect(
-      await screen.findByRole("button", { name: /Confirmar 1 emparejamiento/ }),
-    ).toBeDefined();
+    expect(await screen.findByRole("button", { name: /Confirm 1 match/ })).toBeDefined();
   });
 });

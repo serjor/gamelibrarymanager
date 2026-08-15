@@ -1,11 +1,11 @@
-//! Fichas sin IGDB, y lo que pasa cuando IGDB llega después.
+//! Records with no IGDB, and what occurs when IGDB comes later.
 //!
-//! Bloquear la aplicación entera hasta tener credenciales de Twitch es coherente
-//! —la ficha nace del emparejamiento— pero muy duro en el primer arranque. La
-//! alternativa tiene un riesgo concreto y es el que se prueba aquí: `user_state`
-//! cuelga del `game_id`, así que si al enriquecer una ficha local se creara una
-//! ficha nueva, el usuario perdería lo que hubiera escrito encima.
-
+//! To block all of the application until the user has Twitch credentials agrees
+//! with the design — the record comes from the matching — but it is very hard at
+//! the first start. The other option has one concrete risk and it is the risk
+//! that this file tests: `user_state` is attached to the `game_id`, thus if the
+//! metadata of a local record made a new record, the user would lose what they
+//! had written on it.
 use domain::{EntryKind, GameId};
 use domain::{
     PlayStatus, StoreAccount, StoreAccountId, StoreEntry, StoreEntryId, StoreId, UserState,
@@ -30,24 +30,24 @@ async fn base() -> (tempfile::TempDir, Database) {
     let dir = tempfile::tempdir().expect("directorio temporal");
     let db = Database::open(&dir.path().join("library.db"))
         .await
-        .expect("abrir base");
+        .expect("open the database");
     (dir, db)
 }
 
-/// Da de alta una cuenta y le cuelga una copia con el título que se le pase.
+/// Adds an account and attaches to it a copy with the title given.
 async fn copia(db: &Database, store: StoreId, app_id: &str, title: &str) -> StoreEntryId {
-    let cuenta = StoreAccount {
+    let account = StoreAccount {
         id: StoreAccountId::new(),
         store,
-        account_ref: format!("cuenta-{}", store.as_str()),
+        account_ref: format!("account-{}", store.as_str()),
         display_name: None,
         connected_at: OffsetDateTime::now_utc(),
         last_sync_at: None,
     };
     let account_id = StoreAccountRepository(db)
-        .upsert(&cuenta)
+        .upsert(&account)
         .await
-        .expect("alta de cuenta");
+        .expect("add the account");
 
     let entry = StoreEntry {
         id: StoreEntryId::new(),
@@ -122,7 +122,7 @@ fn token() -> IgdbToken {
 }
 
 #[tokio::test]
-async fn sin_igdb_la_biblioteca_ya_se_ve_y_deduplica_por_titulo() {
+async fn with_no_igdb_the_library_is_visible_and_deduplicates_by_title() {
     let (_dir, db) = base().await;
     copia(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
     copia(
@@ -134,31 +134,31 @@ async fn sin_igdb_la_biblioteca_ya_se_ve_y_deduplica_por_titulo() {
     .await;
     copia(&db, StoreId::Steam, "105600", "Terraria").await;
 
-    let informe = resolve_local(&db, &Silent)
+    let report = resolve_local(&db, &Silent)
         .await
-        .expect("emparejar sin IGDB");
-    assert_eq!(informe.linked, 3);
+        .expect("match with no IGDB");
+    assert_eq!(report.linked, 3);
 
-    let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
-    assert_eq!(biblioteca.len(), 2, "The Witcher 3 y Terraria");
+    let library = LibraryRepository(&db).all().await.expect("library");
+    assert_eq!(library.len(), 2, "The Witcher 3 and Terraria");
 
-    let witcher = biblioteca
+    let witcher = library
         .iter()
         .find(|row| row.sort_title.contains("witcher"))
-        .expect("la ficha de The Witcher 3");
+        .expect("the record of The Witcher 3");
     assert_eq!(
         witcher.owned_stores,
         vec!["gog".to_owned(), "steam".to_owned()],
-        "sin IGDB, la normalización de títulos ya junta las dos tiendas"
+        "with no IGDB, the normalisation of titles already joins the two stores"
     );
     assert_eq!(
         witcher.cover_url, None,
-        "una ficha local no se inventa metadatos que no tiene"
+        "a local record does not invent metadata that it does not have"
     );
 }
 
 #[tokio::test]
-async fn al_configurar_igdb_la_ficha_se_enriquece_sin_perder_el_estado() {
+async fn when_igdb_is_configured_the_record_gets_metadata_and_keeps_the_status() {
     let (_dir, db) = base().await;
     copia(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
     copia(
@@ -169,91 +169,87 @@ async fn al_configurar_igdb_la_ficha_se_enriquece_sin_perder_el_estado() {
     )
     .await;
 
-    // --- primer arranque, sin IGDB: el usuario ya puede marcar su estado ---
+    // --- the first start, with no IGDB: the user can already mark a status ---
     resolve_local(&db, &Silent)
         .await
-        .expect("emparejar sin IGDB");
-    let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
-    let ficha_local: GameId = biblioteca[0].game_id;
+        .expect("match with no IGDB");
+    let library = LibraryRepository(&db).all().await.expect("library");
+    let local_record: GameId = library[0].game_id;
 
     UserStateRepository(&db)
         .save(&UserState {
-            game_id: ficha_local,
+            game_id: local_record,
             status: Some(PlayStatus::Playing),
             rating: Some(9),
-            notes: Some("por el segundo acto".to_owned()),
+            notes: Some("at the second act".to_owned()),
             started_at: None,
             finished_at: None,
         })
         .await
-        .expect("guardar estado");
+        .expect("keep the status");
 
-    // --- y más tarde configura IGDB ---
+    // --- and later they configure IGDB ---
     let server = servidor_igdb().await;
     resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
         .await
-        .expect("emparejar con IGDB");
+        .expect("match with IGDB");
 
-    let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
-    assert_eq!(biblioteca.len(), 1, "sigue habiendo una sola ficha");
+    let library = LibraryRepository(&db).all().await.expect("library");
+    assert_eq!(library.len(), 1, "there is still one record");
 
-    let fila = &biblioteca[0];
+    let row = &library[0];
     assert_eq!(
-        fila.game_id, ficha_local,
-        "la ficha se enriquece en su sitio: si naciera otra, el estado del \
-         usuario se quedaría colgando de una ficha que ya no se ve"
+        row.game_id, local_record,
+        "the record gets its metadata in place: if a second record were made, the \
+         status of the user would stay attached to a record that nobody sees"
     );
-    assert_eq!(fila.title, "The Witcher 3: Wild Hunt");
+    assert_eq!(row.title, "The Witcher 3: Wild Hunt");
     assert!(
-        fila.cover_url.is_some(),
-        "ahora sí tiene portada, que es lo que aporta IGDB"
+        row.cover_url.is_some(),
+        "now it does have a cover, which is what IGDB gives"
     );
-    assert_eq!(fila.status, Some(PlayStatus::Playing));
-    assert_eq!(fila.rating, Some(9));
-    assert_eq!(fila.notes.as_deref(), Some("por el segundo acto"));
+    assert_eq!(row.status, Some(PlayStatus::Playing));
+    assert_eq!(row.rating, Some(9));
+    assert_eq!(row.notes.as_deref(), Some("at the second act"));
     assert_eq!(
-        fila.owned_stores,
+        row.owned_stores,
         vec!["gog".to_owned(), "steam".to_owned()],
-        "y las dos tiendas siguen colgando de ella"
+        "and the two stores are still attached to it"
     );
 
     assert_eq!(
-        GameRepository(&db).all().await.expect("fichas").len(),
+        GameRepository(&db).all().await.expect("records").len(),
         1,
-        "no puede quedar una ficha local huérfana rondando por la base"
+        "no orphan local record can stay in the database"
     );
 }
 
 #[tokio::test]
-async fn lo_que_igdb_no_reconoce_no_desaparece_de_la_biblioteca() {
+async fn what_igdb_does_not_recognise_does_not_go_out_of_the_library() {
     let (_dir, db) = base().await;
-    // Terraria no tiene cruce en las fixtures de IGDB: la búsqueda vuelve vacía.
+    // Terraria has no join in the IGDB fixtures: the search comes back empty.
     copia(&db, StoreId::Steam, "105600", "Terraria").await;
 
     resolve_local(&db, &Silent)
         .await
-        .expect("emparejar sin IGDB");
+        .expect("match with no IGDB");
     assert_eq!(
-        LibraryRepository(&db)
-            .all()
-            .await
-            .expect("biblioteca")
-            .len(),
+        LibraryRepository(&db).all().await.expect("library").len(),
         1
     );
 
     let server = servidor_igdb().await;
     resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
         .await
-        .expect("emparejar con IGDB");
+        .expect("match with IGDB");
 
-    let biblioteca = LibraryRepository(&db).all().await.expect("biblioteca");
+    let library = LibraryRepository(&db).all().await.expect("library");
     assert_eq!(
-        biblioteca.len(),
+        library.len(),
         1,
-        "que IGDB no lo conozca no es motivo para quitarle al usuario un juego \
-         que ya estaba viendo"
+        "that IGDB does not know it is not a reason to take from the user a game \
+         that they were already seeing"
     );
-    assert_eq!(biblioteca[0].title, "Terraria");
-    assert_eq!(biblioteca[0].owned_stores, vec!["steam".to_owned()]);
+    assert_eq!(library[0].title, "Terraria");
+    assert_eq!(library[0].owned_stores, vec!["steam".to_owned()]);
 }

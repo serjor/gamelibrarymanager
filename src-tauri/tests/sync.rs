@@ -1,6 +1,6 @@
-//! El "done when" de la fase 3, hasta donde puede comprobarse sin una cuenta
-//! real: sincronizar dos veces no duplica ni mueve `first_seen_at`, y la clave
-//! de API no acaba en la base de datos.
+//! The "done when" of phase 3, as far as you can test it with no real account:
+//! a second synchronisation does not duplicate and does not move
+//! `first_seen_at`, and the API key does not go into the database.
 
 use connectors::SteamConnector;
 use domain::{EntryKind, StoreAccount, StoreAccountId, StoreId};
@@ -34,10 +34,10 @@ async fn steam_server() -> MockServer {
 }
 
 #[tokio::test]
-async fn sincronizar_dos_veces_no_duplica_ni_deja_la_clave_en_la_base_de_datos() {
+async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_database() {
     let dir = tempfile::tempdir().expect("directorio temporal");
     let db_path = dir.path().join("library.db");
-    let db = Database::open(&db_path).await.expect("abrir base");
+    let db = Database::open(&db_path).await.expect("open the database");
 
     let account = StoreAccount {
         id: StoreAccountId::new(),
@@ -50,14 +50,14 @@ async fn sincronizar_dos_veces_no_duplica_ni_deja_la_clave_en_la_base_de_datos()
     let account_id = StoreAccountRepository(&db)
         .upsert(&account)
         .await
-        .expect("alta de cuenta");
+        .expect("add the account");
     let account = StoreAccount {
         id: account_id,
         ..account
     };
 
-    let store = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "contraseña larga")
-        .expect("abrir almacén");
+    let store = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "a long passphrase")
+        .expect("open the store");
     store
         .set(
             &credential_key(&account),
@@ -69,53 +69,57 @@ async fn sincronizar_dos_veces_no_duplica_ni_deja_la_clave_en_la_base_de_datos()
     let connector =
         SteamConnector::new(reqwest::Client::new()).with_bases(server.uri(), server.uri());
 
-    let mut primera = SyncReport::default();
-    sync_account(&db, &store, &connector, &account, &mut primera)
+    let mut first = SyncReport::default();
+    sync_account(&db, &store, &connector, &account, &mut first)
         .await
-        .expect("primera sincronización");
-    assert_eq!(primera.owned, 3);
-    assert_eq!(primera.wishlist, 2);
+        .expect("the first synchronisation");
+    assert_eq!(first.owned, 3);
+    assert_eq!(first.wishlist, 2);
 
     let entries = StoreEntryRepository(&db);
-    let tras_la_primera = entries.active(EntryKind::Owned).await.expect("listar");
-    assert_eq!(tras_la_primera.len(), 3);
+    let after_the_first = entries.active(EntryKind::Owned).await.expect("list");
+    assert_eq!(after_the_first.len(), 3);
 
-    let mut segunda = SyncReport::default();
-    sync_account(&db, &store, &connector, &account, &mut segunda)
+    let mut second = SyncReport::default();
+    sync_account(&db, &store, &connector, &account, &mut second)
         .await
-        .expect("segunda sincronización");
+        .expect("the second synchronisation");
 
-    let tras_la_segunda = entries.active(EntryKind::Owned).await.expect("listar");
-    assert_eq!(tras_la_segunda.len(), 3, "sincronizar dos veces no duplica");
+    let after_the_second = entries.active(EntryKind::Owned).await.expect("list");
     assert_eq!(
-        tras_la_segunda.iter().map(|e| e.id).collect::<Vec<_>>(),
-        tras_la_primera.iter().map(|e| e.id).collect::<Vec<_>>(),
-        "las filas son las mismas, no filas nuevas"
+        after_the_second.len(),
+        3,
+        "a second synchronisation does not duplicate"
     );
     assert_eq!(
-        segunda.removed, 0,
-        "nada desaparece entre dos sincronizaciones iguales"
+        after_the_second.iter().map(|e| e.id).collect::<Vec<_>>(),
+        after_the_first.iter().map(|e| e.id).collect::<Vec<_>>(),
+        "the rows are the same rows, not new rows"
+    );
+    assert_eq!(
+        second.removed, 0,
+        "nothing goes away between two equal synchronisations"
     );
 
-    // Y lo importante: la clave no está en la base de datos.
+    // And the important part: the key is not in the database.
     drop(db);
     let bytes = std::fs::read(&db_path).expect("leer el fichero de la base");
     assert!(
         !bytes
             .windows(API_KEY.len())
             .any(|w| w == API_KEY.as_bytes()),
-        "la clave de API no puede aparecer en el SQLite"
+        "the API key cannot appear in the SQLite file"
     );
 }
 
 #[tokio::test]
-async fn sin_credencial_guardada_falla_con_un_mensaje_accionable() {
+async fn with_no_credential_kept_it_fails_with_a_message_you_can_act_on() {
     let dir = tempfile::tempdir().expect("directorio temporal");
     let db = Database::open(&dir.path().join("library.db"))
         .await
-        .expect("abrir base");
-    let store = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "contraseña larga")
-        .expect("abrir almacén");
+        .expect("open the database");
+    let store = EncryptedFileStore::open(&dir.path().join("secrets.bin"), "a long passphrase")
+        .expect("open the store");
 
     let account = StoreAccount {
         id: StoreAccountId::new(),
@@ -128,7 +132,7 @@ async fn sin_credencial_guardada_falla_con_un_mensaje_accionable() {
     StoreAccountRepository(&db)
         .upsert(&account)
         .await
-        .expect("alta de cuenta");
+        .expect("add the account");
 
     let server = steam_server().await;
     let connector =
@@ -142,10 +146,10 @@ async fn sin_credencial_guardada_falla_con_un_mensaje_accionable() {
         &mut SyncReport::default(),
     )
     .await
-    .expect_err("sin credencial no se puede sincronizar");
+    .expect_err("with no credential you cannot synchronise");
 
     assert!(
-        error.to_string().contains("vuelve a conectarla"),
-        "el mensaje debe decirle al usuario qué hacer, no solo qué ha fallado"
+        error.to_string().contains("connect it again"),
+        "the message must tell the user what to do, not only what failed"
     );
 }

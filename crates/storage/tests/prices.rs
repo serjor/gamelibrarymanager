@@ -1,6 +1,6 @@
-//! Los precios son la quinta capa, y la única cuyas filas se borran de verdad.
-//! Lo que estos tests vigilan es que ese borrado no llegue nunca ni a la copia
-//! de la tienda ni a lo que escribió el usuario.
+//! The prices are the fifth layer, and the only layer whose rows are really
+//! deleted. What these tests watch is that the delete never reaches the copy of
+//! the store or what the user wrote.
 
 use domain::{
     Deal, EntryKind, Game, GameId, GameLink, GamePrices, LinkMethod, Money, PlayStatus,
@@ -18,17 +18,17 @@ async fn account(db: &Database, store: StoreId) -> StoreAccountId {
         .upsert(&StoreAccount {
             id: StoreAccountId::new(),
             store,
-            account_ref: format!("cuenta-{}", store.as_str()),
+            account_ref: format!("account-{}", store.as_str()),
             display_name: None,
             connected_at: OffsetDateTime::now_utc(),
             last_sync_at: None,
         })
         .await
-        .expect("alta de cuenta")
+        .expect("add the account")
 }
 
-/// Una ficha con una copia colgando, del tipo que se pida.
-async fn juego(db: &Database, store: StoreId, app_id: &str, kind: EntryKind) -> GameId {
+/// A record with one copy attached, of the kind requested.
+async fn game(db: &Database, store: StoreId, app_id: &str, kind: EntryKind) -> GameId {
     let account_id = account(db, store).await;
     let entry = StoreEntry {
         id: StoreEntryId::new(),
@@ -46,7 +46,7 @@ async fn juego(db: &Database, store: StoreId, app_id: &str, kind: EntryKind) -> 
     StoreEntryRepository(db)
         .upsert_many(std::slice::from_ref(&entry))
         .await
-        .expect("alta de copia");
+        .expect("add the copy");
 
     let game = Game {
         id: GameId::new(),
@@ -61,12 +61,12 @@ async fn juego(db: &Database, store: StoreId, app_id: &str, kind: EntryKind) -> 
     GameRepository(db)
         .upsert(&game)
         .await
-        .expect("alta de ficha");
+        .expect("add the record");
 
-    // `rebuild_auto` reescribe **todos** los enlaces automáticos, así que hay
-    // que partir de los que ya hay: pasar solo el nuevo dejaría sin ficha a los
-    // juegos que creó la llamada anterior.
-    let mut links = GameLinkRepository(db).all().await.expect("enlaces");
+    // `rebuild_auto` writes **all** of the automatic links again, thus you must
+    // start from the links that are already there: to give only the new one
+    // would leave the games of the earlier call with no record.
+    let mut links = GameLinkRepository(db).all().await.expect("links");
     links.push(GameLink {
         game_id: game.id,
         store_entry_id: entry.id,
@@ -97,7 +97,7 @@ fn oferta(shop: &str, cents: i64, cut: i64) -> Deal {
     }
 }
 
-fn precios(deals: Vec<Deal>) -> GamePrices {
+fn prices(deals: Vec<Deal>) -> GamePrices {
     GamePrices {
         provider_id: "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c".to_owned(),
         low_all_time: Some(euros(899)),
@@ -107,42 +107,38 @@ fn precios(deals: Vec<Deal>) -> GamePrices {
 }
 
 #[tokio::test]
-async fn solo_los_deseados_entran_en_la_consulta_de_precios() {
-    let db = Database::in_memory().await.expect("base");
-    let deseado = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
-    juego(&db, StoreId::Gog, "1207658930", EntryKind::Owned).await;
+async fn only_the_wished_for_games_go_into_the_price_query() {
+    let db = Database::in_memory().await.expect("database");
+    let wished = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    game(&db, StoreId::Gog, "1207658930", EntryKind::Owned).await;
 
     let targets = PriceRepository(&db).targets().await.expect("objetivos");
 
-    assert_eq!(
-        targets.len(),
-        1,
-        "un juego en propiedad no tiene precio que mirar"
-    );
-    assert_eq!(targets[0].game_id, deseado);
-    // El appid es lo que convierte la búsqueda en exacta: sin él, ITAD decide
-    // por el título y puede equivocarse.
+    assert_eq!(targets.len(), 1, "an owned game has no price to look at");
+    assert_eq!(targets[0].game_id, wished);
+    // The appid is what makes the search exact: without it, ITAD decides by the
+    // title and can be incorrect.
     assert_eq!(targets[0].steam_app_id.as_deref(), Some("632470"));
     assert_eq!(targets[0].itad_id, None);
 }
 
 #[tokio::test]
-async fn el_identificador_de_itad_se_recuerda_y_sobrevive_a_enriquecer_la_ficha() {
-    let db = Database::in_memory().await.expect("base");
-    let game_id = juego(&db, StoreId::Gog, "1207658930", EntryKind::Wishlist).await;
+async fn the_itad_identifier_is_kept_and_survives_the_metadata_of_the_record() {
+    let db = Database::in_memory().await.expect("database");
+    let game_id = game(&db, StoreId::Gog, "1207658930", EntryKind::Wishlist).await;
 
     GameRepository(&db)
         .set_itad(game_id, "018d937f", "disco-elysium")
         .await
         .expect("anotar itad");
 
-    // Emparejar con IGDB reescribe la ficha entera. El identificador de precios
-    // no puede irse por delante: la siguiente consulta volvería a gastar una
-    // búsqueda por cada deseado.
+    // A match with IGDB writes all of the record again. The price identifier
+    // cannot go with it: the next query would spend one search for each
+    // wished-for game again.
     let mut game = GameRepository(&db)
         .find(game_id)
         .await
-        .expect("ficha")
+        .expect("record")
         .expect("existe");
     game.igdb_id = Some(115653);
     game.canonical_title = "Disco Elysium".to_owned();
@@ -153,26 +149,29 @@ async fn el_identificador_de_itad_se_recuerda_y_sobrevive_a_enriquecer_la_ficha(
 }
 
 #[tokio::test]
-async fn el_precio_que_se_enseña_es_el_mas_barato_con_su_tienda() {
-    let db = Database::in_memory().await.expect("base");
-    let game_id = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
-    let prices = PriceRepository(&db);
+async fn the_price_shown_is_the_least_expensive_with_its_store() {
+    let db = Database::in_memory().await.expect("database");
+    let game_id = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    let repo = PriceRepository(&db);
 
-    prices
-        .save(
-            game_id,
-            &precios(vec![
-                oferta("Steam", 1799, 55),
-                oferta("GOG", 1599, 60),
-                oferta("Fanatical", 2099, 47),
-            ]),
-        )
-        .await
-        .expect("guardar precios");
+    repo.save(
+        game_id,
+        &prices(vec![
+            oferta("Steam", 1799, 55),
+            oferta("GOG", 1599, 60),
+            oferta("Fanatical", 2099, 47),
+        ]),
+    )
+    .await
+    .expect("guardar prices");
 
-    let rows = prices.all().await.expect("consultar precios");
+    let rows = repo.all().await.expect("consultar prices");
 
-    assert_eq!(rows.len(), 1, "una fila por juego, no una por tienda");
+    assert_eq!(
+        rows.len(),
+        1,
+        "one row for each game, not one for each store"
+    );
     assert_eq!(rows[0].shop, "GOG");
     assert_eq!(rows[0].amount, 1599);
     assert_eq!(rows[0].cut, 60);
@@ -181,84 +180,80 @@ async fn el_precio_que_se_enseña_es_el_mas_barato_con_su_tienda() {
     assert_eq!(rows[0].low_year, Some(1349));
 }
 
-/// Dos tiendas al mismo céntimo. Sin desempate, la que se enseña cambiaría de
-/// una apertura de la aplicación a la siguiente sin que nada hubiera cambiado.
+/// Two stores at the same cent. With no tie break, the store shown would change
+/// from one start of the application to the next with no change in the data.
 #[tokio::test]
-async fn un_empate_al_centimo_se_resuelve_siempre_igual() {
-    let db = Database::in_memory().await.expect("base");
-    let game_id = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
-    let prices = PriceRepository(&db);
+async fn a_tie_at_the_cent_always_resolves_in_the_same_way() {
+    let db = Database::in_memory().await.expect("database");
+    let game_id = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    let repo = PriceRepository(&db);
 
-    prices
-        .save(
-            game_id,
-            &precios(vec![oferta("Steam", 1599, 60), oferta("GOG", 1599, 60)]),
-        )
-        .await
-        .expect("guardar precios");
+    repo.save(
+        game_id,
+        &prices(vec![oferta("Steam", 1599, 60), oferta("GOG", 1599, 60)]),
+    )
+    .await
+    .expect("guardar prices");
 
     for _ in 0..5 {
-        let rows = prices.all().await.expect("consultar precios");
+        let rows = repo.all().await.expect("consultar prices");
         assert_eq!(rows[0].shop, "GOG");
     }
 }
 
-/// Refrescar sustituye, no acumula: la oferta que terminó tiene que desaparecer.
-/// Una oferta caducada que se queda en pantalla sigue pareciendo una oferta.
+/// A refresh replaces, it does not accumulate: the offer that ended must go.
+/// An expired offer that stays on the screen still looks like an offer.
 #[tokio::test]
-async fn refrescar_sustituye_las_ofertas_y_no_las_acumula() {
-    let db = Database::in_memory().await.expect("base");
-    let game_id = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
-    let prices = PriceRepository(&db);
+async fn a_refresh_replaces_the_offers_and_does_not_accumulate_them() {
+    let db = Database::in_memory().await.expect("database");
+    let game_id = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    let repo = PriceRepository(&db);
 
-    prices
-        .save(
-            game_id,
-            &precios(vec![oferta("Steam", 1799, 55), oferta("GOG", 1599, 60)]),
-        )
+    repo.save(
+        game_id,
+        &prices(vec![oferta("Steam", 1799, 55), oferta("GOG", 1599, 60)]),
+    )
+    .await
+    .expect("first pass");
+    repo.save(game_id, &prices(vec![oferta("Steam", 3999, 0)]))
         .await
-        .expect("primera pasada");
-    prices
-        .save(game_id, &precios(vec![oferta("Steam", 3999, 0)]))
-        .await
-        .expect("segunda pasada");
+        .expect("second pass");
 
-    let rows = prices.all().await.expect("consultar precios");
+    let rows = repo.all().await.expect("consultar prices");
     assert_eq!(
         rows[0].shops, 1,
-        "la rebaja de GOG terminó y no puede seguir ahí"
+        "the GOG discount ended and cannot stay there"
     );
     assert_eq!(rows[0].shop, "Steam");
     assert_eq!(rows[0].amount, 3999);
 }
 
 #[tokio::test]
-async fn un_juego_que_sale_de_la_lista_deja_de_tener_precio() {
-    let db = Database::in_memory().await.expect("base");
-    let comprado = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
-    let sigue = juego(&db, StoreId::Gog, "1207658930", EntryKind::Wishlist).await;
-    let prices = PriceRepository(&db);
+async fn a_game_that_leaves_the_list_stops_having_a_price() {
+    let db = Database::in_memory().await.expect("database");
+    let comprado = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    let stays = game(&db, StoreId::Gog, "1207658930", EntryKind::Wishlist).await;
+    let repo = PriceRepository(&db);
 
-    for game_id in [comprado, sigue] {
-        prices
-            .save(game_id, &precios(vec![oferta("Steam", 1799, 55)]))
+    for game_id in [comprado, stays] {
+        repo.save(game_id, &prices(vec![oferta("Steam", 1799, 55)]))
             .await
-            .expect("guardar precios");
+            .expect("guardar prices");
     }
 
-    prices.forget_missing(&[sigue]).await.expect("olvidar");
+    repo.forget_missing(&[stays]).await.expect("olvidar");
 
-    let rows = prices.all().await.expect("consultar precios");
+    let rows = repo.all().await.expect("consultar prices");
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].game_id, sigue);
+    assert_eq!(rows[0].game_id, stays);
 }
 
-/// La garantía de la fase 2, aplicada a la capa nueva: los precios entran y
-/// salen sin rozar lo que escribió el usuario ni lo que dijo la tienda.
+/// The guarantee of phase 2, applied to the new layer: the prices come in and go
+/// out and do not touch what the user wrote or what the store said.
 #[tokio::test]
-async fn los_precios_no_tocan_ni_la_copia_ni_el_estado_del_usuario() {
-    let db = Database::in_memory().await.expect("base");
-    let game_id = juego(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+async fn the_prices_touch_neither_the_copy_nor_the_user_status() {
+    let db = Database::in_memory().await.expect("database");
+    let game_id = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
 
     UserStateRepository(&db)
         .save(&UserState {
@@ -270,22 +265,21 @@ async fn los_precios_no_tocan_ni_la_copia_ni_el_estado_del_usuario() {
             finished_at: None,
         })
         .await
-        .expect("estado");
+        .expect("status");
 
-    let prices = PriceRepository(&db);
-    prices
-        .save(game_id, &precios(vec![oferta("Steam", 1799, 55)]))
+    let repo = PriceRepository(&db);
+    repo.save(game_id, &prices(vec![oferta("Steam", 1799, 55)]))
         .await
-        .expect("guardar precios");
-    prices.forget_missing(&[]).await.expect("olvidarlo todo");
+        .expect("guardar prices");
+    repo.forget_missing(&[]).await.expect("olvidarlo todo");
 
-    let estado = UserStateRepository(&db)
+    let state = UserStateRepository(&db)
         .find(game_id)
         .await
-        .expect("consultar estado")
-        .expect("el estado sigue ahí");
-    assert_eq!(estado.notes.as_deref(), Some("esperando rebaja"));
-    assert_eq!(estado.rating, Some(9));
+        .expect("consultar state")
+        .expect("the status stays there");
+    assert_eq!(state.notes.as_deref(), Some("esperando rebaja"));
+    assert_eq!(state.rating, Some(9));
     assert_eq!(
         StoreEntryRepository(&db)
             .active(EntryKind::Wishlist)

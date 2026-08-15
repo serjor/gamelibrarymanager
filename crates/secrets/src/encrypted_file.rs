@@ -152,62 +152,63 @@ mod tests {
     use super::*;
 
     fn tmp() -> (tempfile::TempDir, PathBuf) {
-        let dir = tempfile::tempdir().expect("directorio temporal");
+        let dir = tempfile::tempdir().expect("a temporary directory");
         let path = dir.path().join("secrets.bin");
         (dir, path)
     }
 
     #[test]
-    fn guarda_y_recupera() {
+    fn keeps_and_gets_back() {
         let (_dir, path) = tmp();
-        let store = EncryptedFileStore::open(&path, "contraseña larga").expect("abrir");
-        store.set("steam:api_key", "ABC123").expect("guardar");
+        let store = EncryptedFileStore::open(&path, "a long passphrase").expect("open");
+        store.set("steam:api_key", "ABC123").expect("keep");
         assert_eq!(
-            store.get("steam:api_key").expect("leer"),
+            store.get("steam:api_key").expect("read"),
             Some("ABC123".to_owned())
         );
-        store.delete("steam:api_key").expect("borrar");
-        assert_eq!(store.get("steam:api_key").expect("leer"), None);
+        store.delete("steam:api_key").expect("delete");
+        assert_eq!(store.get("steam:api_key").expect("read"), None);
     }
 
     #[test]
-    fn el_secreto_no_esta_en_claro_en_el_fichero() {
+    fn the_secret_is_not_readable_in_the_file() {
         let (_dir, path) = tmp();
-        let store = EncryptedFileStore::open(&path, "contraseña larga").expect("abrir");
+        let store = EncryptedFileStore::open(&path, "a long passphrase").expect("open");
         store
-            .set("steam:api_key", "SECRETO_EN_CLARO")
-            .expect("guardar");
+            .set("steam:api_key", "SECRET_IN_THE_CLEAR")
+            .expect("keep");
 
-        let bytes = fs::read(&path).expect("leer fichero");
+        let bytes = fs::read(&path).expect("read the file");
         assert!(
-            !bytes.windows(16).any(|w| w == b"SECRETO_EN_CLARO"),
-            "el fichero no puede contener el secreto legible"
+            !bytes.windows(19).any(|w| w == b"SECRET_IN_THE_CLEAR"),
+            "the file cannot contain the readable secret"
         );
     }
 
     #[test]
-    fn una_contrasena_equivocada_no_abre_el_almacen() {
+    fn an_incorrect_passphrase_does_not_open_the_store() {
         let (_dir, path) = tmp();
-        EncryptedFileStore::open(&path, "la buena")
-            .expect("abrir")
+        EncryptedFileStore::open(&path, "the correct one")
+            .expect("open")
             .set("k", "v")
-            .expect("guardar");
+            .expect("keep");
 
-        let error = EncryptedFileStore::open(&path, "la mala").expect_err("no debe abrir");
+        let error =
+            EncryptedFileStore::open(&path, "the incorrect one").expect_err("it must not open");
         assert!(matches!(error, SecretsError::WrongPassphrase));
     }
 
     #[test]
-    fn sobrevive_a_cerrar_y_volver_a_abrir() {
+    fn it_survives_a_close_and_a_new_open() {
         let (_dir, path) = tmp();
-        EncryptedFileStore::open(&path, "clave")
-            .expect("abrir")
+        EncryptedFileStore::open(&path, "key")
+            .expect("open")
             .set("gog:token", "refresh-token")
-            .expect("guardar");
+            .expect("keep");
 
-        let reabierto = EncryptedFileStore::open(&path, "clave").expect("reabrir");
+        let reopened = EncryptedFileStore::open(&path, "key").expect("open again");
         assert_eq!(
-            reabierto.get("gog:token").expect("leer"),
+            reopened.get("gog:token").expect("read"),
             Some("refresh-token".to_owned())
         );
     }
