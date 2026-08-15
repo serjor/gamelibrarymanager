@@ -1,69 +1,72 @@
-# 🎯 Cómo se escribe la documentación de este repositorio
+# 🎯 How to write the documentation of this repository
 
 ## 💡 Convention
 
-Cada convención vive en **su propio fichero** dentro de `docs/<area>/`, y las
-áreas son las del propio repositorio, no categorías genéricas:
+Each convention lives in **a file of its own** in `docs/<area>/`. The areas are
+the areas of the repository, not general categories:
 
 ```
 docs/
-  connectors/  tiendas: endpoints, credenciales, autenticación
-  domain/      reglas puras: emparejamiento, normalización
-  storage/     esquema, capas, migraciones
-  tauri/       capacidades, comandos, ventanas
-  ui/          React, onboarding
-  testing/     fixtures, tests guardianes
+  connectors/  stores: endpoints, credentials, authentication
+  domain/      pure rules: matching, normalisation
+  storage/     schema, layers, migrations
+  tauri/       capabilities, commands, windows
+  ui/          React, first-start screens
+  testing/     fixtures, guard tests
 ```
 
-Todo documento lleva estas secciones, en este orden y con estos emojis:
+Each document has these sections, in this order and with these emoji:
 
 ```markdown
-# 🎯 Nombre de la convención
+# 🎯 The name of the convention
 
 ## 💡 Convention
 ## 🏆 Benefits
-## 👀 Examples   (con subsecciones ✅ Good y ❌ Bad)
+## 👀 Examples   (with the subsections ✅ Good and ❌ Bad)
 ## 🧐 Real world examples
 ## 🔗 Related agreements
 ```
 
-Reglas que no se negocian:
+These rules are not negotiable:
 
-- **Una convención por fichero.** Si un documento explica dos cosas, son dos
-  documentos.
-- **Los ejemplos son código de verdad**, con su ✅ y su ❌. El ❌ es el que
-  enseña: sin él, la convención parece una preferencia.
-- **«Real world examples» apunta a ficheros de este repositorio**, con ruta y
-  línea. Un ejemplo inventado envejece sin que nadie se entere; uno que apunta
-  al código se rompe a la vista.
-- **Se explica el porqué, no el qué.** El qué ya está en el código.
-- **En español**, como el resto del proyecto.
-- Toda alta se añade al índice de [`AGENTS.md`](../AGENTS.md).
+- **One convention in each file.** If a document explains two things, they are
+  two documents.
+- **The examples are real code**, with a ✅ and a ❌. The ❌ is the example that
+  teaches: without it, the convention looks like a preference.
+- **"Real world examples" points to files of this repository**, with a path and
+  a line. An invented example becomes old and nobody sees it; an example that
+  points to the code breaks where you can see it.
+- **Give the reason, not the operation.** The code already gives the operation.
+- **Write in English, and use ASD-STE100.** Use short sentences, the active
+  voice, one instruction in each sentence, and simple words. This applies to all
+  of the project.
+- Add each new document to the index of [`AGENTS.md`](../AGENTS.md).
 
 ## 🏆 Benefits
 
-- Una convención por fichero se puede enlazar, discutir y borrar por separado.
-  Un documento cajón de sastre no se actualiza nunca porque tocarlo da miedo.
-- Las áreas por crate hacen obvio dónde buscar y dónde escribir: son las mismas
-  fronteras que la arquitectura ya obliga a respetar.
-- La estructura fija hace que leer el quinto documento cueste lo mismo que leer
-  el primero.
-- Enlazar a ficheros reales convierte la documentación en algo comprobable en
-  vez de en una promesa.
+- One convention in each file is a convention that you can link to, discuss and
+  delete separately. A document that holds everything is never updated, because
+  a change to it causes fear.
+- Areas that agree with the crates make it clear where to look and where to
+  write: they are the same boundaries that the architecture already applies.
+- A fixed structure makes the fifth document as easy to read as the first.
+- Links to real files make the documentation something that you can examine and
+  not a promise.
 
 ## 👀 Examples
 
 ### ✅ Good
 
-Escrito desde `docs/tauri/`, de ahí el `../../` hasta la raíz del repositorio:
+Written from `docs/tauri/`, which is why the path starts with `../../` to reach
+the root of the repository:
 
 ```markdown
 ## 🧐 Real world examples
 
 - [`src-tauri/capabilities/default.json`](../../src-tauri/capabilities/default.json)
-  enumera las cuatro direcciones del asistente.
-- [`src-tauri/tests/capacidades.rs`](../../src-tauri/tests/capacidades.rs)
-  falla si una de ellas deja de estar permitida.
+  lists the four addresses of the setup screens.
+- [`src-tauri/tests/capabilities.rs`](../../src-tauri/tests/capabilities.rs)
+  fails if one of them stops being permitted.
 ```
 
 ### ❌ Bad
@@ -71,18 +74,18 @@ Escrito desde `docs/tauri/`, de ahí el `../../` hasta la raíz del repositorio:
 ```markdown
 ## 🧐 Real world examples
 
-- El fichero de capacidades tiene la lista de URLs permitidas.
-- Hay un test que lo comprueba.
+- The capability file has the list of permitted URLs.
+- There is a test that examines it.
 ```
 
-Sin ruta no se puede ir a mirar, y cuando el fichero se mueva nadie se dará
-cuenta de que el documento ya miente.
+With no path you cannot go and look, and when the file moves nobody sees that
+the document is now false.
 
 ## 🔗 Related agreements
 
-- [`AGENTS.md`](../AGENTS.md) — índice de todas las convenciones.
-- [`README.md`](../README.md) — arquitectura y crates, que es de donde salen
-  las áreas.
-- El plan en `.agents/plans/0001-game-library-manager/plan.html` recoge las
-  decisiones cerradas con sus alternativas descartadas. La documentación
-  desarrolla esas decisiones; no las relitiga.
+- [`AGENTS.md`](../AGENTS.md) — the index of all of the conventions.
+- [`README.md`](../README.md) — the architecture and the crates, which is where
+  the areas come from.
+- The plan in `.agents/plans/0001-game-library-manager/plan.html` records the
+  closed decisions with the alternatives refused. The documentation develops
+  those decisions; it does not discuss them again.

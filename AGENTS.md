@@ -1,99 +1,100 @@
 # AGENTS.md
 
-Índice de las convenciones del proyecto. Cada una vive en su propio fichero
-dentro de `docs/`, organizado por área del repositorio.
+The index of the conventions of the project. Each convention lives in a file of
+its own in `docs/`, in one directory for each area of the repository.
 
-Antes de escribir código, lee también:
+Before you write code, read also:
 
-- [`README.md`](README.md) — arquitectura, crates y sus fronteras.
-- `.agents/plans/0001-game-library-manager/plan.html` — el plan acordado, con las
-  decisiones cerradas **y sus alternativas descartadas**. No se relitigan: si
-  crees que alguna está mal, dilo y espera respuesta en vez de cambiarla.
-- `.agents/plans/0002-rediseno-ui/plan.html` — el rediseño de la interfaz, con la
-  misma regla. Al lado, `maquetas.html` recoge navegables las cinco alternativas
-  que se compararon, incluidas las cuatro descartadas.
-- [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — cómo
-  se escribe y dónde va un documento nuevo.
+- [`README.md`](README.md) — the architecture, the crates and their boundaries.
+- `.agents/plans/0001-game-library-manager/plan.html` — the agreed plan, with the
+  closed decisions **and the alternatives refused**. Do not discuss them again:
+  if you think that one of them is incorrect, say so and wait for an answer; do
+  not change it.
+- `.agents/plans/0002-rediseno-ui/plan.html` — the redesign of the interface,
+  with the same rule. Beside it, `maquetas.html` shows the five alternatives that
+  were compared, the four refused included.
+- [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
+  write a new document and where it goes.
 
-## Convenciones
+## Conventions
 
-### `docs/connectors/` — tiendas
+### `docs/connectors/` — the stores
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Ninguna credencial de tienda va dentro del binario](docs/connectors/credenciales-fuera-del-binario.md) | Todo lo aporta el usuario y vive en el almacén de secretos, incluso cuando el secreto es público. Nunca se pide la contraseña de una tienda. |
-| [Los endpoints no oficiales se contrastan antes de escribir el conector](docs/connectors/contrastar-endpoints-no-oficiales.md) | Leer la implementación de referencia viva, probar a mano, y anotar la vigencia con fecha en el módulo. |
-| [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | Una tienda rota se apaga y el resto sigue igual. El motivo se guarda, apagar es decisión del usuario y nada más la toma. |
-| [Un identificador ambiguo no es una identidad](docs/connectors/un-identificador-ambiguo-no-es-una-identidad.md) | Si la tienda admite dos lecturas de cuál es el identificador de la copia, el conector no elige: no lo entrega y decide el título. |
+| [No store credential goes inside the binary](docs/connectors/credentials-outside-the-binary.md) | The user supplies all of it and it lives in the store of secrets, also when the secret is public. The application never asks for the password of a store. |
+| [Verify the unofficial endpoints before you write the connector](docs/connectors/verify-unofficial-endpoints.md) | Read the live reference implementation, test by hand, and record the result with a date in the module. |
+| [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | You switch a broken store off and the others continue. The reason is kept, and only the user decides to switch a store off. |
+| [An ambiguous identifier is not an identity](docs/connectors/an-ambiguous-identifier-is-not-an-identity.md) | If the store permits two readings of the identifier of the copy, the connector does not select: it gives no identifier and the title decides. |
 
-### `docs/domain/` — reglas puras
+### `docs/domain/` — the pure rules
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Money is kept in whole cents](docs/domain/dinero-en-centimos.md) | Enteros con su moneda al lado, y texto solo al pintarlo. En coma flotante, 19,99 deja de ser 19,99 en cuanto se opera con él. |
+| [Money is kept in whole cents](docs/domain/money-in-cents.md) | Integers with their currency beside them, and text only when you show it. In floating point, 19.99 stops being 19.99 as soon as you calculate with it. |
 
-### `docs/storage/` — esquema y datos
+### `docs/storage/` — the schema and the data
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Enriquecer una ficha reescribe su fila; no crea otra](docs/storage/enriquecer-fichas-en-su-sitio.md) | `user_state` cuelga del `game_id`: reutilizarlo es lo que impide perder lo que el usuario escribió. |
-| [A price is a cache of somebody else's data, and it is replaced whole](docs/storage/precios-son-cache-que-se-sustituye.md) | La única excepción a la baja lógica, acotada a dos tablas: una oferta que terminó no puede seguir pareciendo una oferta. |
+| [To add metadata to a record writes its row again; it does not make a new one](docs/storage/enrich-records-in-place.md) | `user_state` is attached to the `game_id`: to use it again is what prevents the loss of what the user wrote. |
+| [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to two tables: an offer that ended cannot continue to look like an offer. |
 
-### `docs/tauri/` — shell de la aplicación
+### `docs/tauri/` — the application shell
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
-| [Lo que el webview necesita del entorno se pone en `main.rs`](docs/tauri/preparar-el-webview-antes-de-que-arranque-gtk.md) | Antes de que arranque GTK, tras un `cfg` de plataforma y respetando lo que ya venga puesto. En el script de desarrollo solo arregla la máquina de quien lo escribe. |
-| [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | Leer la página de una tienda solo se hace donde emite el código, sin lógica dentro del script y sin darle comandos. |
-| [A long pass saves as it goes, and a provider that cuts it off is a result](docs/tauri/pasadas-largas-guardan-por-tramos.md) | Escribir por tramos, parar donde te corten sin perder lo de atrás, y decir por qué. Un fallo de la base de datos sí sube. |
+| [Each interface link needs explicit scope in the capability](docs/tauri/url-scope-in-capabilities.md) | `opener:allow-open-url` enables the command but gives no scope, and the patterns are compared with no normalisation. |
+| [What the webview needs from the environment goes in `main.rs`](docs/tauri/prepare-the-webview-before-gtk-starts.md) | Before GTK starts, behind a platform `cfg` and with respect for what the environment already gives. In the development script it corrects only the machine of the programmer. |
+| [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | You read the page of a store only where it gives the code, with no logic inside the script and with no command given to it. |
+| [A long pass saves as it goes, and a provider that cuts it off is a result](docs/tauri/long-passes-save-in-batches.md) | Write in batches, stop where the provider stops you and lose nothing from before, and say why. A failure of the database does go up. |
 
-### `docs/ui/` — interfaz
+### `docs/ui/` — the interface
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Ningún componente declara un color: todos salen de los tokens](docs/ui/tokens-como-unica-fuente-de-color.md) | La paleta y su variante oscura se definen una vez. Ni literales, ni `Canvas`, ni colores derivados de `currentColor`. |
-| [Un estado para los dos modos de vista: las vistas solo pintan](docs/ui/un-estado-para-los-dos-modos-de-vista.md) | Filtro, orden y selección viven en `Library.tsx`; la tabla y la pared pintan lo que les llega. Y lo que hace sus propios cortes no es un modo de vista. |
-| [Se desplaza una sola región, y llega a los bordes de la ventana](docs/ui/una-sola-region-que-se-desplaza.md) | La altura se reparte con `flex` y `min-height: 0`; el tope de ancho lo pone la pieza y no el marco, o el hueco de los lados deja de responder a la rueda. |
+| [No component declares a colour: all of them come from the tokens](docs/ui/tokens-as-the-only-source-of-colour.md) | The palette and its dark variant are defined one time. No literal values, no `Canvas`, and no colours derived from `currentColor`. |
+| [One state for the two view modes: the views only show](docs/ui/one-state-for-the-two-view-modes.md) | The filter, the sort and the selection live in `Library.tsx`; the table and the wall show what they receive. And a screen that makes its own divisions is not a view mode. |
+| [One region scrolls, and it reaches the edges of the window](docs/ui/one-region-that-scrolls.md) | The height is divided with `flex` and `min-height: 0`; the piece sets the maximum width and the frame does not, or the space at the sides stops answering the wheel. |
 
-### `docs/testing/` — comprobaciones
+### `docs/testing/` — the tests
 
-| Convención | De qué trata |
+| Convention | What it is about |
 | --- | --- |
-| [Una comprobación afirma sobre la estructura, no sobre lo que parece](docs/testing/afirmar-sobre-la-estructura.md) | Contar sentencias en vez de cronometrarlas, afirmar sobre el plan de una consulta en vez de sobre lo que tarda, y medir la maquetación en vez de mirarla. Una captura no es una comprobación. |
+| [A test asserts on the structure, not on what it looks like](docs/testing/assert-on-the-structure.md) | Count the statements and do not measure their time, assert on the plan of a query and not on its time, and measure the layout and do not look at it. A screenshot is not a test. |
 
-### Pendientes de documentar
+### Areas with no convention yet
 
-No queda ninguna área vacía. La siguiente convención se añade donde le toque.
+No area is empty. The next convention goes where it belongs.
 
-## Comprobaciones
+## Checks
 
-Las mismas que ejecuta CI. Todas tienen que pasar antes de dar una fase por
-cerrada:
+These are the checks that CI runs. All of them must pass before you close a
+phase:
 
 ```sh
 cargo fmt --all --check
 cargo clippy --all-targets --workspace -- -D warnings
 cargo test --workspace
 bunx tsc --noEmit && bun run lint && bun test
-bun run tauri dev            # tiene que abrir la ventana
+bun run tauri dev            # the window must open
 ```
 
-Hay dos comprobaciones que CI **no** puede hacer. La primera necesita una sesión
-de escritorio con secret-service:
+There are two checks that CI **cannot** make. The first needs a desktop session
+with secret-service:
 
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
 
-La segunda necesita un Chromium, porque mide la maquetación de verdad —solapes,
-desbordes, alineación de columnas y contraste— y eso no lo sabe `bun test`, que
-con happy-dom mide todos los contenedores a cero:
+The second needs a Chromium, because it measures the real layout — overlaps,
+overflows, the alignment of columns and the contrast — and `bun test` does not
+know that: with happy-dom it measures each container as zero:
 
 ```sh
 bun run build && bun run visual
 ```
 
-Si no encuentra navegador: `bunx playwright install chromium`, o `CHROMIUM_PATH`
-apuntando al que ya tengas. Cómo se escribe una comprobación así está en
-[afirmar sobre la estructura](docs/testing/afirmar-sobre-la-estructura.md).
+If it finds no browser: `bunx playwright install chromium`, or `CHROMIUM_PATH`
+that points to the browser that you have. How to write a check of that kind is in
+[assert on the structure](docs/testing/assert-on-the-structure.md).

@@ -42,26 +42,26 @@ The provider stops the pass; the database does not:
 ```rust
 let decision = match decide(igdb, credentials, token, &entry).await {
     Ok(decision) => decision,
-    // Un corte del proveedor para la pasada aquí mismo, y lo de atrás se
-    // guarda igual. Un fallo de la base de datos sí sube: si no se puede
-    // escribir, no hay nada que salvar.
+    // A stop from the provider stops the pass at this point, and the earlier
+    // work is still kept. A failure of the database goes up: if you cannot
+    // write, there is nothing to keep.
     Err(AppError::Metadata(error)) => {
         report.stopped = Some(error.to_string());
         break;
     }
-    Err(otro) => return Err(otro),
+    Err(other) => return Err(other),
 };
 ```
 
 The chunk, with the reason it can be repeated:
 
 ```rust
-desde_el_ultimo_guardado += 1;
-if desde_el_ultimo_guardado == TRAMO {
-    // `rebuild_auto` reescribe el mismo conjunto de enlaces cada vez, así que
-    // llamarlo veinte veces deja lo mismo que llamarlo una.
+since_last_save += 1;
+if since_last_save == BATCH {
+    // `rebuild_auto` writes the same set of links each time, thus twenty calls
+    // give the same result as one call.
     GameLinkRepository(db).rebuild_auto(&links).await?;
-    desde_el_ultimo_guardado = 0;
+    since_last_save = 0;
 }
 ```
 
@@ -70,8 +70,8 @@ And the interface says it out loud:
 ```tsx
 if (stopped !== null) {
   setError(
-    `El emparejamiento se paró: ${stopped}. Lo hecho hasta ahí está ` +
-      "guardado; vuelve a pulsar «Emparejar» para seguir desde donde iba.",
+    `The matching stopped: ${stopped}. The work made to that point is ` +
+      'kept; click "Match" again to continue from there.',
   );
 }
 ```
@@ -79,8 +79,8 @@ if (stopped !== null) {
 ### ❌ Bad
 
 ```rust
-// Escribir solo al final. Un 429 en el juego trescientos deja la base
-// exactamente como estaba, después de cinco minutos de espera.
+// To write only at the end. A 429 at game three hundred leaves the database
+// exactly as it was, after five minutes of waiting.
 for entry in pending {
     let decision = decide(igdb, credentials, token, &entry).await?;
     links.push(/* … */);
@@ -89,20 +89,20 @@ GameLinkRepository(db).rebuild_auto(&links).await?;
 ```
 
 ```rust
-// Tragarse el motivo. La pasada devuelve cero emparejados y el usuario no
-// distingue «no había nada que hacer» de «IGDB me cortó».
+// To hide the reason. The pass gives back zero matches and the user cannot
+// tell "there was nothing to do" from "IGDB stopped me".
 Err(_) => break,
 ```
 
 ```rust
-// Tratar un fallo de la base de datos como un corte del proveedor. Se sigue
-// como si nada, escribiendo en algo que no acepta escrituras.
+// To hold a failure of the database as a stop from the provider. The pass
+// continues and writes in something that accepts no write.
 Err(_) => { report.stopped = Some(error.to_string()); break; }
 ```
 
 ```rust
-// Guardar cada elemento en su propia transacción «por si acaso». Mil
-// transacciones donde caben cuarenta: el tramo existe para eso.
+// To keep each item in a transaction of its own "for safety". One thousand
+// transactions where forty are sufficient: that is what the batch is for.
 for entry in pending {
     GameLinkRepository(db).rebuild_auto(&links).await?;
 }
@@ -110,22 +110,25 @@ for entry in pending {
 
 ## 🧐 Real world examples
 
-- [`src-tauri/src/identity.rs`](../../src-tauri/src/identity.rs) — `TRAMO`, y el
-  `match` que separa un corte del proveedor de un fallo de la base de datos.
-- [`src-tauri/tests/identity.rs`](../../src-tauri/tests/identity.rs) — un 429 a
-  mitad deja escrito lo de antes del corte, con su motivo.
-- [`src-tauri/src/sync.rs`](../../src-tauri/src/sync.rs) — el mismo reparto por
-  cuentas: una tienda que falla es una línea en `failures`, no el final de la
-  pasada.
-- [`src-tauri/src/prices.rs`](../../src-tauri/src/prices.rs) — lo caro es
-  identificar cada deseado, y eso se anota juego a juego; los precios de un lote
-  que falle los rehace la siguiente pasada sin volver a buscar a nadie.
-- [`src/App.tsx`](../../src/App.tsx) — el aviso que convierte el motivo en algo
-  que el usuario lee.
+- [`src-tauri/src/identity.rs`](../../src-tauri/src/identity.rs) — `BATCH`, and
+  the `match` that separates a stop from the provider from a failure of the
+  database.
+- [`src-tauri/tests/identity.rs`](../../src-tauri/tests/identity.rs) — a 429 in
+  the middle keeps the work before the stop, with its reason.
+- [`src-tauri/src/sync.rs`](../../src-tauri/src/sync.rs) — the same division by
+  accounts: a store that fails is one line in `failures`, not the end of the
+  pass.
+- [`src-tauri/src/prices.rs`](../../src-tauri/src/prices.rs) — the expensive
+  operation is to identify each wished-for game, and that is written game by
+  game; the next pass makes the prices of a batch that failed again and does not
+  search for anybody again.
+- [`src/App.tsx`](../../src/App.tsx) — the message that turns the reason into
+  something that the user reads.
 
 ## 🔗 Related agreements
 
 - [Every store connector has a switch of its own](../connectors/switch-per-connector.md)
-  — la misma idea entre tiendas: lo que se rompe, se rompe solo.
-- [A price is a cache of somebody else's data, and it is replaced whole](../storage/precios-son-cache-que-se-sustituye.md)
-  — por qué cancelar a mitad de los precios no borra nada que siga valiendo.
+  — the same idea between stores: what breaks, breaks alone.
+- [A price is a cache of the data of another person, and it is replaced complete](../storage/prices-are-a-cache-that-is-replaced.md)
+  — why a cancel in the middle of the prices deletes nothing that is still
+  applicable.

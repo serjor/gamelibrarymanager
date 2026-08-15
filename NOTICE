@@ -1,68 +1,69 @@
 Game Library Manager
 Copyright (C) 2026 serjor
 
-Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los
-términos de la GNU General Public License, versión 3 o posterior, tal como la
-publica la Free Software Foundation. El texto completo está en LICENSE.
+This program is free software: you can give it to other persons and/or change it
+under the conditions of the GNU General Public License, version 3 or a later
+version, as the Free Software Foundation publishes it. The complete text is in
+LICENSE.
 
-Código de terceros
-------------------
-Este fichero registra todo código ajeno portado o adaptado en el proyecto, con
-su origen, su licencia y el fichero donde vive. Portar código de legendary o de
-Heroic Games Launcher (ambos GPLv3) es compatible con esta licencia, pero exige
-conservar sus cabeceras de copyright y anotarlo aquí.
+Third-party code
+----------------
+This file records all of the external code that the project has taken or
+adapted, with its origin, its licence and the file in which it lives. To take
+code from legendary or from Heroic Games Launcher (the two are GPLv3) agrees
+with this licence, but you must keep their copyright headers and record them
+here.
 
-Hasta ahora no se ha copiado ni adaptado código de terceros: no hay ninguna
-cabecera de copyright ajena que conservar.
+Until now no third-party code has been copied or adapted: there is no external
+copyright header to keep.
 
-Sí hay conocimiento tomado de proyectos ajenos, que se registra igual por
-honestidad aunque no obligue a nada:
+There is knowledge taken from external projects. It is recorded here for
+honesty, although no licence makes that necessary:
 
-  Conector de GOG (crates/connectors/src/gog/)
-  El flujo de autorización y los endpoints vigentes se determinaron leyendo
-  Heroic Games Launcher y gogdl, ambos GPLv3, y comprobándolos a mano el
-  2026-08-14:
+  The GOG connector (crates/connectors/src/gog/)
+  The authorisation flow and the current endpoints were found in Heroic Games
+  Launcher and gogdl, the two GPLv3, and were examined by hand on 2026-08-14:
     - https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher
       Copyright (c) Heroic Games Launcher contributors
     - https://github.com/Heroic-Games-Launcher/heroic-gogdl
-      Copyright (c) 2021-2026 Paweł Lidwin y contribuidores
-  De ahí sale el dato de que la biblioteca ya no se lee de embed.gog.com sino
-  de galaxy-library.gog.com. No se ha copiado código: la implementación es
-  propia y en Rust.
+      Copyright (c) 2021-2026 Paweł Lidwin and contributors
+  From there comes the fact that the library is no longer read from
+  embed.gog.com but from galaxy-library.gog.com. No code has been copied: the
+  implementation belongs to this project and is in Rust.
 
-  Credenciales de cliente de GOG Galaxy
-  GOG no permite registrar aplicaciones de terceros, así que el único cliente
-  que su servidor de autorización reconoce es el de GOG Galaxy. Ese par está
-  publicado en gogdl desde hace años. Este programa **no lo lleva dentro**: lo
-  aporta el usuario al conectar su cuenta y se guarda en el almacén de
-  secretos, como cualquier otra credencial.
+  The client credentials of GOG Galaxy
+  GOG does not let you register third-party applications, thus the only client
+  that its authorisation server accepts is the client of GOG Galaxy. That pair
+  has been published in gogdl for years. This program does **not** carry it
+  inside: the user supplies it when they connect their account, and it is kept
+  in the store of secrets, as each other credential is.
 
-  Conector de Epic (crates/connectors/src/epic/)
-  Epic no publica ninguna API de biblioteca: lo que hay es la API privada de su
-  propio lanzador. El flujo de autorización y los endpoints vigentes se
-  determinaron leyendo legendary, GPLv3, y comprobándolos a mano el 2026-08-15:
+  The Epic connector (crates/connectors/src/epic/)
+  Epic publishes no library API: what exists is the private API of its own
+  launcher. The authorisation flow and the current endpoints were found in
+  legendary, GPLv3, and were examined by hand on 2026-08-15:
     - https://github.com/legendary-gl/legendary
-      Copyright (c) derrod y contribuidores de legendary
-  De ahí salen tres cosas que ninguna documentación cuenta: que el código de
-  autorización llega en el cuerpo de `id/api/redirect` y no en una redirección,
-  que el token hay que pedirlo con `token_type=eg1`, y que el espacio de
-  nombres `ue` son assets de Unreal Engine y no juegos. No se ha copiado
-  código: la implementación es propia y en Rust.
+      Copyright (c) derrod and the contributors of legendary
+  From there come three facts that no documentation gives: that the
+  authorisation code comes in the body of `id/api/redirect` and not in a
+  redirect, that you must ask for the token with `token_type=eg1`, and that the
+  `ue` namespace contains Unreal Engine assets and not games. No code has been
+  copied: the implementation belongs to this project and is in Rust.
 
-  Credenciales de cliente del lanzador de Epic
-  Como con GOG, Epic no permite registrar aplicaciones de terceros y el único
-  cliente que su servidor de autorización reconoce es el de su lanzador. Ese
-  par está publicado en legendary. Este programa **no lo lleva dentro**: lo
-  aporta el usuario al conectar su cuenta.
+  The client credentials of the Epic launcher
+  As with GOG, Epic does not let you register third-party applications and the
+  only client that its authorisation server accepts is the client of its
+  launcher. That pair is published in legendary. This program does **not** carry
+  it inside: the user supplies it when they connect their account.
 
-Sobre las tiendas
------------------
-Este proyecto no está afiliado a Valve, GOG, CD PROJEKT ni Epic Games. Los
-conectores son de solo lectura, actúan con las credenciales del propio usuario y
-en su propia máquina, y no redistribuyen datos de ninguna tienda.
+About the stores
+----------------
+This project has no relation to Valve, GOG, CD PROJEKT or Epic Games. The
+connectors only read, they operate with the credentials of the user and on the
+machine of the user, and they give the data of no store to other persons.
 
-Tampoco está afiliado a IsThereAnyDeal. Los precios se piden a su API pública y
-documentada, con la clave del propio usuario, desde su propia máquina y solo
-para los juegos de su lista de deseados. No se ha portado código suyo: no hay
-ninguno que portar, porque la API está documentada y no hizo falta leer ninguna
-implementación de referencia.
+The project also has no relation to IsThereAnyDeal. The prices come from its
+public API with documentation, with the key of the user, from the machine of the
+user and only for the games of their wishlist. No code of theirs has been taken:
+there is none to take, because the API has documentation and no reference
+implementation was necessary.

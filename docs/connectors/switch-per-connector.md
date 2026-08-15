@@ -69,7 +69,7 @@ match result {
 And the message says what to do, because it is what the user will read:
 
 ```rust
-#[error("credenciales inválidas o caducadas: vuelve a conectar la cuenta")]
+#[error("invalid or expired credentials: connect the account again")]
 Unauthorized,
 ```
 
@@ -121,7 +121,7 @@ report.failures.push(SyncFailure { reason: error.to_string(), /* … */ });
 
 ## 🔗 Related agreements
 
-- [Los endpoints no oficiales se contrastan antes de escribir el conector](contrastar-endpoints-no-oficiales.md)
+- [Verify the unofficial endpoints before you write the connector](verify-unofficial-endpoints.md)
   — the same problem seen earlier: what has no public contract will move.
-- [Ninguna credencial de tienda va dentro del binario](credenciales-fuera-del-binario.md)
-  — the other half of what it takes to add a store.
+- [No store credential goes inside the binary](credentials-outside-the-binary.md)
+  — the other half of what you need to add a store.

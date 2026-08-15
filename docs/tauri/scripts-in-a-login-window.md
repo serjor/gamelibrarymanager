@@ -120,7 +120,7 @@ remote page. There is no reason it would ever need them.
 
 ## 🔗 Related agreements
 
-- [Todo enlace de la interfaz necesita alcance explícito en la capacidad](alcance-de-urls-en-capacidades.md)
-  — least privilege applied to the permissions of the window.
-- [Ninguna credencial de tienda va dentro del binario](../connectors/credenciales-fuera-del-binario.md)
-  — the password of a store never passes through code of this project.
+- [Each interface link needs explicit scope in the capability](url-scope-in-capabilities.md)
+  — minimum privilege applied to the permissions of the window.
+- [No store credential goes inside the binary](../connectors/credentials-outside-the-binary.md)
+  — the password of a store never comes through code of this project.

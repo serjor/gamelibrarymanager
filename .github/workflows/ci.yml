@@ -29,7 +29,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Dependencias de sistema de Tauri
+      - name: Tauri system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libsoup-3.0-dev \
@@ -38,19 +38,19 @@ jobs:
       - run: cargo clippy --all-targets --workspace -- -D warnings
       - run: cargo test --workspace
 
-  arquitectura:
+  architecture:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: El dominio no puede depender de IO
+      - name: The domain cannot depend on IO
         run: |
           if cargo tree -p domain --prefix none --no-dedupe \
              | grep -Ei '^(reqwest|sqlx|rusqlite|tauri|hyper) '; then
-            echo "::error::crates/domain ha adquirido una dependencia de red o de base de datos"
+            echo "::error::crates/domain has taken a network or database dependency"
             exit 1
           fi
-          echo "domain limpio"
+          echo "domain is clean"
 
   build:
     needs: [frontend, rust]
@@ -66,7 +66,7 @@ jobs:
           bun-version: latest
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Dependencias de sistema de Tauri
+      - name: Tauri system dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update

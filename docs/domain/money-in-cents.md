@@ -18,8 +18,8 @@ That means:
   calculated and is not recomputed: two different roundings of the same discount
   contradict each other on the same screen.
 
-Formatting belongs to the interface and to one function, `dinero`, which uses
-the currency of the price and the language of the application.
+Formatting belongs to the interface and to one function, `money`, which uses the
+currency of the price and the language of the application.
 
 ## 🏆 Benefits
 
@@ -39,10 +39,11 @@ the currency of the price and the language of the application.
 The integer form is the one that is read:
 
 ```rust
-/// El precio tal y como llega: con el importe repetido en dos formas.
+/// The price as it comes: with the quantity given in two forms.
 ///
-/// Se lee `amountInt`, que son céntimos enteros, y se ignora `amount`, que es el
-/// mismo número en coma flotante. La forma que no pierde nada es la entera.
+/// This code reads `amountInt`, which is whole cents, and ignores `amount`,
+/// which is the same number in floating point. The whole form is the form that
+/// loses nothing.
 struct RawPrice {
     #[serde(rename = "amountInt")]
     amount_int: i64,
@@ -53,35 +54,35 @@ struct RawPrice {
 And it becomes text once, where it is painted:
 
 ```ts
-export function dinero(cents: number, currency: string): string {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency }).format(cents / 100);
+export function money(cents: number, currency: string): string {
+  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(cents / 100);
 }
 ```
 
 ### ❌ Bad
 
 ```rust
-// Los céntimos convertidos a euros en cuanto entran. A partir de aquí ya no se
-// puede sumar ni comparar sin arrastrar el error.
+// The cents changed to euros as soon as they come in. From here you can no
+// longer add or compare without you carry the error.
 struct Price { amount: f64 }
 ```
 
 ```sql
--- Un precio como REAL. La base de datos guarda 19.989999999999998 y el mínimo
--- histórico deja de coincidir consigo mismo.
+-- A price as REAL. The database keeps 19.989999999999998 and the all-time low
+-- stops being equal to itself.
 amount REAL NOT NULL
 ```
 
 ```rust
-// Recalcular el descuento. El proveedor dice 60 %, esta cuenta dice 59 %, y en
-// la misma fila aparecen los dos números.
+// To calculate the discount again. The provider says 60 %, this calculation
+// says 59 %, and the two numbers appear in the same row.
 let cut = 100 - (price * 100 / regular);
 ```
 
 ```tsx
-// Un importe sin su moneda: se pinta en euros porque sí, y quien compra en
-// libras ve un precio que no es el suyo.
-<span>{(precio.amount / 100).toFixed(2)} €</span>
+// A quantity with no currency: it is shown in euros for no reason, and a user
+// who buys in pounds sees a price that is not their price.
+<span>{(price.amount / 100).toFixed(2)} €</span>
 ```
 
 ## 🧐 Real world examples
@@ -92,15 +93,15 @@ let cut = 100 - (price * 100 / regular);
   — the two forms that arrive, and which one is read.
 - [`migrations/0007_prices.up.sql`](../../migrations/0007_prices.up.sql) — the
   columns are `INTEGER`, and the currency is next to them.
-- [`src/features/wishlist/precios.ts`](../../src/features/wishlist/precios.ts) —
-  `dinero` is the only place where an amount becomes text.
-- [`src/features/wishlist/precios.test.ts`](../../src/features/wishlist/precios.test.ts)
+- [`src/features/wishlist/prices.ts`](../../src/features/wishlist/prices.ts) —
+  `money` is the only place where an amount becomes text.
+- [`src/features/wishlist/prices.test.ts`](../../src/features/wishlist/prices.test.ts)
   — the same amount in two currencies is not written the same way.
 
 ## 🔗 Related agreements
 
-- [A price is a cache of somebody else's data, and it is replaced whole](../storage/precios-son-cache-que-se-sustituye.md)
+- [A price is a cache of the data of another person, and it is replaced complete](../storage/prices-are-a-cache-that-is-replaced.md)
   — where these amounts are kept, and for how long.
-- [Ningún componente declara un color: todos salen de los tokens](../ui/tokens-como-unica-fuente-de-color.md)
+- [No component declares a colour: all of them come from the tokens](../ui/tokens-as-the-only-source-of-colour.md)
   — the same shape of rule on the interface side: one source, and no local
   copies.

@@ -1,4 +1,4 @@
-# 🎯 A price is a cache of somebody else's data, and it is replaced whole
+# 🎯 A price is a cache of the data of another person, and it is replaced complete
 
 ## 💡 Convention
 
@@ -57,8 +57,8 @@ for deal in &prices.deals {
 Forget with the complete list, taken before the pass:
 
 ```rust
-let vivos: Vec<GameId> = targets.iter().map(|target| target.game_id).collect();
-prices.forget_missing(&vivos).await?;
+let live: Vec<GameId> = targets.iter().map(|target| target.game_id).collect();
+prices.forget_missing(&live).await?;
 ```
 
 ### ❌ Bad
@@ -79,7 +79,7 @@ sqlx::query("UPDATE price_snapshot SET deleted_at = ? WHERE game_id = ?")
 ```rust
 // Forgetting with what was refreshed instead of with the whole wish list. A
 // cancelled pass wipes the prices of everything it did not get to.
-prices.forget_missing(&refrescados).await?;
+prices.forget_missing(&refreshed).await?;
 ```
 
 ```rust
@@ -106,11 +106,11 @@ games.upsert(&game).await?;
 
 ## 🔗 Related agreements
 
-- [Enriquecer una ficha reescribe su fila; no crea otra](enriquecer-fichas-en-su-sitio.md)
-  — the other half of what protects `user_state`: the record keeps its
-  identifier, and everything that hangs from it survives.
-- [Money is kept in whole cents](../domain/dinero-en-centimos.md) — what goes
-  inside these rows.
+- [To add metadata to a record writes its row again; it does not make a new one](enrich-records-in-place.md)
+  — the second half of what protects `user_state`: the record keeps its
+  identifier, and everything attached to it survives.
+- [Money is kept in whole cents](../domain/money-in-cents.md) — what goes inside
+  these rows.
 - [Every store connector has a switch of its own](../connectors/switch-per-connector.md)
   — the same reasoning applied to a provider that breaks: prices have their own
   button and their own failure, and a synchronisation never waits for them.
