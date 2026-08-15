@@ -20,6 +20,7 @@ Antes de escribir código, lee también:
 | --- | --- |
 | [Ninguna credencial de tienda va dentro del binario](docs/connectors/credenciales-fuera-del-binario.md) | Todo lo aporta el usuario y vive en el almacén de secretos, incluso cuando el secreto es público. Nunca se pide la contraseña de una tienda. |
 | [Los endpoints no oficiales se contrastan antes de escribir el conector](docs/connectors/contrastar-endpoints-no-oficiales.md) | Leer la implementación de referencia viva, probar a mano, y anotar la vigencia con fecha en el módulo. |
+| [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | Una tienda rota se apaga y el resto sigue igual. El motivo se guarda, apagar es decisión del usuario y nada más la toma. |
 
 ### `docs/storage/` — esquema y datos
 
@@ -32,6 +33,7 @@ Antes de escribir código, lee también:
 | Convención | De qué trata |
 | --- | --- |
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
+| [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | Leer la página de una tienda solo se hace donde emite el código, sin lógica dentro del script y sin darle comandos. |
 
 ### Pendientes de documentar
 

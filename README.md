@@ -9,16 +9,20 @@ cuentas y ninguna credencial de tienda sale de tu ordenador.
 
 ## Estado
 
-Fases 1 a 6: Steam, GOG, metadatos de IGDB, deduplicación entre tiendas y
-backlog. Quedan especificadas y sin implementar la fase 7 (Epic) y la 8
-(precios con ITAD).
+Fases 1 a 7: Steam, GOG, Epic, metadatos de IGDB, deduplicación entre tiendas y
+backlog. Queda especificada y sin implementar la fase 8 (precios con ITAD).
 
 Puedes empezar solo con Steam, que es la única tienda con una vía oficial: hace
-falta tu clave de la API. GOG se conecta en su propia página de login, dentro de
-la app; tu contraseña no pasa por aquí. Como GOG no permite registrar
-aplicaciones de terceros, hay que darle además el par de cliente de GOG Galaxy,
-que es público y el mismo para todo el mundo: se te pide para que no vaya
-escrito dentro del programa.
+falta tu clave de la API. GOG y Epic se conectan en su propia página de login,
+dentro de la app; tu contraseña no pasa por aquí. Como ninguna de las dos
+permite registrar aplicaciones de terceros, hay que darles además el par de
+cliente de su propio lanzador, que es público y el mismo para todo el mundo: se
+te pide para que no vaya escrito dentro del programa.
+
+Epic es la tienda sin ningún contrato público: se apoya en la API privada de su
+lanzador y puede dejar de funcionar el día que a Epic le parezca. Por eso cada
+conector tiene su propio interruptor. Si Epic se rompe, lo desactivas, y lo que
+ya trajo sigue en tu biblioteca con tus notas y tu estado encima.
 
 Los metadatos de IGDB son opcionales. Sin ellos la biblioteca funciona igual,
 con las fichas hechas a partir del título de la tienda —incluida la
@@ -64,7 +68,7 @@ bunx tsc --noEmit && bun run lint && bun test
 | --- | --- |
 | `crates/domain` | Entidades y reglas. Sin red, sin base de datos, sin Tauri. CI lo verifica. |
 | `crates/storage` | SQLite y migraciones. Todo el SQL del proyecto está aquí. |
-| `crates/connectors` | Tiendas (Steam, GOG), solo autenticación y listado. Nunca descargas. |
+| `crates/connectors` | Tiendas (Steam, GOG, Epic), solo autenticación y listado. Nunca descargas. |
 | `crates/metadata` | Proveedores de metadatos (IGDB). |
 | `crates/secrets` | Keyring nativo del sistema operativo. |
 | `src-tauri` | Shell de la app y comandos: orquestan, no deciden. |
