@@ -9,6 +9,14 @@
 //!
 //! Nunca se pide la contraseña de Steam: los términos de uso de la Web API lo
 //! prohíben expresamente.
+//!
+//! ## Vigencia de los endpoints (comprobado el 2026-08-15)
+//!
+//! Los tres de la Web API —`GetPlayerSummaries`, `GetOwnedGames` y
+//! `GetWishlist`— siguen bien. El cuarto no es de la Web API sino de la tienda,
+//! y no está documentado: `store.steampowered.com/api/appdetails` **solo
+//! contesta a un appid por petición**, y devuelve `null` a la petición entera en
+//! cuanto se le mandan dos. Está detallado en `titles`.
 
 mod parse;
 
@@ -84,13 +92,30 @@ impl SteamConnector {
     /// Títulos de los deseados. `GetWishlist` solo devuelve appids, así que hay
     /// que preguntar por los nombres aparte. Un fallo aquí no invalida la
     /// sincronización: el título definitivo lo pone IGDB en la fase 4.
+    ///
+    /// Un appid por petición, y esto no es una elección: `appdetails` acepta
+    /// varios en la URL y contesta `null` a la petición **entera** en cuanto son
+    /// dos. Comprobado el 2026-08-15:
+    ///
+    /// ```sh
+    /// curl "…/api/appdetails?appids=115800&filters=basic"          # {"115800":{…"name":"Owlboy"…}}
+    /// curl "…/api/appdetails?appids=115800,235460&filters=basic"   # null
+    /// ```
+    ///
+    /// Por lotes de veinte, ninguna lista de deseados llegaba a tener un solo
+    /// título: todas se quedaban en «Steam 115800» y sin nombre no hay ni ficha
+    /// ni búsqueda de precio que valga.
+    ///
+    /// Sale una petición por juego deseado. La tienda corta sobre las doscientas
+    /// cada cinco minutos: una lista muy larga perderá los títulos del final, y
+    /// los recuperará en la siguiente sincronización.
     async fn titles(&self, app_ids: &[String]) -> std::collections::HashMap<String, String> {
+        let url = format!("{}/api/appdetails", self.store_base);
         let mut titles = std::collections::HashMap::new();
-        for chunk in app_ids.chunks(20) {
-            let joined = chunk.join(",");
-            let url = format!("{}/api/appdetails", self.store_base);
+
+        for app_id in app_ids {
             let Ok(body) = self
-                .get(&url, &[("appids", joined.as_str()), ("filters", "basic")])
+                .get(&url, &[("appids", app_id.as_str()), ("filters", "basic")])
                 .await
             else {
                 continue;

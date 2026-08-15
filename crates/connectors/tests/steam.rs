@@ -10,7 +10,12 @@ const OWNED: &str = include_str!("fixtures/steam_owned_games.json");
 const PRIVATE: &str = include_str!("fixtures/steam_owned_private.json");
 const WISHLIST: &str = include_str!("fixtures/steam_wishlist.json");
 const SUMMARIES: &str = include_str!("fixtures/steam_player_summaries.json");
+/// `appdetails` con un solo appid. Con dos, la tienda contesta `null` a la
+/// petición entera, y esa respuesta también está grabada: es la que hacía que
+/// ningún deseado llegara con nombre.
 const APP_DETAILS: &str = include_str!("fixtures/steam_app_details.json");
+const APP_DETAILS_RDR2: &str = include_str!("fixtures/steam_app_details_rdr2.json");
+const APP_DETAILS_VARIOS: &str = include_str!("fixtures/steam_app_details_varios.json");
 
 fn session() -> StoreSession {
     StoreSession {
@@ -93,7 +98,24 @@ async fn distingue_un_perfil_privado_de_una_biblioteca_vacia() {
 async fn lee_los_deseados_y_completa_los_titulos() {
     let server = MockServer::start().await;
     mock(&server, "/IWishlistService/GetWishlist/v1/", WISHLIST).await;
-    mock(&server, "/api/appdetails", APP_DETAILS).await;
+
+    // Un appid por petición, que es lo único que la tienda contesta. La
+    // respuesta a una petición con varios —`null`— se monta la última, de
+    // catch-all: si el conector volviera a pedirlos por lotes, los deseados se
+    // quedarían sin nombre y este test lo vería.
+    Mock::given(method("GET"))
+        .and(path("/api/appdetails"))
+        .and(query_param("appids", "1145360"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(APP_DETAILS, "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/api/appdetails"))
+        .and(query_param("appids", "1174180"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(APP_DETAILS_RDR2, "application/json"))
+        .mount(&server)
+        .await;
+    mock(&server, "/api/appdetails", APP_DETAILS_VARIOS).await;
 
     let entries = connector(&server)
         .wishlist(&session(), StoreAccountId::new())
@@ -104,6 +126,25 @@ async fn lee_los_deseados_y_completa_los_titulos() {
     assert_eq!(entries[0].title, "Hades");
     assert_eq!(entries[1].title, "Red Dead Redemption 2");
     assert!(entries[0].acquired_at.is_some(), "date_added se conserva");
+
+    // Y se comprueba lo que se manda, no solo lo que se recibe: dos appids en
+    // la misma petición es exactamente el fallo que dejó 84 deseados llamándose
+    // «Steam 115800».
+    for peticion in server.received_requests().await.expect("peticiones") {
+        if peticion.url.path() != "/api/appdetails" {
+            continue;
+        }
+        let appids = peticion
+            .url
+            .query_pairs()
+            .find(|(clave, _)| clave == "appids")
+            .map(|(_, valor)| valor.to_string())
+            .unwrap_or_default();
+        assert!(
+            !appids.contains(','),
+            "appdetails contesta `null` a una petición con varios appids, y esta lleva {appids}"
+        );
+    }
 }
 
 #[tokio::test]
