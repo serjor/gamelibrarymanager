@@ -1,8 +1,8 @@
-//! Núcleo de dominio: entidades y reglas. Sin red, sin base de datos, sin Tauri.
+//! Domain core: entities and rules. No network, no database, no Tauri.
 //!
-//! Si algún día aparece aquí una dependencia de IO, la arquitectura se ha roto.
-//! El paso `arquitectura` de CI ejecuta `cargo tree -p domain` y falla si
-//! encuentra reqwest, sqlx o tauri en el árbol.
+//! If a dependency on IO appears here one day, the architecture has broken. The
+//! `architecture` step of CI runs `cargo tree -p domain` and fails if it finds
+//! reqwest, sqlx or tauri in the tree.
 
 pub mod library;
 pub mod matching;

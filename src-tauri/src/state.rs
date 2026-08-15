@@ -1,5 +1,5 @@
-//! Estado compartido de la aplicación: la base de datos, el almacén de secretos
-//! y los conectores disponibles.
+//! The shared state of the application: the database, the store of secrets and
+//! the available connectors.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,13 +15,15 @@ use tokio::sync::RwLock;
 
 pub const SERVICE: &str = "com.serjor.gamelibrarymanager";
 
-/// Claves bajo las que viven los secretos que no pertenecen a una cuenta de
-/// tienda. IGDB prohíbe empotrar el secreto en el binario, así que son del
-/// usuario y viven donde vive todo lo demás: en el almacén, nunca en SQLite.
+/// The keys under which the secrets that do not belong to a store account live.
+/// IGDB prohibits a secret inside the binary, thus these secrets belong to the
+/// user and live where all of the other secrets live: in the store, never in
+/// SQLite.
 pub const IGDB_CREDENTIALS: &str = "igdb:credentials";
 pub const IGDB_TOKEN: &str = "igdb:token";
-/// La clave de ITAD y el país con el que se piden los precios. El país viaja
-/// con la clave porque sin él los precios son los de otro mercado.
+/// The ITAD key and the country with which the prices are requested. The country
+/// goes with the key because without it the prices are those of a different
+/// market.
 pub const ITAD_CREDENTIALS: &str = "itad:credentials";
 
 pub struct AppState {
@@ -29,14 +31,14 @@ pub struct AppState {
     pub igdb: IgdbClient,
     pub itad: ItadClient,
     pub connectors: HashMap<StoreId, Arc<dyn StoreConnector>>,
-    /// El almacén puede no existir todavía: sin keyring hace falta que el
-    /// usuario escriba una contraseña antes de poder guardar nada.
+    /// The store can not yet exist: with no keyring, the user must write a
+    /// passphrase before the application can keep anything.
     secrets: RwLock<Option<Arc<dyn SecretStore>>>,
     pub backend: Backend,
     secrets_path: PathBuf,
-    /// Bandera de cancelación de la operación larga en curso. Es una sola
-    /// porque sincronizar y emparejar nunca corren a la vez: los dos botones se
-    /// deshabilitan mutuamente mientras uno trabaja.
+    /// The cancel flag of the long operation in progress. There is only one
+    /// because a synchronisation and a match never run at the same time: each of
+    /// the two buttons disables the other while one operation runs.
     cancel_flag: AtomicBool,
 }
 
@@ -75,7 +77,8 @@ impl AppState {
         }
     }
 
-    /// Abre el almacén cifrado. Solo hace falta cuando no hay keyring.
+    /// Opens the encrypted store. It is necessary only when there is no
+    /// keyring.
     pub async fn unlock(&self, passphrase: &str) -> Result<(), secrets::SecretsError> {
         let store = EncryptedFileStore::open(&self.secrets_path, passphrase)?;
         *self.secrets.write().await = Some(Arc::new(store));
@@ -111,8 +114,8 @@ impl AppState {
     }
 }
 
-/// Nombre bajo el que se guarda la credencial de una cuenta. Nunca se guarda en
-/// SQLite: la base de datos sabe que la cuenta existe, no cómo entrar en ella.
+/// The name under which the credential of an account is kept. It is never kept
+/// in SQLite: the database knows that the account exists, not how to open it.
 pub fn credential_key(account: &StoreAccount) -> String {
     format!("{}:{}", account.store.as_str(), account.account_ref)
 }

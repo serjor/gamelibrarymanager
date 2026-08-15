@@ -3,87 +3,89 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage, type ReviewItem, type ScoredCandidate } from "../../lib/api";
 
 /**
- * Base de las fichas públicas de IGDB. Se escribe como constante y se concatena
- * el slug, en vez de interpolar la dirección entera, porque el alcance de la
- * capacidad se comprueba contra las cadenas literales que hay en el código.
+ * The base of the public IGDB records. It is written as a constant and the slug
+ * is added to it, and the complete address is not interpolated, because the
+ * scope of the capability is examined against the literal strings that are in
+ * the code.
  */
 const IGDB_GAME_URL = "https://www.igdb.com/games/";
 
 /**
- * Lo que el emparejamiento automático no se atrevió a decidir.
+ * What the automatic matching did not decide.
  *
- * Que esta cola exista es la decisión de diseño central del producto: un
- * duplicado visible molesta, pero dos juegos distintos fusionados le hacen
- * perder al usuario el estado y las notas de uno de los dos, y encima sin
- * avisar. Ante la duda, se pregunta.
+ * That this queue exists is the central design decision of the product: a
+ * duplicate that you see is a nuisance, but two different games merged make the
+ * user lose the status and the notes of one of the two, and with no message. When
+ * there is doubt, the application asks.
  *
- * Lo que casi siempre llega aquí no son dudas entre juegos distintos: son
- * empates entre fichas que **son el mismo juego** —IGDB tiene entradas
- * duplicadas, y las ediciones se normalizan al mismo título—. Por eso van
- * agrupados y se pueden resolver en lote: el umbral no se toca, porque acierta
- * al negarse cuando dos juegos distintos comparten nombre; lo que se arregla es
- * el trabajo de revisarlos.
+ * What almost always comes here is not doubt between different games: it is
+ * equal scores between records that **are the same game** — IGDB has duplicate
+ * entries, and the editions normalise to the same title. Thus they come in
+ * groups and you can resolve them together: the threshold does not change,
+ * because it is correct when it refuses if two different games share a name; what
+ * is corrected is the work to examine them.
  *
- * De ahí la tabla. Una lista vertical obliga a leer entrada por entrada aunque
- * ciento cuarenta de las ciento cincuenta sean obvias; en columnas, lo que se
- * repasa es una sola —«se emparejará con»— y solo se baja al detalle donde algo
- * no cuadra.
+ * That is the reason for the table. A vertical list makes you read entry by
+ * entry even if one hundred and forty of the one hundred and fifty are clear; in
+ * columns, you examine one column — "will match with" — and you go to the detail
+ * only where something is not correct.
  */
 export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onResolved: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   /**
-   * Lo que el usuario ha tocado: entrada -> ficha, o `null` si ha quitado la
-   * que venía puesta. Lo que no está aquí es que no lo ha tocado, y entonces
-   * manda la preselección. Guardar solo las diferencias evita el efecto que
-   * copiaría la preselección a estado cada vez que la cola se recarga.
+   * What the user has touched: entry -> record, or `null` if they removed the
+   * record that came selected. An entry that is not here is an entry that they
+   * have not touched, and then the preselection applies. To keep only the
+   * differences prevents the effect that would copy the preselection to state
+   * each time that the queue loads again.
    */
-  const [tocados, setTocados] = useState<Record<string, number | null>>({});
+  const [touched, setTouched] = useState<Record<string, number | null>>({});
 
-  const [empates, sueltos] = useMemo(
+  const [ties, singles] = useMemo(
     () => [items.filter((i) => i.tie), items.filter((i) => !i.tie)],
     [items],
   );
 
   /**
-   * Lo que no empata viene con el mejor candidato ya elegido; lo que empata,
-   * con nada.
+   * The entries that are not equal come with the best candidate already
+   * selected; the entries that are equal come with nothing.
    *
-   * Esa asimetría es la cola entera. Cuando un candidato gana con holgura, lo
-   * que queda por hacer es mirar si es él y decir que sí, y hacer clic para
-   * repetir lo que la pantalla ya dice es trabajo inventado. Cuando dos
-   * empatan, elegir por el usuario sería justo lo que el umbral se negó a
-   * hacer, y el motivo por el que existe esta pantalla.
+   * That difference is all of the queue. When a candidate wins clearly, what
+   * stays to do is to look whether it is the correct one and say yes, and a
+   * click to repeat what the screen already says is work that nobody needs. When
+   * two are equal, a selection made for the user would be exactly what the
+   * threshold refused to do, and the reason that this screen exists.
    */
-  const preseleccion = useMemo(
+  const preselection = useMemo(
     () =>
       Object.fromEntries(
-        sueltos
+        singles
           .filter((item) => item.candidates.length > 0)
           .map((item) => [item.store_entry_id, item.candidates[0]!.igdb_id]),
       ) as Record<string, number>,
-    [sueltos],
+    [singles],
   );
 
-  const elegido = (item: ReviewItem): number | null => {
-    const tocado = tocados[item.store_entry_id];
-    return tocado === undefined ? (preseleccion[item.store_entry_id] ?? null) : tocado;
+  const chosen = (item: ReviewItem): number | null => {
+    const value = touched[item.store_entry_id];
+    return value === undefined ? (preselection[item.store_entry_id] ?? null) : value;
   };
 
-  // Pulsar la que ya está puesta la quita: es la única forma de decir «esta no»
-  // sin decir a la vez cuál sí, y hace falta para dejar una entrada fuera del
-  // lote sin resolverla.
-  const elegir = (item: ReviewItem, igdbId: number) => {
-    const actual = elegido(item);
-    setTocados((previos) => ({
-      ...previos,
-      [item.store_entry_id]: actual === igdbId ? null : igdbId,
+  // A click on the candidate that is already selected removes it: it is the only
+  // way to say "not this one" without you say at the same time which one, and it
+  // is necessary to leave an entry out of the batch and not resolve it.
+  const choose = (item: ReviewItem, igdbId: number) => {
+    const current = chosen(item);
+    setTouched((previous) => ({
+      ...previous,
+      [item.store_entry_id]: current === igdbId ? null : igdbId,
     }));
   };
 
-  const decisiones = items
-    .map((item) => [item.store_entry_id, elegido(item)] as const)
-    .filter((par): par is [string, number] => par[1] !== null);
+  const decisions = items
+    .map((item) => [item.store_entry_id, chosen(item)] as const)
+    .filter((pair): pair is [string, number] => pair[1] !== null);
 
   const act = async (id: string, action: () => Promise<unknown>) => {
     setBusy(id);
@@ -98,34 +100,34 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
     }
   };
 
-  const confirmarLote = async () => {
-    if (decisiones.length === 0) return;
-    await act("lote", async () => {
-      await api.reviewConfirmMany(decisiones.map(([entrada, ficha]) => [entrada, ficha]));
-      setTocados({});
+  const confirmBatch = async () => {
+    if (decisions.length === 0) return;
+    await act("batch", async () => {
+      await api.reviewConfirmMany(decisions.map(([entry, record]) => [entry, record]));
+      setTouched({});
     });
   };
 
   if (items.length === 0) {
-    return <p className="hint">No hay nada pendiente de revisar.</p>;
+    return <p className="hint">There is nothing to review.</p>;
   }
 
-  const abrir = (url: string) => {
+  const open = (url: string) => {
     openUrl(url).catch((cause: unknown) =>
-      setError(`No he podido abrir ${url}: ${errorMessage(cause)}`),
+      setError(`Could not open ${url}: ${errorMessage(cause)}`),
     );
   };
 
-  const fila = (item: ReviewItem) => {
-    const id = elegido(item);
-    const puesto = item.candidates.find((candidate) => candidate.igdb_id === id) ?? null;
-    const otros = item.candidates.filter((candidate) => candidate.igdb_id !== id);
+  const row = (item: ReviewItem) => {
+    const id = chosen(item);
+    const selected = item.candidates.find((candidate) => candidate.igdb_id === id) ?? null;
+    const others = item.candidates.filter((candidate) => candidate.igdb_id !== id);
 
     return (
-      <tr key={item.store_entry_id} className={puesto === null ? "sin-elegir" : undefined}>
-        {/* Lo que dice la tienda, que es contra lo que hay que comparar. */}
+      <tr key={item.store_entry_id} className={selected === null ? "not-chosen" : undefined}>
+        {/* What the store says, which is what you must compare against. */}
         <td>
-          <div className="origen">
+          <div className="source">
             {item.cover_url ? (
               <img src={item.cover_url} alt="" width={96} height={45} loading="lazy" />
             ) : (
@@ -136,12 +138,12 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
         </td>
 
         <td>
-          <span className="tienda">{item.store}</span>
+          <span className="store">{item.store}</span>
           {item.store_url && (
             <button
               className="link"
-              onClick={() => abrir(item.store_url!)}
-              aria-label={`Ver ${item.title} en ${item.store}`}
+              onClick={() => open(item.store_url!)}
+              aria-label={`See ${item.title} in ${item.store}`}
             >
               ↗
             </button>
@@ -149,35 +151,35 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
         </td>
 
         <td>
-          {puesto ? (
-            <Candidato
-              candidate={puesto}
-              elegido
-              resumido
-              onElegir={() => elegir(item, puesto.igdb_id)}
-              onMirar={puesto.slug ? () => abrir(IGDB_GAME_URL + puesto.slug) : undefined}
+          {selected ? (
+            <Candidate
+              candidate={selected}
+              chosen
+              short
+              onChoose={() => choose(item, selected.igdb_id)}
+              onLook={selected.slug ? () => open(IGDB_GAME_URL + selected.slug) : undefined}
             />
           ) : (
-            <span className="hint">sin elegir</span>
+            <span className="hint">not chosen</span>
           )}
         </td>
 
-        <td className="num">{puesto?.release_year ?? "—"}</td>
-        <td className="num">{puesto ? `${Math.round(puesto.score * 100)}%` : "—"}</td>
+        <td className="num">{selected?.release_year ?? "—"}</td>
+        <td className="num">{selected ? `${Math.round(selected.score * 100)}%` : "—"}</td>
 
         <td>
           {item.candidates.length === 0 ? (
-            <p className="hint">IGDB no conoce este juego.</p>
+            <p className="hint">IGDB does not know this game.</p>
           ) : (
             <ul className="candidates">
-              {otros.map((candidate) => (
+              {others.map((candidate) => (
                 <li key={candidate.igdb_id}>
-                  <Candidato
+                  <Candidate
                     candidate={candidate}
-                    elegido={false}
-                    onElegir={() => elegir(item, candidate.igdb_id)}
-                    onMirar={
-                      candidate.slug ? () => abrir(IGDB_GAME_URL + candidate.slug) : undefined
+                    chosen={false}
+                    onChoose={() => choose(item, candidate.igdb_id)}
+                    onLook={
+                      candidate.slug ? () => open(IGDB_GAME_URL + candidate.slug) : undefined
                     }
                   />
                 </li>
@@ -191,16 +193,16 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
               void act(item.store_entry_id, () => api.reviewWithoutMetadata(item.store_entry_id))
             }
           >
-            Ninguno: crear ficha con el título de la tienda
+            None: make a record with the title of the store
           </button>
         </td>
       </tr>
     );
   };
 
-  const tabla = (filas: ReviewItem[]) => (
-    <div className="revision-viewport">
-      <table className="revision">
+  const table = (rows: ReviewItem[]) => (
+    <div className="review-viewport">
+      <table className="review">
         <colgroup>
           <col />
           <col style={{ width: "5.5rem" }} />
@@ -211,121 +213,125 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
         </colgroup>
         <thead>
           <tr>
-            <th>En la tienda</th>
-            <th>Tienda</th>
-            <th>Se emparejará con</th>
-            <th className="num">Año</th>
-            <th className="num">Parecido</th>
-            <th>Otras fichas de IGDB</th>
+            <th>In the store</th>
+            <th>Store</th>
+            <th>Will match with</th>
+            <th className="num">Year</th>
+            <th className="num">Similarity</th>
+            <th>Other IGDB records</th>
           </tr>
         </thead>
-        <tbody>{filas.map(fila)}</tbody>
+        <tbody>{rows.map(row)}</tbody>
       </table>
     </div>
   );
 
   return (
-    <section className="revision-pantalla">
-      <h2>Por revisar ({items.length})</h2>
+    <section className="review-screen">
+      <h2>To review ({items.length})</h2>
       {error && <p role="alert">{error}</p>}
 
-      {decisiones.length > 0 && (
+      {decisions.length > 0 && (
         <p className="hint sticky">
-          <button disabled={busy !== null} onClick={() => void confirmarLote()}>
-            {busy === "lote"
-              ? "Confirmando…"
-              : `Confirmar ${decisiones.length} emparejamiento${decisiones.length === 1 ? "" : "s"}`}
+          <button disabled={busy !== null} onClick={() => void confirmBatch()}>
+            {busy === "batch"
+              ? "Confirming…"
+              : `Confirm ${decisions.length} match${decisions.length === 1 ? "" : "es"}`}
           </button>{" "}
           <button
             className="link"
             onClick={() =>
-              setTocados(Object.fromEntries(items.map((item) => [item.store_entry_id, null])))
+              setTouched(Object.fromEntries(items.map((item) => [item.store_entry_id, null])))
             }
           >
-            deseleccionar
+            clear selection
           </button>
         </p>
       )}
 
-      {empates.length > 0 && (
+      {ties.length > 0 && (
         <>
-          <h3>Empates ({empates.length})</h3>
+          <h3>Equal scores ({ties.length})</h3>
           <p className="hint">
-            Los mejores candidatos puntúan igual. Casi siempre son la misma ficha
-            repetida en IGDB o ediciones del mismo juego, pero no siempre: dos
-            juegos distintos pueden llamarse igual, y por eso no se decide solo.
-            La portada y el año los distinguen.
+            The best candidates have the same score. Almost always they are the
+            same record repeated in IGDB or editions of the same game, but not
+            always: two different games can have the same name, and thus the
+            application does not decide alone. The cover and the year tell them
+            apart.
           </p>
-          {tabla(empates)}
+          {table(ties)}
         </>
       )}
 
-      {sueltos.length > 0 && (
+      {singles.length > 0 && (
         <>
-          {empates.length > 0 && <h3>El resto ({sueltos.length})</h3>}
-          {/* Decir qué va a pasar al pulsar el botón del lote. Una preselección
-              callada es la manera de que alguien confirme ciento cincuenta
-              emparejamientos creyendo que confirmaba los que había tocado. */}
+          {ties.length > 0 && <h3>The remainder ({singles.length})</h3>}
+          {/* Say what will occur at a click on the batch button. A preselection
+              with no words is the way to let somebody confirm one hundred and
+              fifty matches while they think that they confirm only the matches
+              that they touched. */}
           <p className="hint">
-            Aquí un candidato gana con holgura, así que viene ya elegido. Repasa
-            la columna «se emparejará con» y cambia lo que no cuadre: nada se
-            escribe hasta que confirmes.
+            Here one candidate wins clearly, thus it comes already selected.
+            Examine the "will match with" column and change what is not correct:
+            nothing is written until you confirm.
           </p>
-          {tabla(sueltos)}
+          {table(singles)}
         </>
       )}
     </section>
   );
 }
 
-/** Un candidato con lo que hace falta para reconocerlo sin salir de la app. */
-function Candidato({
+/** A candidate with what is necessary to recognise it in the application. */
+function Candidate({
   candidate,
-  elegido,
-  resumido,
-  onElegir,
-  onMirar,
+  chosen,
+  short,
+  onChoose,
+  onLook,
 }: {
   candidate: ScoredCandidate;
-  elegido: boolean;
-  /** En la columna de elegido el año y el parecido tienen la suya, y repetirlos ahí es ruido. */
-  resumido?: boolean;
-  onElegir: () => void;
-  /** Abre su ficha en IGDB. Falta cuando IGDB no publicó un slug. */
-  onMirar?: () => void;
+  chosen: boolean;
+  /** In the chosen column the year and the similarity have their own columns, and
+   *  to repeat them there is noise. */
+  short?: boolean;
+  onChoose: () => void;
+  /** Opens its record in IGDB. Absent when IGDB published no slug. */
+  onLook?: () => void;
 }) {
   return (
     <span className="candidate-wrap">
       <button
-        className={elegido ? "candidate chosen" : "candidate"}
-        aria-pressed={elegido}
-        onClick={onElegir}
+        className={chosen ? "candidate chosen" : "candidate"}
+        aria-pressed={chosen}
+        onClick={onChoose}
       >
         {candidate.cover_url ? (
-          // Decorativa: el nombre ya está en el propio botón, así que repetirlo
-          // en el alt solo haría que un lector de pantalla lo dijese dos veces.
+          // Decoration: the name is already in the button, thus to repeat it in
+          // the alt would only make a screen reader say it two times.
           <img src={candidate.cover_url} alt="" width={45} height={60} loading="lazy" />
         ) : (
-          // Hueco del mismo tamaño. Sin él, un candidato sin portada se queda
-          // como una pastilla baja al lado de una tarjeta alta y la fila deja de
-          // leerse de un vistazo, que es justo para lo que están las portadas.
+          // A space of the same size. Without it, a candidate with no cover
+          // stays as a low pill beside a high card and you can no longer read
+          // the row quickly, which is exactly what the covers are for.
           <span className="cover-missing" aria-hidden="true" />
         )}
         <span>
           {candidate.name}
-          {!resumido && candidate.release_year !== null && (
+          {!short && candidate.release_year !== null && (
             <span className="hint"> · {candidate.release_year}</span>
           )}
-          {!resumido && <span className="hint"> · {Math.round(candidate.score * 100)}%</span>}
+          {!short && <span className="hint"> · {Math.round(candidate.score * 100)}%</span>}
         </span>
       </button>
-      {onMirar && (
-        // Botón aparte y no un enlace dentro del otro: anidar un control dentro
-        // de un botón no es HTML válido y el teclado no llegaría al de dentro.
+      {onLook && (
+        // A separate button and not a link inside the other one: a control inside
+        // a button is not valid HTML and the keyboard would not reach the inner
+        // control.
         <button
           className="link"
-          onClick={onMirar}
-          aria-label={`Ver ${candidate.name} en IGDB`}
+          onClick={onLook}
+          aria-label={`See ${candidate.name} in IGDB`}
         >
           IGDB ↗
         </button>

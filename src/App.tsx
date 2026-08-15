@@ -21,21 +21,21 @@ import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { ItadSetup } from "./features/onboarding/ItadSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
-import { Library, type Vista } from "./features/library/Library";
+import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
 import { Wishlist } from "./features/wishlist/Wishlist";
 
-/** Las tiendas que se saben leer, con el nombre que se enseña de cada una. */
-const TIENDAS = [
+/** The stores that the application can read, with the name that it shows. */
+const STORES = [
   ["steam", "Steam"],
   ["gog", "GOG"],
   ["epic", "Epic"],
 ] as const;
 
-type Tienda = (typeof TIENDAS)[number][0];
+type Store = (typeof STORES)[number][0];
 
-function nombreDe(store: string): string {
-  return TIENDAS.find(([id]) => id === store)?.[1] ?? store;
+function nameOf(store: string): string {
+  return STORES.find(([id]) => id === store)?.[1] ?? store;
 }
 
 export function App() {
@@ -47,24 +47,24 @@ export function App() {
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [rows, setRows] = useState<LibraryRow[]>([]);
-  const [precios, setPrecios] = useState<PriceRow[]>([]);
+  const [prices, setPrices] = useState<PriceRow[]>([]);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
-  // Arranca en la biblioteca y no en «Hoy»: si la recomendación falla, no
-  // conviene que sea lo primero que ves cada día.
+  // It starts at the library and not at "Today": if the recommendation is
+  // incorrect, it must not be the first thing that you see each day.
   const [tab, setTab] = useState<"library" | "today" | "wishlist" | "review">("library");
-  // El modo de vista vive aquí y no dentro de la biblioteca porque cambiar de
-  // pestaña la desmonta: si lo guardara ella, volver de «Por revisar» te
-  // devolvería siempre a la tabla aunque estuvieras mirando las portadas.
-  const [vista, setVista] = useState<Vista>("tabla");
-  // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
-  // aplicación: se entra a ellos cuando el usuario quiere.
-  const [setup, setSetup] = useState<Tienda | "igdb" | "itad" | null>(null);
+  // The view mode lives here and not in the library, because a change of tab
+  // removes the library: if the library kept the mode, a return from "To review"
+  // would always give you the table even if you were looking at the covers.
+  const [view, setView] = useState<View>("table");
+  // A setup screen opened on top of the library. None of them blocks the
+  // application: you go to them when you want.
+  const [setup, setSetup] = useState<Store | "igdb" | "itad" | null>(null);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // `alive` evita que una carga en vuelo escriba estado sobre un componente ya
-  // desmontado, que es la carrera clásica de este patrón.
+  // `alive` prevents a load in progress from writing state on a component that
+  // is already removed, which is the usual race of this pattern.
   const load = useCallback(async (alive: () => boolean) => {
     try {
       const nextInfo = await api.appInfo();
@@ -80,7 +80,7 @@ export function App() {
         nextSummary,
         nextQueue,
         nextRows,
-        nextPrecios,
+        nextPrices,
       ] = await Promise.all([
         api.listAccounts(),
         api.connectorStates(),
@@ -99,7 +99,7 @@ export function App() {
       setSummary(nextSummary);
       setQueue(nextQueue);
       setRows(nextRows);
-      setPrecios(nextPrecios);
+      setPrices(nextPrices);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -109,10 +109,10 @@ export function App() {
 
   useEffect(() => {
     let mounted = true;
-    // La regla marca cualquier setState alcanzable desde un efecto. Aquí la
-    // carga es asíncrona y solo escribe si el componente sigue montado, que es
-    // el caso que la regla no distingue. Desaparecerá en la fase 5, cuando la
-    // biblioteca pase a cargarse con una librería de datos.
+    // The rule marks every setState that an effect can reach. Here the load is
+    // asynchronous and writes only if the component is still mounted, which is
+    // the condition that the rule does not tell apart. It will go away in phase
+    // 5, when a data library loads the library.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(() => mounted);
     return () => {
@@ -120,8 +120,8 @@ export function App() {
     };
   }, [load]);
 
-  // El progreso llega por eventos desde Rust: la ventana no se queda muda
-  // mientras se sincronizan mil juegos.
+  // The progress comes through events from Rust: the window does not stay quiet
+  // while one thousand games synchronise.
   useEffect(() => {
     const unlisten = listen<SyncProgress>("sync:progress", (event) =>
       setProgress(event.payload),
@@ -137,15 +137,16 @@ export function App() {
     try {
       const result = await action();
       if (label === "sync") setReport(result as SyncReport);
-      // Una pasada que se paró a mitad no lanza error: guarda lo que llevaba y
-      // devuelve el motivo. Si no se dijera aquí, el usuario vería el trabajo a
-      // medias sin una palabra de por qué, que es peor que un error.
+      // A pass that stopped in the middle does not give an error: it keeps its
+      // work and gives back the reason. If the interface did not say that here,
+      // the user would see incomplete work with no word about why, which is
+      // worse than an error.
       if (label === "identity") {
         const { stopped } = result as IdentityReport;
         if (stopped !== null) {
           setError(
-            `El emparejamiento se paró: ${stopped}. Lo hecho hasta ahí está ` +
-              "guardado; vuelve a pulsar «Emparejar» para seguir desde donde iba.",
+            `The matching stopped: ${stopped}. The work made to that point is ` +
+              'kept; click "Match" again to continue from there.',
           );
         }
       }
@@ -161,13 +162,13 @@ export function App() {
   if (!info) {
     return (
       <main>
-        <p>{error ?? "Abriendo la biblioteca…"}</p>
+        <p>{error ?? "Opening the library…"}</p>
       </main>
     );
   }
 
-  // Sin almacén abierto no se puede guardar ninguna clave, así que es lo
-  // primero que hay que resolver.
+  // With no open store you cannot keep a key, thus it is the first thing to
+  // resolve.
   if (!info.unlocked) {
     return (
       <main>
@@ -176,7 +177,7 @@ export function App() {
     );
   }
 
-  const cerrarSetup = () => {
+  const closeSetup = () => {
     setSetup(null);
     refresh();
   };
@@ -184,87 +185,88 @@ export function App() {
   if (setup !== null) {
     return (
       <main>
-        {setup === "steam" && <SteamSetup onConnected={cerrarSetup} />}
-        {setup === "gog" && <GogSetup onConnected={cerrarSetup} />}
-        {setup === "epic" && <EpicSetup onConnected={cerrarSetup} />}
-        {setup === "igdb" && <IgdbSetup onConnected={cerrarSetup} />}
-        {setup === "itad" && <ItadSetup onConnected={cerrarSetup} />}
+        {setup === "steam" && <SteamSetup onConnected={closeSetup} />}
+        {setup === "gog" && <GogSetup onConnected={closeSetup} />}
+        {setup === "epic" && <EpicSetup onConnected={closeSetup} />}
+        {setup === "igdb" && <IgdbSetup onConnected={closeSetup} />}
+        {setup === "itad" && <ItadSetup onConnected={closeSetup} />}
         <button className="link" onClick={() => setSetup(null)}>
-          Volver
+          Back
         </button>
       </main>
     );
   }
 
-  // Hay que empezar por algún sitio, y Steam es la única tienda con una vía
-  // oficial. Pero quien no tenga Steam no puede quedarse en un callejón, y eso
-  // vale para todas las demás: la lista sale de TIENDAS para que añadir una no
-  // se olvide de esta pantalla.
+  // You must start at some store, and Steam is the only store with an official
+  // method. But a user with no Steam cannot be in a dead end, and that applies
+  // to all of the other stores: the list comes from STORES so that a new store
+  // does not forget this screen.
   if (accounts.length === 0) {
     return (
       <main>
         <SteamSetup onConnected={refresh} />
-        {TIENDAS.filter(([store]) => store !== "steam").map(([store, nombre]) => (
+        {STORES.filter(([store]) => store !== "steam").map(([store, name]) => (
           <button key={store} className="link" onClick={() => setSetup(store)}>
-            o empezar por {nombre}
+            or start with {name}
           </button>
         ))}
       </main>
     );
   }
 
-  // Cada tienda que falte tiene que seguir siendo alcanzable desde aquí. Con
-  // solo la primera pantalla, quien empezara por GOG se quedaba sin ninguna
-  // forma de añadir Steam después.
-  const conectadas = new Set(accounts.map((account) => account.store));
-  const porConectar = TIENDAS.filter(([store]) => !conectadas.has(store));
+  // Each store that is absent must stay reachable from here. With the first
+  // screen alone, a user who started with GOG had no way to add Steam later.
+  const connected = new Set(accounts.map((account) => account.store));
+  const toConnect = STORES.filter(([store]) => !connected.has(store));
 
-  // Solo los conectores que tienen algo que decir. Una tienda que va bien no
-  // sale: la fila ni siquiera existe hasta que pasa algo.
-  const conProblema = connectors.filter(
-    (conector) => !conector.enabled || conector.last_error !== null,
+  // Only the connectors that have something to say. A store that operates
+  // correctly does not appear: its row does not even exist until something
+  // occurs.
+  const withProblem = connectors.filter(
+    (connector) => !connector.enabled || connector.last_error !== null,
   );
 
-  // Fichas y no copias: el resumen cuenta lo que dicen las tiendas —el mismo
-  // juego deseado en dos cuenta dos veces— y la pestaña tiene que decir lo
-  // mismo que la pantalla que abre.
-  const deseados = rows.filter((row) => row.wishlist_stores.length > 0).length;
+  // Records and not copies: the summary counts what the stores say — the same
+  // wished-for game in two stores counts two times — and the tab must say the
+  // same as the screen that it opens.
+  const wished = rows.filter((row) => row.wishlist_stores.length > 0).length;
 
   return (
     <main>
       <header>
-        <h1>Biblioteca</h1>
+        <h1>Library</h1>
         <div className="actions">
           <button onClick={() => void run("sync", api.syncNow)} disabled={busy !== null}>
-            {busy === "sync" ? "Sincronizando…" : "Sincronizar"}
+            {busy === "sync" ? "Synchronising…" : "Synchronise"}
           </button>
           {busy !== null && (
             <button className="link" onClick={() => void api.cancelOperation()}>
-              cancelar
+              cancel
             </button>
           )}
           <button
             onClick={() => void run("identity", api.resolveIdentities)}
             disabled={busy !== null}
           >
-            {busy === "identity" ? "Emparejando…" : "Emparejar"}
+            {busy === "identity" ? "Matching…" : "Match"}
           </button>
-          {porConectar.map(([store, nombre]) => (
+          {toConnect.map(([store, name]) => (
             <button key={store} className="link" onClick={() => setSetup(store)}>
-              Conectar {nombre}
+              Connect {name}
             </button>
           ))}
         </div>
       </header>
 
-      {/* Sin IGDB la biblioteca funciona, pero las fichas salen del título de
-          la tienda. Conviene decirlo, y no a modo de error: no lo es. */}
+      {/* With no IGDB the library operates, but the records come from the title
+          of the store. It is correct to say that, and not as an error: it is
+          not an error. */}
       {!hasIgdb && (
         <p className="hint">
-          Sin metadatos: las fichas se crean con el título de la tienda y sin
-          portada.{" "}
+          No metadata: the records are made with the title of the store and with
+          no cover.{" "}
           <button className="link" onClick={() => setSetup("igdb")}>
-            Configurar IGDB
+            Configure IGDB
           </button>
         </p>
       )}
@@ -274,34 +276,35 @@ export function App() {
           <li key={`${account.store}:${account.account_ref}`}>
             <strong>{account.store}</strong> · {account.display_name ?? account.account_ref}
             {account.last_sync_at === null
-              ? " · sin sincronizar"
+              ? " · not synchronised"
               : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`}
           </li>
         ))}
       </ul>
 
-      {/* Una tienda rota no puede volver inútil la aplicación. Se dice qué le
-          pasa y se ofrece apagarla, que es lo que deja el resto intacto. */}
-      {conProblema.length > 0 && (
+      {/* A store that is broken cannot make the application useless. The
+          interface says what occurs to it and offers to switch it off, which is
+          what keeps the remainder unchanged. */}
+      {withProblem.length > 0 && (
         <ul className="connectors">
-          {conProblema.map((conector) => (
-            <li key={conector.store}>
-              <strong>{nombreDe(conector.store)}</strong>{" "}
-              {conector.enabled
-                ? `no pudo sincronizar: ${conector.last_error}`
-                : "está desactivado: no se sincroniza, y lo que ya trajo sigue en la biblioteca."}{" "}
+          {withProblem.map((connector) => (
+            <li key={connector.store}>
+              <strong>{nameOf(connector.store)}</strong>{" "}
+              {connector.enabled
+                ? `could not synchronise: ${connector.last_error}`
+                : "is switched off: it does not synchronise, and the data that it gave stays in the library."}{" "}
               <button
                 className="link"
                 disabled={busy !== null}
                 onClick={() =>
                   void run("connector", () =>
-                    api.setConnectorEnabled(conector.store, !conector.enabled),
+                    api.setConnectorEnabled(connector.store, !connector.enabled),
                   )
                 }
               >
-                {conector.enabled
-                  ? `Desactivar ${nombreDe(conector.store)}`
-                  : `Reactivar ${nombreDe(conector.store)}`}
+                {connector.enabled
+                  ? `Switch ${nameOf(connector.store)} off`
+                  : `Switch ${nameOf(connector.store)} on`}
               </button>
             </li>
           ))}
@@ -310,8 +313,8 @@ export function App() {
 
       {summary && (
         <p className="summary">
-          {summary.games} fichas · {summary.owned} copias en propiedad · {summary.wishlist} deseados
-          {summary.pending_review > 0 && ` · ${summary.pending_review} por revisar`}
+          {summary.games} records · {summary.owned} owned copies · {summary.wishlist} wished for
+          {summary.pending_review > 0 && ` · ${summary.pending_review} to review`}
         </p>
       )}
 
@@ -327,10 +330,11 @@ export function App() {
 
       {progress && progress.total > 0 && (
         <p className="hint">
-          {/* Emparejar mil juegos son minutos por el límite de IGDB: sin una
-              barra, el usuario no distingue «va despacio» de «se ha colgado». */}
+          {/* To match one thousand games takes minutes because of the IGDB
+              limit: with no bar, the user cannot tell "it is slow" from "it has
+              stopped". */}
           <progress value={progress.done} max={progress.total} />{" "}
-          {progress.stage} · {progress.done} de {progress.total} (
+          {progress.stage} · {progress.done} of {progress.total} (
           {Math.floor((progress.done / progress.total) * 100)}%)
         </p>
       )}
@@ -342,37 +346,37 @@ export function App() {
           className={tab === "library" ? "tab active" : "tab"}
           onClick={() => setTab("library")}
         >
-          Biblioteca
+          Library
         </button>
         <button
           className={tab === "today" ? "tab active" : "tab"}
           onClick={() => setTab("today")}
         >
-          Hoy
+          Today
         </button>
         <button
           className={tab === "wishlist" ? "tab active" : "tab"}
           onClick={() => setTab("wishlist")}
         >
-          Deseados{deseados > 0 && ` (${deseados})`}
+          Wishlist{wished > 0 && ` (${wished})`}
         </button>
         <button
           className={tab === "review" ? "tab active" : "tab"}
           onClick={() => setTab("review")}
         >
-          Por revisar{queue.length > 0 && ` (${queue.length})`}
+          To review{queue.length > 0 && ` (${queue.length})`}
         </button>
       </nav>
 
       {tab === "library" && (
-        <Library rows={rows} vista={vista} onVista={setVista} onSaved={refresh} />
+        <Library rows={rows} view={view} onView={setView} onSaved={refresh} />
       )}
       {tab === "today" && <Today rows={rows} onSaved={refresh} />}
       {tab === "wishlist" && (
         <Wishlist
           rows={rows}
-          precios={precios}
-          copias={summary?.wishlist ?? 0}
+          prices={prices}
+          copies={summary?.wishlist ?? 0}
           hasItad={hasItad}
           busy={busy !== null}
           onRefresh={() => void run("prices", api.refreshPrices)}

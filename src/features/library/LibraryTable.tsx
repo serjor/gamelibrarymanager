@@ -1,52 +1,53 @@
 import { useEffect } from "react";
 import type { LibraryRow } from "../../lib/api";
-import { ETIQUETA_ESTADO } from "../../lib/estado";
+import { STATUS_LABEL } from "../../lib/status";
 import { useVirtualGrid } from "./useVirtualGrid";
-import { conMayusculas, useSeleccion } from "./useSeleccion";
+import { withShift, useSelection } from "./useSelection";
 import type { Sort, SortField } from "./sort";
 
-/** Alto de fila fijo: la virtualización es aritmética, no medición. */
-const ALTO_FILA = 33;
+/** A fixed row height: the virtual list is arithmetic, not measurement. */
+const ROW_HEIGHT = 33;
 
-interface Columna {
-  campo: SortField;
-  etiqueta: string;
-  ancho: string;
-  numerica?: boolean;
+interface Column {
+  field: SortField;
+  label: string;
+  width: string;
+  numeric?: boolean;
 }
 
-const COLUMNAS: Columna[] = [
-  { campo: "title", etiqueta: "Título", ancho: "auto" },
-  { campo: "year", etiqueta: "Año", ancho: "4.5rem", numerica: true },
-  { campo: "genre", etiqueta: "Género", ancho: "7rem" },
-  { campo: "stores", etiqueta: "Tiendas", ancho: "6.5rem" },
-  { campo: "hours", etiqueta: "Horas", ancho: "5rem", numerica: true },
-  { campo: "last", etiqueta: "Últ.", ancho: "5rem", numerica: true },
-  { campo: "status", etiqueta: "Estado", ancho: "6.5rem" },
-  { campo: "rating", etiqueta: "Nota", ancho: "4rem", numerica: true },
+const COLUMNS: Column[] = [
+  { field: "title", label: "Title", width: "auto" },
+  { field: "year", label: "Year", width: "4.5rem", numeric: true },
+  { field: "genre", label: "Genre", width: "7rem" },
+  { field: "stores", label: "Stores", width: "6.5rem" },
+  { field: "hours", label: "Hours", width: "5rem", numeric: true },
+  { field: "last", label: "Last", width: "5rem", numeric: true },
+  { field: "status", label: "Status", width: "6.5rem" },
+  { field: "rating", label: "Rating", width: "4rem", numeric: true },
 ];
 
-function horas(minutos: number): string {
-  if (minutos === 0) return "—";
-  if (minutos < 60) return `${minutos} min`;
-  return `${Math.round(minutos / 60)} h`;
+function hours(minutes: number): string {
+  if (minutes === 0) return "—";
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.round(minutes / 60)} h`;
 }
 
-/** El año basta para decidir si algo lleva mucho aparcado, y ocupa cinco letras. */
-function anyoDe(epoch: number | null): string {
+/** The year is sufficient to see whether a game has waited a long time, and it
+ *  uses four characters. */
+function yearOf(epoch: number | null): string {
   return epoch === null ? "—" : String(new Date(epoch * 1000).getFullYear());
 }
 
 /**
- * La biblioteca como tabla: densa, ordenable y con selección múltiple.
+ * The library as a table: dense, sortable and with multiple selection.
  *
- * Va virtualizada con filas espaciadoras arriba y abajo, y no moviendo el
- * `<tbody>` con `transform` como hace la pared. Dentro de una tabla eso saca
- * las celdas de su columna; un `<tr>` con altura ocupa el sitio sin salirse del
- * modelo de tabla, y las cabeceras siguen cuadrando con las celdas.
+ * It is virtual, with spacer rows above and below, and it does not move the
+ * `<tbody>` with `transform` as the wall does. In a table that would take the
+ * cells out of their column; a `<tr>` with a height uses the space and stays in
+ * the table model, and the headers continue to align with the cells.
  *
- * Es una tabla de verdad y no `div`s con `role`: la semántica nativa es la que
- * ya saben leer el teclado y los lectores de pantalla.
+ * It is a true table and not `div`s with a `role`: the native semantics is what
+ * the keyboard and the screen readers already know how to read.
  */
 export function LibraryTable({
   rows,
@@ -55,85 +56,85 @@ export function LibraryTable({
   selected,
   onSelect,
   onOpen,
-  abierto,
+  opened,
 }: {
   rows: LibraryRow[];
   sort: Sort;
   onSort: (sort: Sort) => void;
   selected: Set<string>;
-  /** Marca o desmarca de golpe: uno al pulsar, un rango con mayúsculas. */
-  onSelect: (gameIds: string[], marcar: boolean) => void;
+  /** Marks or clears together: one at a click, a range with the shift key. */
+  onSelect: (gameIds: string[], checked: boolean) => void;
   onOpen: (row: LibraryRow) => void;
-  abierto: string | null;
+  opened: string | null;
 }) {
   const { containerRef, totalHeight, offsetY, range } = useVirtualGrid({
     itemCount: rows.length,
-    rowHeight: ALTO_FILA,
+    rowHeight: ROW_HEIGHT,
   });
-  const alMarcar = useSeleccion(rows, selected, onSelect);
+  const onMark = useSelection(rows, selected, onSelect);
 
-  // Con ↑↓ la fila abierta se va de la ventana virtualizada en cuanto bajas
-  // veinte juegos, y el inspector acaba enseñando uno que ya no está en
-  // pantalla. Traerla a la vista es lo que hace que recorrer la lista con el
-  // teclado sea recorrerla de verdad. La aritmética es la misma que virtualiza:
-  // fila por alto de fila, sin medir nada.
+  // With ↑↓ the open row goes out of the virtual window as soon as you go down
+  // twenty games, and the inspector shows a game that is no longer on the
+  // screen. To bring the row into view is what makes the keyboard really go
+  // through the list. The arithmetic is the same as the virtual list: the row
+  // multiplied by the row height, with no measurement.
   useEffect(() => {
-    const caja = containerRef.current;
-    if (caja === null || abierto === null) return;
+    const box = containerRef.current;
+    if (box === null || opened === null) return;
 
-    const indice = rows.findIndex((row) => row.game_id === abierto);
-    if (indice === -1) return;
+    const index = rows.findIndex((row) => row.game_id === opened);
+    if (index === -1) return;
 
-    // La cabecera va pegada arriba y taparía la fila que acaba de entrar.
-    const cabecera = caja.querySelector("thead")?.clientHeight ?? 0;
-    const arriba = indice * ALTO_FILA;
-    const abajo = arriba + ALTO_FILA;
+    // The header stays at the top and would cover the row that has just come in.
+    const header = box.querySelector("thead")?.clientHeight ?? 0;
+    const top = index * ROW_HEIGHT;
+    const bottom = top + ROW_HEIGHT;
 
-    if (arriba - cabecera < caja.scrollTop) caja.scrollTop = arriba - cabecera;
-    else if (abajo > caja.scrollTop + caja.clientHeight) {
-      caja.scrollTop = abajo - caja.clientHeight;
+    if (top - header < box.scrollTop) box.scrollTop = top - header;
+    else if (bottom > box.scrollTop + box.clientHeight) {
+      box.scrollTop = bottom - box.clientHeight;
     }
-  }, [abierto, rows, containerRef]);
+  }, [opened, rows, containerRef]);
 
   if (rows.length === 0) {
-    return <p className="hint">Ningún juego encaja con lo que has filtrado.</p>;
+    return <p className="hint">No game agrees with your filter.</p>;
   }
 
-  const visibles = rows.slice(range.start, range.end);
-  const alto = { arriba: offsetY, abajo: totalHeight - offsetY - visibles.length * ALTO_FILA };
+  const visible = rows.slice(range.start, range.end);
+  const spacer = { top: offsetY, bottom: totalHeight - offsetY - visible.length * ROW_HEIGHT };
 
-  // Pulsar la columna por la que ya se ordena da la vuelta; cambiar de columna
-  // empieza siempre ascendente.
-  const ordenarPor = (campo: SortField) =>
-    onSort({ field: campo, desc: sort.field === campo ? !sort.desc : false });
+  // A click on the column that already sorts inverts the direction; a change of
+  // column always starts with the ascending direction.
+  const sortBy = (field: SortField) =>
+    onSort({ field, desc: sort.field === field ? !sort.desc : false });
 
   return (
-    <div className="tabla-viewport" ref={containerRef}>
-      <table className="tabla">
+    <div className="table-viewport" ref={containerRef}>
+      <table className="table">
         <colgroup>
           <col style={{ width: "2.2rem" }} />
-          {COLUMNAS.map((columna) => (
-            <col key={columna.campo} style={{ width: columna.ancho }} />
+          {COLUMNS.map((column) => (
+            <col key={column.field} style={{ width: column.width }} />
           ))}
         </colgroup>
         <thead>
           <tr>
             <th />
-            {COLUMNAS.map((columna) => (
+            {COLUMNS.map((column) => (
               <th
-                key={columna.campo}
-                className={columna.numerica ? "num" : undefined}
+                key={column.field}
+                className={column.numeric ? "num" : undefined}
                 aria-sort={
-                  sort.field === columna.campo
+                  sort.field === column.field
                     ? sort.desc
                       ? "descending"
                       : "ascending"
                     : "none"
                 }
               >
-                <button className="th" onClick={() => ordenarPor(columna.campo)}>
-                  {columna.etiqueta}
-                  {sort.field === columna.campo && (
+                <button className="th" onClick={() => sortBy(column.field)}>
+                  {column.label}
+                  {sort.field === column.field && (
                     <span aria-hidden="true">{sort.desc ? " ↓" : " ↑"}</span>
                   )}
                 </button>
@@ -142,25 +143,25 @@ export function LibraryTable({
           </tr>
         </thead>
         <tbody>
-          <tr style={{ height: alto.arriba }} />
-          {visibles.map((row, i) => {
-            const indice = range.start + i;
-            const marcada = selected.has(row.game_id);
+          <tr style={{ height: spacer.top }} />
+          {visible.map((row, i) => {
+            const index = range.start + i;
+            const checked = selected.has(row.game_id);
             return (
               <tr
                 key={row.game_id}
-                className={`${marcada ? "marcada" : ""} ${abierto === row.game_id ? "abierta" : ""}`.trim()}
+                className={`${checked ? "checked" : ""} ${opened === row.game_id ? "open" : ""}`.trim()}
               >
                 <td>
                   <input
                     type="checkbox"
-                    checked={marcada}
-                    aria-label={`Seleccionar ${row.title}`}
-                    onChange={(e) => alMarcar(indice, conMayusculas(e))}
+                    checked={checked}
+                    aria-label={`Select ${row.title}`}
+                    onChange={(e) => onMark(index, withShift(e))}
                   />
                 </td>
                 <td className="tt">
-                  <button className="celda" onClick={() => onOpen(row)}>
+                  <button className="cell" onClick={() => onOpen(row)}>
                     {row.title}
                   </button>
                 </td>
@@ -168,20 +169,20 @@ export function LibraryTable({
                 <td>{row.genres[0] ?? "—"}</td>
                 <td>
                   {row.owned_stores.length > 0 ? (
-                    row.owned_stores.map((tienda) => (
-                      <span key={tienda} className="tienda">
-                        {tienda}
+                    row.owned_stores.map((store) => (
+                      <span key={store} className="store">
+                        {store}
                       </span>
                     ))
                   ) : (
-                    <span className="hint">deseado</span>
+                    <span className="hint">wished for</span>
                   )}
                 </td>
-                <td className="num">{horas(row.playtime_minutes)}</td>
-                <td className="num">{anyoDe(row.last_played_at)}</td>
+                <td className="num">{hours(row.playtime_minutes)}</td>
+                <td className="num">{yearOf(row.last_played_at)}</td>
                 <td>
                   {row.status ? (
-                    <span className={`estado ${row.status}`}>{ETIQUETA_ESTADO[row.status]}</span>
+                    <span className={`status ${row.status}`}>{STATUS_LABEL[row.status]}</span>
                   ) : (
                     <span className="hint">—</span>
                   )}
@@ -190,7 +191,7 @@ export function LibraryTable({
               </tr>
             );
           })}
-          <tr style={{ height: alto.abajo }} />
+          <tr style={{ height: spacer.bottom }} />
         </tbody>
       </table>
     </div>

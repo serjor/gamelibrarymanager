@@ -41,12 +41,13 @@ impl GameRepository<'_> {
         Ok(())
     }
 
-    /// Anota con qué identificador conoce el proveedor de precios esta ficha.
+    /// Writes down the identifier with which the price provider knows this
+    /// record.
     ///
-    /// Va aparte de `upsert` y no dentro de `Game` a propósito: enriquecer una
-    /// ficha con metadatos de IGDB reescribe su fila entera, y si el
-    /// identificador viajara ahí, cada emparejamiento lo borraría sin que nadie
-    /// lo notase hasta la siguiente consulta de precios.
+    /// It is separate from `upsert` and not part of `Game`, and that is
+    /// deliberate: when you add IGDB metadata to a record, its complete row is
+    /// written again, and if the identifier were there, each match would delete
+    /// it and nobody would see it until the next price query.
     pub async fn set_itad(&self, id: GameId, itad_id: &str, slug: &str) -> Result<()> {
         sqlx::query("UPDATE game SET itad_id = ?, itad_slug = ?, updated_at = ? WHERE id = ?")
             .bind(itad_id)
@@ -84,11 +85,12 @@ impl GameRepository<'_> {
         .transpose()
     }
 
-    /// Ficha local —sin metadatos— con ese título normalizado.
+    /// A local record — with no metadata — that has this normalised title.
     ///
-    /// Solo mira las que no tienen `igdb_id`: agrupar por título es lo mejor que
-    /// se puede hacer sin base de metadatos, pero no es identidad, y no puede
-    /// colarse por la puerta de atrás en una ficha que sí la tiene.
+    /// It looks only at the records with no `igdb_id`: to group by title is the
+    /// best that you can do with no metadata database, but it is not an
+    /// identity, and it cannot come in through the back door into a record that
+    /// has an identity.
     pub async fn find_local_by_sort_title(&self, sort_title: &str) -> Result<Option<Game>> {
         sqlx::query(
             "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
@@ -105,12 +107,12 @@ impl GameRepository<'_> {
         .transpose()
     }
 
-    /// Da de baja las fichas que se han quedado sin ninguna copia detrás.
+    /// Deletes logically the records that have no copy behind them.
     ///
-    /// Pasa cuando el emparejamiento con IGDB reúne bajo una sola ficha lo que
-    /// antes estaba en dos locales. Las que tienen estado del usuario **no** se
-    /// tocan: un duplicado a la vista molesta, perder lo que el usuario escribió
-    /// no se arregla.
+    /// This occurs when the match with IGDB collects into one record the data
+    /// that was in two local records before. The records that have a user status
+    /// are **not** touched: a duplicate that you see is a nuisance, but data of
+    /// the user that is lost cannot be recovered.
     pub async fn soft_delete_orphans(&self) -> Result<u64> {
         let now = OffsetDateTime::now_utc();
         Ok(sqlx::query(

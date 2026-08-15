@@ -1,14 +1,14 @@
-//! Proveedores de metadatos.
+//! The metadata providers.
 //!
-//! IGDB es de Twitch y su acuerdo de desarrollador **prohíbe** empotrar el
-//! client secret en una aplicación de escritorio: la única salida sin montar un
-//! servidor es que cada usuario registre su propia aplicación en Twitch. Por eso
-//! las credenciales entran por parámetro y no hay ninguna constante aquí.
+//! IGDB belongs to Twitch, and its developer agreement **prohibits** a client
+//! secret inside a desktop application: the only method that does not need a
+//! server is that each user registers an application of their own in Twitch.
+//! Thus the credentials come in as a parameter and there is no constant here.
 //!
-//! ITAD entra por la misma puerta y por el mismo motivo: su clave es del
-//! usuario, vive en el almacén de secretos y llega por parámetro. Lo que aporta
-//! no es una ficha sino un precio, que es lo que convierte una lista de deseados
-//! en una decisión de compra.
+//! ITAD comes in through the same door and for the same reason: its key belongs
+//! to the user, it lives in the store of secrets and it comes in as a parameter.
+//! What it gives is not a record but a price, which is what turns a wishlist
+//! into a decision to buy.
 
 pub mod igdb;
 pub mod itad;
@@ -19,16 +19,16 @@ pub use itad::ItadClient;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MetadataError {
-    // Un solo error para los dos proveedores, así que el mensaje no puede
-    // nombrar a IGDB: quien se equivoque con la clave de ITAD leería que lo que
-    // está mal es otra cosa.
-    #[error("las credenciales del proveedor no son válidas")]
+    // One error for the two providers, thus the message cannot name IGDB: a
+    // user who makes a mistake with the ITAD key would read that a different
+    // thing is incorrect.
+    #[error("the credentials of the provider are not valid")]
     Unauthorized,
-    #[error("límite de peticiones alcanzado")]
+    #[error("the request limit is reached")]
     RateLimited,
-    #[error("no se pudo contactar con el proveedor: {0}")]
+    #[error("could not contact the provider: {0}")]
     Transport(String),
-    #[error("el proveedor respondió de forma inesperada: {0}")]
+    #[error("the provider gave an unexpected answer: {0}")]
     Unexpected(String),
 }
 

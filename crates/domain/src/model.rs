@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Las tiendas que el sistema sabe leer. Añadir una variante obliga a revisar
-/// todo el emparejamiento, que es exactamente la intención.
+/// The stores that the system can read. If you add a variant, you must examine
+/// all of the matching code. That is the intention.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum StoreId {
@@ -34,8 +34,8 @@ pub struct ConnectorState {
     pub last_error: Option<String>,
 }
 
-/// Una entrada de tienda es propiedad o deseo. Nada más: son los dos únicos
-/// listados que los conectores saben leer.
+/// A store entry is owned or wished for. Nothing else: these are the only two
+/// lists that the connectors can read.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EntryKind {
@@ -43,8 +43,8 @@ pub enum EntryKind {
     Wishlist,
 }
 
-/// Estado que el usuario asigna a un juego. Es el único dato que ninguna
-/// sincronización puede sobrescribir.
+/// The status that the user gives to a game. It is the only data that no
+/// synchronisation can overwrite.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PlayStatus {

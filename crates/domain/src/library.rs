@@ -1,28 +1,29 @@
-//! Las entidades de la biblioteca, en el orden en que se apilan:
-//! lo que dice la tienda, lo que deduce la app, la ficha y lo que escribe el
-//! usuario. Cada una tiene un dueño distinto y ninguna pisa a la siguiente.
+//! The library entities, in the order in which they stack up: what the store
+//! says, what the application deduces, the metadata record and what the user
+//! writes. Each one has a different owner and none overwrites the next.
 
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 use crate::model::{EntryKind, GameId, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
 
-/// Una cuenta conectada. Las credenciales no viven aquí: van al keyring, y esta
-/// fila solo guarda a quién pertenecen.
+/// A connected account. The credentials do not live here: they go to the
+/// keyring, and this row only keeps a record of who owns them.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StoreAccount {
     pub id: StoreAccountId,
     pub store: StoreId,
-    /// Identificador de la cuenta en la tienda (steamid, user id de GOG…).
+    /// The identifier of the account in the store (steamid, GOG user id, and so
+    /// on).
     pub account_ref: String,
     pub display_name: Option<String>,
     pub connected_at: OffsetDateTime,
     pub last_sync_at: Option<OffsetDateTime>,
 }
 
-/// Lo que la tienda dice, tal cual. Nunca se edita a mano: la sincronización lo
-/// da de alta o lo actualiza, y `raw` conserva la respuesta original para poder
-/// re-emparejar en el futuro sin volver a preguntar a la tienda.
+/// What the store says, unchanged. It is never edited by hand: the
+/// synchronisation adds it or updates it, and `raw` keeps the initial answer so
+/// that you can match again in the future without a new request to the store.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StoreEntry {
     pub id: StoreEntryId,
@@ -33,20 +34,21 @@ pub struct StoreEntry {
     pub title: String,
     pub playtime_minutes: Option<i64>,
     pub acquired_at: Option<OffsetDateTime>,
-    /// Portada y página de la copia **en su tienda**. No las usa el
-    /// emparejamiento: existen para que el usuario pueda comparar lo que dice la
-    /// tienda con lo que propone IGDB antes de aceptar un enlace dudoso.
+    /// The cover and the page of the copy **in its own store**. The matching
+    /// does not use them: they exist so that the user can compare what the
+    /// store says with what IGDB proposes before they accept an unsure link.
     pub cover_url: Option<String>,
     pub store_url: Option<String>,
     pub raw: serde_json::Value,
 }
 
-/// La ficha unificada. Una por juego, aunque se posea en tres tiendas.
+/// The unified metadata record. One for each game, even if you own it in three
+/// stores.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Game {
     pub id: GameId,
     pub canonical_title: String,
-    /// Título normalizado para ordenar y emparejar. Lo produce la fase 4.
+    /// The title, normalised for sorting and matching. Phase 4 produces it.
     pub sort_title: String,
     pub igdb_id: Option<i64>,
     pub cover_url: Option<String>,
@@ -55,8 +57,8 @@ pub struct Game {
     pub genres: Vec<String>,
 }
 
-/// Cómo se decidió un enlace. `Manual` es la palabra del usuario y el
-/// emparejamiento automático no puede sobrescribirla nunca.
+/// How a link was decided. `Manual` is the word of the user, and the automatic
+/// matching can never overwrite it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LinkMethod {
@@ -64,8 +66,8 @@ pub enum LinkMethod {
     Manual,
 }
 
-/// El resultado del emparejamiento, en su propia tabla para que rehacerlo no
-/// toque ni el dato de la tienda ni el estado del usuario.
+/// The result of the matching, in a table of its own so that a new match does
+/// not touch the store data or the user status.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GameLink {
     pub game_id: GameId,
@@ -74,7 +76,7 @@ pub struct GameLink {
     pub method: LinkMethod,
 }
 
-/// Lo único que escribe el usuario. Ninguna sincronización lo toca.
+/// The only data that the user writes. No synchronisation touches it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UserState {
     pub game_id: GameId,

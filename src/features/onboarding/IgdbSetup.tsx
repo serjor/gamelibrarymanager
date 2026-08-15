@@ -5,10 +5,10 @@ import { api, errorMessage } from "../../lib/api";
 const CONSOLE_URL = "https://dev.twitch.tv/console/apps";
 
 /**
- * IGDB es de Twitch, y su acuerdo de desarrollador prohíbe empotrar el client
- * secret en una aplicación de escritorio. O montas un servidor propio, o cada
- * usuario registra su aplicación. Esta pantalla es el precio de no tener
- * servidor, así que al menos lleva el enlace directo y valida al momento.
+ * IGDB belongs to Twitch, and its developer agreement prohibits a client secret
+ * inside a desktop application. Either you build a server of your own, or each
+ * user registers their application. This screen is the cost of no server, thus
+ * it at least carries the direct link and examines the credentials immediately.
  */
 export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
   const [clientId, setClientId] = useState("");
@@ -32,30 +32,31 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Metadatos: IGDB</h2>
+      <h2>Metadata: IGDB</h2>
       <p className="hint">
-        Hace falta una aplicación tuya en el portal de Twitch. Es gratis para uso
-        no comercial. Sin esto la biblioteca funciona igual, pero las fichas se
-        quedan con el título de la tienda y sin portada.
+        An application of your own in the Twitch portal is necessary. It is free
+        for non-commercial use. Without this the library operates in the same
+        way, but the records keep the title of the store and have no cover.
       </p>
-      {/* El formulario de Twitch pide tres cosas que no son evidentes, y
-          equivocarse en la tercera te deja sin secret y sin saber por qué. */}
+      {/* The Twitch form asks for three things that are not clear, and a mistake
+          in the third one leaves you with no secret and with no reason why. */}
       <p className="hint">
-        Al registrarla, el portal te pedirá:
+        When you register it, the portal will ask you for:
       </p>
       <ul className="hint">
         <li>
-          <strong>OAuth Redirect URL</strong>: pon <code>http://localhost</code>.
-          Es obligatorio en su formulario, pero aquí no se usa nunca: esta
-          aplicación pide el token con tus credenciales, sin ninguna redirección.
+          <strong>OAuth Redirect URL</strong>: write <code>http://localhost</code>.
+          Their form makes it necessary, but this application never uses it: this
+          application asks for the token with your credentials and with no
+          redirect.
         </li>
         <li>
-          <strong>Client Type</strong>: <strong>Confidential</strong>. Una
-          aplicación pública no llega a darte Client Secret.
+          <strong>Client Type</strong>: <strong>Confidential</strong>. A public
+          application does not give you a Client Secret.
         </li>
         <li>
-          <strong>Name</strong>: es único en todo Twitch, así que puede que
-          tengas que probar varios.
+          <strong>Name</strong>: it is unique in all of Twitch, thus you can have
+          to try more than one.
         </li>
       </ul>
 
@@ -84,17 +85,17 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
         className="link"
         onClick={() => {
           openUrl(CONSOLE_URL).catch((cause: unknown) =>
-            setError(`No he podido abrir ${CONSOLE_URL}: ${errorMessage(cause)}`),
+            setError(`Could not open ${CONSOLE_URL}: ${errorMessage(cause)}`),
           );
         }}
       >
-        Registrar mi aplicación en dev.twitch.tv
+        Register my application in dev.twitch.tv
       </button>
 
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
-        {busy ? "Comprobando…" : "Guardar"}
+        {busy ? "Examining…" : "Save"}
       </button>
     </form>
   );

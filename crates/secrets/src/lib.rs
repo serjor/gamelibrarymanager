@@ -1,8 +1,7 @@
-//! Almacén de secretos. Aquí van las claves de API y los tokens de tienda, y
-//! solo aquí: nunca a SQLite, nunca a un fichero de configuración, nunca a un
-//! log.
+//! The store of secrets. The API keys and the store tokens go here, and only
+//! here: never to SQLite, never to a configuration file, never to a log.
 //!
-//! Nada de `tauri-plugin-stronghold`: desaparece en Tauri v3.
+//! No `tauri-plugin-stronghold`: it goes away in Tauri v3.
 
 mod encrypted_file;
 mod keyring_store;
@@ -12,45 +11,47 @@ pub use keyring_store::KeyringStore;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecretsError {
-    #[error("no hay almacén de secretos disponible en este sistema")]
+    #[error("there is no store of secrets available on this system")]
     Unavailable,
-    #[error("la contraseña no abre el almacén")]
+    #[error("the passphrase does not open the store")]
     WrongPassphrase,
-    #[error("el almacén está corrupto: {0}")]
+    #[error("the store is corrupt: {0}")]
     Corrupt(String),
-    #[error("error del almacén del sistema: {0}")]
+    #[error("error of the system store: {0}")]
     Backend(String),
-    #[error("error de entrada/salida: {0}")]
+    #[error("input/output error: {0}")]
     Io(#[from] std::io::Error),
 }
 
 pub type Result<T> = std::result::Result<T, SecretsError>;
 
-/// Guardar y recuperar secretos por nombre. Deliberadamente sin `list`: nadie
-/// necesita enumerar credenciales y no tenerlo evita la tentación.
+/// Keeps secrets and gets them back by name. There is deliberately no `list`:
+/// nobody needs a list of the credentials, and the absence of the operation
+/// removes the temptation.
 pub trait SecretStore: Send + Sync {
     fn set(&self, key: &str, value: &str) -> Result<()>;
     fn get(&self, key: &str) -> Result<Option<String>>;
     fn delete(&self, key: &str) -> Result<()>;
 }
 
-/// Qué almacén puede usarse en esta máquina.
+/// Which store you can use on this machine.
 ///
-/// En Linux sin secret-service —contenedores, escritorios mínimos, sesiones
-/// remotas— el keyring nativo no existe, y descubrirlo al guardar la primera
-/// clave es la peor forma de enterarse.
+/// On Linux with no secret-service — containers, minimal desktops, remote
+/// sessions — the native keyring does not exist, and to find that when you keep
+/// the first key is the worst moment to find it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Backend {
-    /// Keyring del sistema operativo: sin contraseña que recordar.
+    /// The keyring of the operating system: there is no passphrase to remember.
     Keyring,
-    /// Fichero cifrado: exige una contraseña al usuario.
+    /// An encrypted file: it asks the user for a passphrase.
     Passphrase,
 }
 
-/// Comprueba de verdad si el keyring responde, con un secreto de usar y tirar.
-/// Preguntar por la plataforma no vale: dos Linux iguales se comportan distinto
-/// según qué haya arrancado en la sesión.
+/// Examines whether the keyring really answers, with a secret that it then
+/// deletes. A question about the platform is not sufficient: two equal Linux
+/// systems operate differently, and the difference is what started in the
+/// session.
 pub fn detect(service: &str) -> Backend {
     let probe = KeyringStore::new(service);
     let key = "__probe__";

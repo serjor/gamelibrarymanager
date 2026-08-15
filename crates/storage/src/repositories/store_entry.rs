@@ -12,8 +12,9 @@ use crate::{Database, Result};
 pub struct StoreEntryRepository<'a>(pub &'a Database);
 
 impl StoreEntryRepository<'_> {
-    /// Vuelca lo que ha dicho la tienda. Es idempotente a propósito: sincronizar
-    /// dos veces actualiza, nunca duplica, y `first_seen_at` no se mueve.
+    /// Writes what the store said. It is idempotent, and that is deliberate: a
+    /// second synchronisation updates, it never duplicates, and `first_seen_at`
+    /// does not change.
     pub async fn upsert_many(&self, entries: &[StoreEntry]) -> Result<()> {
         let now = OffsetDateTime::now_utc();
         let mut tx = self.0.pool().begin().await?;
@@ -55,8 +56,9 @@ impl StoreEntryRepository<'_> {
         Ok(())
     }
 
-    /// Baja lógica de lo que ya no aparece en la tienda. No se borra la fila:
-    /// el juego puede volver, y su estado y su enlace siguen ahí cuando vuelva.
+    /// A logical delete of the entries that the store no longer shows. The row
+    /// is not deleted: the game can come back, and its status and its link are
+    /// still there when it comes back.
     pub async fn soft_delete_missing(
         &self,
         account_id: domain::StoreAccountId,
@@ -97,8 +99,8 @@ impl StoreEntryRepository<'_> {
         .collect()
     }
 
-    /// Entradas activas que todavía no cuelgan de ninguna ficha. Es la cola de
-    /// revisión y también lo que queda por emparejar.
+    /// The active entries that are not yet attached to a record. This is the
+    /// review queue and also the work that the matching has left.
     pub async fn unlinked(&self) -> Result<Vec<StoreEntry>> {
         sqlx::query(
             "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,
@@ -115,12 +117,12 @@ impl StoreEntryRepository<'_> {
         .collect()
     }
 
-    /// Entradas que cuelgan de una ficha creada sin metadatos.
+    /// The entries that are attached to a record made with no metadata.
     ///
-    /// Son las que se emparejaron por título mientras IGDB no estaba
-    /// configurado: siguen pendientes de identidad de verdad, pero ya se ven en
-    /// la biblioteca, así que `unlinked` no las devuelve. Los enlaces manuales
-    /// quedan fuera: la palabra del usuario no se revisa.
+    /// These are the entries matched by title while IGDB was not configured:
+    /// they are still without a true identity, but you can already see them in
+    /// the library, thus `unlinked` does not give them back. The manual links
+    /// stay out: the word of the user is not examined again.
     pub async fn pending_metadata(&self) -> Result<Vec<StoreEntry>> {
         sqlx::query(
             "SELECT e.id, e.account_id, e.store, e.store_app_id, e.kind, e.title,

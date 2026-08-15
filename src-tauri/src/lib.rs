@@ -5,8 +5,9 @@ mod prices;
 mod state;
 mod sync;
 
-/// Superficie que consumen los tests de integración. No la usa la aplicación:
-/// existe para poder probar el caso de uso completo sin arrancar Tauri.
+/// The surface that the integration tests use. The application does not use it:
+/// it exists so that you can test the complete use case without you start
+/// Tauri.
 pub mod testing {
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
@@ -18,8 +19,8 @@ use state::AppState;
 use storage::Database;
 use tauri::Manager;
 
-/// Arranca la aplicación. Los comandos solo orquestan casos de uso: la lógica
-/// vive en los crates de dominio y adaptadores, nunca aquí.
+/// Starts the application. The commands only control the use cases: the logic
+/// lives in the domain and adapter crates, never here.
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -58,5 +59,5 @@ pub fn run() {
             commands::set_user_state,
         ])
         .run(tauri::generate_context!())
-        .expect("error al arrancar la aplicación");
+        .expect("error while the application started");
 }

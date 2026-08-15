@@ -61,7 +61,7 @@ pub async fn connect_epic(
     let connector = state
         .connectors
         .get(&StoreId::Epic)
-        .ok_or_else(|| AppError::Message("sin conector de Epic".to_owned()))?;
+        .ok_or_else(|| AppError::Message("there is no Epic connector".to_owned()))?;
 
     let session = connector
         .authenticate(&AuthContext::AuthCode { code, client })
@@ -106,14 +106,14 @@ async fn request_code(app: &AppHandle, client_id: &str) -> Result<String, AppErr
     let url = EpicConnector::authorize_url(client_id);
     let url = url
         .parse()
-        .map_err(|_| AppError::Message("la dirección de login de Epic no es válida".to_owned()))?;
+        .map_err(|_| AppError::Message("the Epic login address is not valid".to_owned()))?;
 
     let (tx, rx) = tokio::sync::oneshot::channel::<Outcome>();
     let sender = Arc::new(Mutex::new(Some(tx)));
 
     let on_load = sender.clone();
     let window = WebviewWindowBuilder::new(app, LOGIN_WINDOW, WebviewUrl::External(url))
-        .title("Iniciar sesión en Epic")
+        .title("Sign in to Epic")
         .inner_size(520.0, 720.0)
         .on_page_load(move |webview, payload| {
             // Only the finished load, and only the page that carries the code.
@@ -134,7 +134,7 @@ async fn request_code(app: &AppHandle, client_id: &str) -> Result<String, AppErr
             });
         })
         .build()
-        .map_err(|e| AppError::Message(format!("no se pudo abrir el login de Epic: {e}")))?;
+        .map_err(|e| AppError::Message(format!("could not open the Epic login: {e}")))?;
 
     let on_close = sender.clone();
     window.on_window_event(move |event| {
@@ -149,12 +149,12 @@ async fn request_code(app: &AppHandle, client_id: &str) -> Result<String, AppErr
     match outcome {
         Outcome::Code(code) => Ok(code),
         Outcome::Unreadable => Err(AppError::Message(
-            "Epic ha abierto la página de autorización pero no ha devuelto ningún \
-             código. Vuelve a intentarlo; si se repite, es que Epic ha cambiado su \
-             forma de autorizar y el conector necesita una actualización."
+            "Epic opened the authorisation page but gave back no code. Try \
+             again; if this occurs again, Epic has changed how it authorises \
+             and the connector needs an update."
                 .to_owned(),
         )),
-        Outcome::Closed => Err(AppError::Message("login de Epic cancelado".to_owned())),
+        Outcome::Closed => Err(AppError::Message("the Epic login was cancelled".to_owned())),
     }
 }
 

@@ -1,5 +1,5 @@
-//! Un repositorio por agregado. Cada uno es dueño de sus tablas y nadie escribe
-//! en las tablas de otro.
+//! One repository for each aggregate. Each one owns its tables and no
+//! repository writes in the tables of another.
 
 mod connector_state;
 mod game;

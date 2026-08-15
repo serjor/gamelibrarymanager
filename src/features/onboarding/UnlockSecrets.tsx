@@ -2,9 +2,9 @@ import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
 
 /**
- * Solo aparece en máquinas sin keyring: contenedores, escritorios mínimos,
- * sesiones remotas. Descubrirlo al guardar la primera clave sería la peor
- * forma de enterarse, así que se detecta al arrancar.
+ * It appears only on machines with no keyring: containers, minimal desktops,
+ * remote sessions. To find that when you keep the first key would be the worst
+ * moment to find it, thus the application detects it at the start.
  */
 export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
   const [passphrase, setPassphrase] = useState("");
@@ -27,14 +27,14 @@ export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Contraseña del almacén</h2>
+      <h2>Passphrase of the store</h2>
       <p className="hint">
-        Este sistema no tiene un llavero donde guardar las claves, así que se
-        cifran en un fichero. Si pierdes esta contraseña habrá que volver a
-        introducir las claves de API: no se guarda en ninguna parte.
+        This system has no keyring in which to keep the keys, thus they are
+        encrypted in a file. If you lose this passphrase you must write the API
+        keys again: the passphrase is kept in no place.
       </p>
 
-      <label htmlFor="passphrase">Contraseña</label>
+      <label htmlFor="passphrase">Passphrase</label>
       <input
         id="passphrase"
         type="password"
@@ -47,7 +47,7 @@ export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || passphrase.length < 8}>
-        {busy ? "Abriendo…" : "Abrir almacén"}
+        {busy ? "Opening…" : "Open the store"}
       </button>
     </form>
   );

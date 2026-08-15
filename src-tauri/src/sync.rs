@@ -1,12 +1,13 @@
-//! Caso de uso de sincronización: pedir a cada tienda lo que hay y volcarlo en
+//! The synchronisation use case: to ask each store what is there and write it in
 //! `store_entry`.
 //!
-//! No escribe en `game`, ni en `game_link`, ni en `user_state`. Esa disciplina
-//! es la que hace que sincronizar sea una operación segura de repetir.
+//! It does not write in `game`, in `game_link` or in `user_state`. That
+//! discipline is what makes a synchronisation an operation that is safe to
+//! repeat.
 //!
-//! Recibe sus colaboradores en lugar de sacarlos del estado global: así se
-//! puede probar de extremo a extremo contra un servidor de mentira y una base
-//! de datos de verdad, sin arrancar Tauri.
+//! It takes its collaborators and does not get them from the global state: thus
+//! you can test it from end to end against a pretend server and a real database,
+//! with no start of Tauri.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -25,8 +26,8 @@ use time::OffsetDateTime;
 use crate::error::AppError;
 use crate::state::{AppState, credential_key};
 
-/// Qué está pasando durante una sincronización. La UI lo recibe por eventos en
-/// lugar de esperar callada a que termine.
+/// What occurs during a synchronisation. The interface receives it through
+/// events and does not wait quietly for the end.
 #[derive(Debug, Clone, Serialize)]
 pub struct SyncProgress {
     pub store: String,
@@ -35,18 +36,18 @@ pub struct SyncProgress {
     pub total: usize,
 }
 
-/// Recibe el progreso. Un trait en vez del `AppHandle` de Tauri para que el
-/// caso de uso se pueda probar sin arrancar la aplicación.
+/// Receives the progress. A trait and not the `AppHandle` of Tauri, so that you
+/// can test the use case without you start the application.
 pub trait ProgressSink: Send + Sync {
     fn report(&self, progress: SyncProgress);
-    /// La sincronización se para en el siguiente punto seguro, nunca a mitad de
-    /// una escritura.
+    /// The synchronisation stops at the next safe point, never in the middle of
+    /// a write.
     fn cancelled(&self) -> bool {
         false
     }
 }
 
-/// Para cuando a nadie le interesa el progreso: los tests, por ejemplo.
+/// For when nobody wants the progress: the tests, for example.
 pub struct Silent;
 impl ProgressSink for Silent {
     fn report(&self, _progress: SyncProgress) {}
@@ -57,13 +58,14 @@ pub struct SyncReport {
     pub owned: usize,
     pub wishlist: usize,
     pub removed: u64,
-    /// Cuentas que han fallado, con el motivo. Una tienda caída no puede
-    /// impedir que las demás se sincronicen.
+    /// The accounts that failed, with the reason. A store that is down cannot
+    /// prevent the synchronisation of the other stores.
     pub failures: Vec<SyncFailure>,
     /// Stores that were left out because their connector is switched off. It is
     /// said out loud: a library that quietly stops growing looks like a bug.
     pub skipped: Vec<String>,
-    /// El usuario paró a mitad. Lo ya volcado se queda: es idempotente.
+    /// The user stopped in the middle. The data already written stays: the
+    /// operation is idempotent.
     pub cancelled: bool,
 }
 
@@ -116,7 +118,7 @@ pub async fn sync_stores(
         }
         progress.report(SyncProgress {
             store: account.store.as_str().to_owned(),
-            stage: "biblioteca",
+            stage: "library",
             done: index,
             total,
         });
@@ -125,7 +127,7 @@ pub async fn sync_stores(
                 sync_account(db, secrets, connector.as_ref(), &account, &mut report).await
             }
             None => Err(AppError::Message(format!(
-                "sin conector para {}",
+                "there is no connector for {}",
                 account.store.as_str()
             ))),
         };
@@ -177,9 +179,10 @@ pub async fn sync_account(
 
     let session = restore_session(connector, account, credential.clone()).await?;
 
-    // Si el conector ha renovado la credencial hay que guardarla antes de nada.
-    // GOG rota el token de refresco al usarlo: perder el nuevo deja la cuenta
-    // sin forma de volver a entrar, y no se notaría hasta la próxima caducidad.
+    // If the connector renewed the credential, you must keep it before anything
+    // else. GOG changes the refresh token when you use it: to lose the new token
+    // leaves the account with no way back in, and nobody would see that until
+    // the next expiry.
     if session.credential != credential {
         secrets.set(&key, &session.credential)?;
     }
@@ -206,8 +209,8 @@ pub async fn sync_account(
     Ok(())
 }
 
-/// Reconstruye la sesión a partir de lo guardado. El conector decide qué
-/// significa su propia credencial; aquí solo se transporta.
+/// Builds the session again from the data kept. The connector decides what its
+/// own credential means; this code only carries it.
 async fn restore_session(
     connector: &dyn StoreConnector,
     account: &StoreAccount,

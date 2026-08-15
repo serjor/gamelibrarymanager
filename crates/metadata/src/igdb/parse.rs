@@ -1,5 +1,5 @@
-//! Lectura de las respuestas de IGDB, separada del transporte para poder
-//! probarla con respuestas grabadas y sin red.
+//! The reading of the IGDB answers, kept apart from the transport so that you
+//! can test it with recorded answers and with no network.
 
 use domain::Candidate;
 use serde::Deserialize;
@@ -55,28 +55,28 @@ struct Cover {
 
 pub fn parse_token(body: &str, now: OffsetDateTime) -> Result<IgdbToken> {
     let parsed: TokenResponse = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("token ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable token: {e}")))?;
     Ok(IgdbToken {
         access_token: parsed.access_token,
         expires_at: now.unix_timestamp() + parsed.expires_in,
     })
 }
 
-/// Los cruces de un lote, indexados por el identificador de la tienda.
+/// The joins of one batch, indexed by the identifier of the store.
 ///
-/// Un `uid` puede venir repetido —IGDB registra la misma copia bajo varias
-/// fichas cuando hay ediciones— y entonces gana la primera. Devolver dos fichas
-/// para un identificador que se pidió como exacto sería mentir sobre lo que es
-/// exacto, y quien llama no tiene con qué desempatar.
+/// A `uid` can come more than once — IGDB records the same copy under more than
+/// one record when there are editions — and then the first one wins. To give
+/// back two records for an identifier that was requested as exact would be false
+/// about what is exact, and the caller has no data to break the tie.
 pub fn parse_external_games(body: &str) -> Result<Vec<(String, i64)>> {
     let parsed: Vec<ExternalGame> = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
     Ok(parsed.into_iter().map(|e| (e.uid, e.game)).collect())
 }
 
 pub fn parse_candidates(body: &str) -> Result<Vec<Candidate>> {
     let parsed: Vec<RawGame> = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
 
     Ok(parsed
         .into_iter()
@@ -89,15 +89,15 @@ pub fn parse_candidates(body: &str) -> Result<Vec<Candidate>> {
                 .map(|alt| alt.name)
                 .collect(),
             release_year: game.first_release_date.and_then(year_of),
-            // En la cola de revisión la portada es una miniatura para
-            // distinguir de un vistazo, no una carátula: basta la talla chica.
+            // In the review queue the cover is a small image to tell candidates
+            // apart quickly, not a full cover: the small size is sufficient.
             cover_url: game.cover.map(|cover| cover_url(&cover, "t_cover_small")),
             slug: game.slug,
         })
         .collect())
 }
 
-/// IGDB sirve las portadas por plantilla, y la talla va en la propia dirección.
+/// IGDB gives the covers through a template, and the size goes in the address.
 fn cover_url(cover: &Cover, size: &str) -> String {
     format!(
         "https://images.igdb.com/igdb/image/upload/{size}/{}.jpg",
@@ -107,14 +107,14 @@ fn cover_url(cover: &Cover, size: &str) -> String {
 
 pub fn parse_game(body: &str) -> Result<Option<GameMetadata>> {
     let parsed: Vec<RawGame> = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
 
     Ok(parsed.into_iter().next().map(|game| GameMetadata {
         igdb_id: game.id,
         name: game.name,
         summary: game.summary,
-        // t_cover_big es el tamaño que se ve bien en la rejilla de la
-        // biblioteca sin disparar el peso.
+        // t_cover_big is the size that looks good in the grid of the library
+        // and does not make the page too heavy.
         cover_url: game.cover.map(|cover| cover_url(&cover, "t_cover_big")),
         released_at: game
             .first_release_date

@@ -12,12 +12,12 @@ use crate::{Database, Result};
 pub struct GameLinkRepository<'a>(pub &'a Database);
 
 impl GameLinkRepository<'_> {
-    /// Rehace el emparejamiento automático: borra los enlaces `auto` y escribe
-    /// los nuevos en una sola transacción.
+    /// Makes the automatic matching again: it deletes the `auto` links and
+    /// writes the new links in one transaction.
     ///
-    /// Los enlaces `manual` no se tocan. Es la palabra del usuario y ningún
-    /// algoritmo la revisa. `game` y `user_state` quedan intactos por
-    /// construcción: esta operación solo escribe en `game_link`.
+    /// The `manual` links are not touched. They are the word of the user and no
+    /// algorithm examines them. `game` and `user_state` stay unchanged by
+    /// design: this operation writes only in `game_link`.
     pub async fn rebuild_auto(&self, links: &[GameLink]) -> Result<()> {
         let now = OffsetDateTime::now_utc();
         let mut tx = self.0.pool().begin().await?;
@@ -27,8 +27,9 @@ impl GameLinkRepository<'_> {
             .await?;
 
         for link in links.iter().filter(|l| l.method == LinkMethod::Auto) {
-            // Si la entrada ya tiene un enlace manual, el índice único la
-            // protege: se ignora la propuesta automática en lugar de pisarla.
+            // If the entry already has a manual link, the unique index
+            // protects it: the automatic proposal is ignored and does not
+            // overwrite the manual link.
             sqlx::query(
                 "INSERT OR IGNORE INTO game_link
                      (game_id, store_entry_id, confidence, method, updated_at)
@@ -47,7 +48,7 @@ impl GameLinkRepository<'_> {
         Ok(())
     }
 
-    /// Corrección del usuario: sustituye cualquier enlace de esa entrada.
+    /// A correction of the user: it replaces every link of that entry.
     pub async fn set_manual(&self, link: &GameLink) -> Result<()> {
         let now = OffsetDateTime::now_utc();
         let mut tx = self.0.pool().begin().await?;
@@ -94,7 +95,7 @@ impl GameLinkRepository<'_> {
             .collect()
     }
 
-    /// Entradas de tienda que no han encontrado ficha: la cola de revisión.
+    /// The store entries that found no record: the review queue.
     pub async fn unlinked_entry_count(&self) -> Result<i64> {
         let row = sqlx::query(
             "SELECT COUNT(*) AS n FROM store_entry e

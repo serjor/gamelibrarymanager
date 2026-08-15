@@ -1,11 +1,12 @@
--- Cuatro capas separadas a propósito:
---   store_entry  lo que dice la tienda      (lo escribe la sincronización)
---   game_link    lo que deduce la app       (lo reescribe el emparejamiento)
---   game         la ficha canónica          (metadatos)
---   user_state   lo que escribe el usuario  (no lo toca nada más)
+-- Four layers, kept apart deliberately:
+--   store_entry  what the store says          (the synchronisation writes it)
+--   game_link    what the application deduces (the matching writes it again)
+--   game         the canonical record         (metadata)
+--   user_state   what the user writes         (nothing else touches it)
 --
--- Ninguna tabla borra filas: `deleted_at` marca la baja y conserva el histórico,
--- que es lo que permitirá sincronizar entre dispositivos sin resucitar registros.
+-- No table deletes rows: `deleted_at` marks the delete and keeps the history,
+-- which is what will let the application synchronise between devices without it
+-- brings deleted records back.
 
 CREATE TABLE store_account (
     id            TEXT PRIMARY KEY,
@@ -51,9 +52,9 @@ CREATE TABLE game (
 
 CREATE INDEX game_by_sort_title ON game (sort_title);
 
--- Una entrada de tienda pertenece como mucho a un juego: el índice único sobre
--- store_entry_id es lo que impide que un emparejamiento defectuoso duplique la
--- misma copia en dos fichas.
+-- A store entry belongs to one game at the most: the unique index on
+-- store_entry_id is what prevents an incorrect match from putting the same copy
+-- in two records.
 CREATE TABLE game_link (
     game_id         TEXT NOT NULL REFERENCES game (id) ON DELETE CASCADE,
     store_entry_id  TEXT NOT NULL REFERENCES store_entry (id) ON DELETE CASCADE,

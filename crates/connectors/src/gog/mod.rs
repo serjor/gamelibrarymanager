@@ -1,28 +1,30 @@
-//! Conector de GOG.
+//! The GOG connector.
 //!
-//! GOG no tiene API pública ni permite registrar un cliente propio: el único
-//! cliente que su servidor de autorización reconoce es el de GOG Galaxy. Por
-//! eso el par `client_id`/`client_secret` no viaja dentro del binario sino que
-//! lo aporta el usuario al conectar la cuenta, igual que la clave de Steam, y
-//! vive donde viven las demás credenciales: en el almacén de secretos.
+//! GOG has no public API and does not let you register a client of your own: the
+//! only client that its authorisation server accepts is the client of GOG
+//! Galaxy. Thus the `client_id`/`client_secret` pair does not go inside the
+//! binary. The user supplies it when they connect the account, as with the Steam
+//! key, and it lives where the other credentials live: in the store of secrets.
 //!
-//! La contraseña de GOG no pasa por aquí en ningún momento. El usuario se
-//! identifica en la página real de GOG dentro de un webview y lo único que este
-//! código llega a ver es el `code` de la redirección.
+//! The GOG password never comes through here. The user identifies themselves on
+//! the real GOG page in a webview, and the only data that this code sees is the
+//! `code` of the redirect.
 //!
-//! ## Vigencia de los endpoints (comprobado el 2026-08-14)
+//! ## The endpoints (examined on 2026-08-14)
 //!
-//! El plan documentaba endpoints de un volcado de 2018 y la mitad ya no vale:
+//! The plan recorded endpoints from a 2018 dump and one half of them is no
+//! longer applicable:
 //!
-//! - `auth.gog.com/auth` y `auth.gog.com/token` **siguen bien**. El token
-//!   responde `invalid_grant` a un código inventado, es decir, acepta el
-//!   cliente y solo rechaza el código.
-//! - `embed.gog.com/user/data/games` y `embed.gog.com/account/getFilteredProducts`
-//!   **están muertos**: responden 302 a la pantalla de login. Heroic los
-//!   sustituyó en su PR #5718 (junio de 2026) y ya no le queda ni una
-//!   referencia a `embed.gog.com` en su código de biblioteca.
-//! - La biblioteca se lee hoy de `galaxy-library.gog.com/users/{id}/releases`,
-//!   paginada por `page_token`.
+//! - `auth.gog.com/auth` and `auth.gog.com/token` **continue to operate**. The
+//!   token endpoint answers `invalid_grant` to a code that does not exist, which
+//!   shows that it accepts the client and refuses only the code.
+//! - `embed.gog.com/user/data/games` and
+//!   `embed.gog.com/account/getFilteredProducts` are **dead**: they answer 302
+//!   to the login screen. Heroic replaced them in its PR #5718 (June 2026) and
+//!   keeps no reference to `embed.gog.com` in its library code.
+//! - Today the library is read from
+//!   `galaxy-library.gog.com/users/{id}/releases`, in pages through
+//!   `page_token`.
 
 mod parse;
 
@@ -41,20 +43,22 @@ const DEFAULT_GALAXY: &str = "https://galaxy-library.gog.com";
 const DEFAULT_API: &str = "https://api.gog.com";
 const DEFAULT_USERS: &str = "https://users.gog.com";
 
-/// A donde redirige GOG al terminar el login. No es una página nuestra ni hace
-/// falta que exista un servidor detrás: solo hay que reconocerla para sacar el
-/// `code` de su cadena de consulta.
+/// The address to which GOG redirects at the end of the login. It is not a page
+/// of this project and it does not need a server behind it: you only must
+/// recognise it to take the `code` from its query string.
 pub const REDIRECT_URI: &str = "https://embed.gog.com/on_login_success?origin=client";
 
-/// Margen con el que se considera caducado un token todavía vivo. Un token que
-/// expira en pleno vuelo es un 401 que nadie ha pedido.
+/// The margin with which a token that is still live counts as expired. A token
+/// that expires during a request is a 401 that nobody asked for.
 const EXPIRY_MARGIN_SECONDS: i64 = 60;
 
-/// Lo que el conector guarda en el almacén de secretos. Opaco para el resto del
-/// sistema, que solo lo mueve entre el almacén y este conector.
+/// What the connector keeps in the store of secrets. It is opaque to the
+/// remainder of the system, which only moves it between the store and this
+/// connector.
 ///
-/// Lleva dentro las credenciales de cliente porque el refresco las necesita: sin
-/// ellas habría que volver a pedírselas al usuario cada vez que caduca el token.
+/// It contains the client credentials because the refresh needs them: without
+/// them you would have to ask the user for them again each time that the token
+/// expires.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct GogCredential {
     client_id: String,
@@ -62,7 +66,7 @@ struct GogCredential {
     access_token: String,
     refresh_token: String,
     user_id: String,
-    /// Unix, en segundos.
+    /// Unix time, in seconds.
     expires_at: i64,
 }
 
@@ -91,8 +95,8 @@ impl GogConnector {
         }
     }
 
-    /// Redirige las llamadas a otro host. Existe para los tests: nunca se llama
-    /// a la API real desde la suite.
+    /// Sends the calls to a different host. It exists for the tests: the suite
+    /// never calls the real API.
     pub fn with_bases(mut self, base: &str) -> Self {
         self.auth_base = base.to_owned();
         self.galaxy_base = base.to_owned();
@@ -101,8 +105,8 @@ impl GogConnector {
         self
     }
 
-    /// La dirección del formulario de login de GOG, que es lo único que se abre
-    /// en el webview.
+    /// The address of the GOG login form, which is the only page that opens in
+    /// the webview.
     pub fn authorize_url(auth_base: &str, client_id: &str) -> String {
         format!(
             "{auth_base}/auth?client_id={client_id}\
@@ -112,9 +116,8 @@ impl GogConnector {
         )
     }
 
-    /// Saca el `code` de la redirección final. Devuelve `None` mientras el
-    /// usuario siga navegando por el login, que es la mayoría de las veces que
-    /// se llama.
+    /// Takes the `code` from the final redirect. It gives back `None` while the
+    /// user continues through the login, which is most of the calls.
     pub fn code_from_redirect(url: &str) -> Option<String> {
         let (base, query) = url.split_once('?')?;
         if !base.starts_with("https://embed.gog.com/on_login_success") {
@@ -149,9 +152,9 @@ impl GogConnector {
 
         match response.status().as_u16() {
             200 => {}
-            // GOG contesta 400 tanto al código caducado como al par de cliente
-            // equivocado. En ambos casos lo que hay que hacer es volver a
-            // conectar la cuenta, así que se traduce igual.
+            // GOG answers 400 both to an expired code and to an incorrect
+            // client pair. In the two conditions the user must connect the
+            // account again, thus the two become the same error.
             400 | 401 | 403 => return Err(ConnectorError::Unauthorized),
             429 => return Err(ConnectorError::RateLimited),
             other => return Err(ConnectorError::Unexpected(format!("HTTP {other}"))),
@@ -208,23 +211,23 @@ impl GogConnector {
         }
     }
 
-    /// Títulos por lotes. Sin esto la biblioteca de GOG llegaría como una lista
-    /// de números, y el emparejamiento por título no tendría con qué trabajar.
-    async fn productos(
+    /// The titles in batches. Without this, the GOG library would come as a
+    /// list of numbers, and the matching by title would have no data.
+    async fn products(
         &self,
         ids: &[String],
         access_token: &str,
     ) -> std::collections::HashMap<String, parse::ProductInfo> {
-        let mut productos = std::collections::HashMap::new();
+        let mut products = std::collections::HashMap::new();
         for chunk in ids.chunks(50) {
             let url = format!("{}/products?ids={}", self.api_base, chunk.join(","));
-            // Un lote que falle deja sus juegos con nombre provisional, pero no
-            // tumba la sincronización entera.
+            // A batch that fails leaves its games with a temporary name, but it
+            // does not stop all of the synchronisation.
             if let Ok(body) = self.get(&url, access_token).await {
-                productos.extend(parse_products(&body));
+                products.extend(parse_products(&body));
             }
         }
-        productos
+        products
     }
 }
 
@@ -248,8 +251,8 @@ impl StoreConnector for GogConnector {
                     )
                     .await?;
 
-                // El nombre de la cuenta es un adorno: si falla, la cuenta se
-                // conecta igual y se muestra por su identificador.
+                // The name of the account is decoration: if it fails, the
+                // account still connects and shows its identifier.
                 let display_name = self
                     .get(
                         &format!("{}/users/{}", self.users_base, credential.user_id),
@@ -262,9 +265,9 @@ impl StoreConnector for GogConnector {
                 Ok(Self::session_from(&credential, display_name))
             }
 
-            // Aquí es donde vive el refresco. `sync` vuelve a pedir la sesión
-            // en cada pasada, así que basta con comprobar la caducidad al
-            // reconstruirla: si el token sigue vivo no se gasta ni una petición.
+            // The refresh lives here. `sync` asks for the session again at each
+            // pass, thus it is sufficient to examine the expiry when the session
+            // is built again: if the token is still live, it uses no request.
             AuthContext::Stored { credential } => {
                 let stored: GogCredential =
                     serde_json::from_str(credential).map_err(|_| ConnectorError::Unauthorized)?;
@@ -291,7 +294,7 @@ impl StoreConnector for GogConnector {
             }
 
             AuthContext::ApiKey { .. } => Err(ConnectorError::Unexpected(
-                "GOG no usa clave de API".to_owned(),
+                "GOG does not use an API key".to_owned(),
             )),
         }
     }
@@ -322,14 +325,14 @@ impl StoreConnector for GogConnector {
         }
 
         let ids: Vec<String> = releases.iter().map(|r| r.external_id.clone()).collect();
-        let productos = self.productos(&ids, &credential.access_token).await;
-        Ok(parse::to_entries(&releases, &productos, account_id))
+        let products = self.products(&ids, &credential.access_token).await;
+        Ok(parse::to_entries(&releases, &products, account_id))
     }
 
-    /// GOG no expone la lista de deseados a un token de Galaxy: la única vía es
-    /// `embed.gog.com/user/wishlist.json`, que va por la cookie de sesión del
-    /// navegador y responde 403 a un `Bearer`. Devolver una lista vacía es
-    /// preferible a inventarse un scraping con la sesión web del usuario.
+    /// GOG does not give the wishlist to a Galaxy token: the only method is
+    /// `embed.gog.com/user/wishlist.json`, which uses the session cookie of the
+    /// browser and answers 403 to a `Bearer`. An empty list is preferable to a
+    /// scrape made with the web session of the user.
     async fn wishlist(
         &self,
         _session: &StoreSession,
@@ -339,9 +342,9 @@ impl StoreConnector for GogConnector {
     }
 }
 
-/// Escape mínimo para meter una URL dentro de otra. Solo se usa con constantes
-/// nuestras y con testigos de paginación de GOG, así que no hace falta traer una
-/// dependencia entera para esto.
+/// The minimum escape to put one URL inside another. It is used only with
+/// constants of this project and with GOG page tokens, thus a complete
+/// dependency is unnecessary for this.
 fn urlencode(value: &str) -> String {
     value
         .bytes()

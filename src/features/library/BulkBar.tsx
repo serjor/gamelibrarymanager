@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/api";
-import { ESTADOS, ETIQUETA_ESTADO } from "../../lib/estado";
+import { STATUSES, STATUS_LABEL } from "../../lib/status";
 
 /**
- * Lo que se puede hacerle de golpe a lo seleccionado.
+ * What you can do to the selection together.
  *
- * Es la razón de que la biblioteca sea una tabla: con cuatrocientas fichas,
- * marcar treinta como abandonadas de una en una no lo hace nadie, y por eso el
- * estado se queda sin poner.
+ * It is the reason that the library is a table: with four hundred records,
+ * nobody marks thirty games as abandoned one at a time, and thus the status
+ * stays empty.
  */
 export function BulkBar({
   rows,
@@ -15,66 +15,67 @@ export function BulkBar({
   onSaved,
   onClear,
 }: {
-  /** Todas las filas, para recuperar de cada una lo que no se está cambiando. */
+  /** All of the rows, to get from each one the data that does not change. */
   rows: LibraryRow[];
   selected: Set<string>;
   onSaved: () => void;
   onClear: () => void;
 }) {
-  const [estado, setEstado] = useState<PlayStatus | "">("");
-  const [ocupado, setOcupado] = useState(false);
+  const [status, setStatus] = useState<PlayStatus | "">("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cuantos = selected.size;
-  if (cuantos === 0) return null;
+  const count = selected.size;
+  if (count === 0) return null;
 
-  const aplicar = async () => {
-    setOcupado(true);
+  const apply = async () => {
+    setBusy(true);
     setError(null);
     try {
       for (const row of rows.filter((r) => selected.has(r.game_id))) {
-        // `set_user_state` reescribe la fila entera, así que la nota y el texto
-        // hay que devolvérselos tal cual: sin esto, poner un estado en lote
-        // borraría en silencio todo lo que el usuario tenga escrito, que es
-        // justo lo único que esta aplicación sabe de él y no sabe la tienda.
-        await api.setUserState(row.game_id, estado || null, row.rating, row.notes);
+        // `set_user_state` writes all of the row again, thus you must give the
+        // rating and the notes back unchanged: without this, a bulk status would
+        // quietly delete all of the text that the user wrote, which is exactly
+        // the only data that this application knows about them and the store
+        // does not know.
+        await api.setUserState(row.game_id, status || null, row.rating, row.notes);
       }
       onClear();
       onSaved();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
-      setOcupado(false);
+      setBusy(false);
     }
   };
 
   return (
-    <div className="lote">
+    <div className="bulk">
       <strong>
-        {cuantos} seleccionado{cuantos === 1 ? "" : "s"}
+        {count} selected
       </strong>
 
-      <label className="lote-campo" htmlFor="lote-estado">
-        Marcar como
+      <label className="bulk-field" htmlFor="bulk-status">
+        Mark as
       </label>
       <select
-        id="lote-estado"
-        value={estado}
-        onChange={(e) => setEstado(e.target.value as PlayStatus | "")}
+        id="bulk-status"
+        value={status}
+        onChange={(e) => setStatus(e.target.value as PlayStatus | "")}
       >
-        <option value="">Sin marcar</option>
-        {ESTADOS.map((valor) => (
-          <option key={valor} value={valor}>
-            {ETIQUETA_ESTADO[valor]}
+        <option value="">Not marked</option>
+        {STATUSES.map((value) => (
+          <option key={value} value={value}>
+            {STATUS_LABEL[value]}
           </option>
         ))}
       </select>
 
-      <button disabled={ocupado} onClick={() => void aplicar()}>
-        {ocupado ? "Aplicando…" : "Aplicar"}
+      <button disabled={busy} onClick={() => void apply()}>
+        {busy ? "Applying…" : "Apply"}
       </button>
       <button className="link" onClick={onClear}>
-        deseleccionar
+        clear selection
       </button>
 
       {error && <p role="alert">{error}</p>}

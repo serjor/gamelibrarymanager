@@ -14,7 +14,7 @@ export const EMPTY_FILTERS: Filters = {
   genre: null,
 };
 
-/** Sin acentos ni mayúsculas: buscar "pokemon" tiene que encontrar "Pokémon". */
+/** No accents and no capitals: a search for "pokemon" must find "Pokémon". */
 function fold(text: string): string {
   return text
     .toLowerCase()
@@ -23,8 +23,8 @@ function fold(text: string): string {
 }
 
 /**
- * Filtrado puro, fuera de React: es lo que se ejecuta en cada tecla sobre miles
- * de filas, y así se puede probar sin montar nada.
+ * A pure filter, out of React: it runs at each key press over thousands of rows,
+ * and thus you can test it without you build a component.
  */
 export function applyFilters(rows: LibraryRow[], filters: Filters): LibraryRow[] {
   const needle = fold(filters.search.trim());

@@ -1,96 +1,100 @@
 import { useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { errorMessage, type LibraryRow, type PriceRow } from "../../lib/api";
-import { deseados, dinero, enMinimoHistorico, type Deseado } from "./precios";
+import { wishes, money, atAllTimeLow, type Wish } from "./prices";
 
 /**
- * Base de las páginas de ITAD. Se escribe como constante y se le concatena el
- * slug, en vez de interpolar la dirección entera, porque el alcance de la
- * capacidad se comprueba contra las cadenas literales que hay en el código.
+ * The base of the ITAD pages. It is written as a constant and the slug is added
+ * to it, and the complete address is not interpolated, because the scope of the
+ * capability is examined against the literal strings that are in the code.
  */
 const ITAD_GAME_URL = "https://isthereanydeal.com/game/";
 
 /**
- * Los deseados, ordenados por descuento.
+ * The wished-for games, sorted by discount.
  *
- * Es la única pantalla que no habla de lo que tienes sino de lo que costaría
- * tenerlo, y por eso no es un tercer modo de vista de la biblioteca: no lee sus
- * filtros y hace su propio corte, como «Hoy».
+ * It is the only screen that speaks not about what you have but about what it
+ * would cost to have it, and thus it is not a third view mode of the library: it
+ * does not read the library filters and it makes its own division, as "Today"
+ * does.
  *
- * Lo que se enseña de cada juego es lo que hace falta para decidir una compra y
- * nada más: cuánto cuesta hoy, dónde, y si eso es barato de verdad. Un −60 % no
- * dice nada por su cuenta; al lado de su mínimo histórico, sí.
+ * What it shows about each game is what is necessary to decide a purchase and
+ * nothing else: what it costs today, where, and whether that is really
+ * inexpensive. A −60 % tells you nothing alone; beside its all-time low, it
+ * does.
  *
- * El enlace va a la página del juego en ITAD y no a la oferta. No es un rodeo:
- * la oferta apunta a la tienda que sea —Fanatical, Humble, cualquiera—, y la
- * ventana solo puede abrir direcciones que la capacidad enumera de antemano.
- * La página de ITAD las lista todas y es un único host.
+ * The link goes to the page of the game in ITAD and not to the offer. That is
+ * not an unnecessary step: the offer points to a store that can be any store —
+ * Fanatical, Humble, any of them — and the window can open only the addresses
+ * that the capability lists before. The ITAD page lists all of them and it is
+ * one host.
  */
 export function Wishlist({
   rows,
-  precios,
-  copias,
+  prices,
+  copies,
   hasItad,
   busy,
   onRefresh,
   onSetup,
 }: {
   rows: LibraryRow[];
-  precios: PriceRow[];
+  prices: PriceRow[];
   /**
-   * Cuántas copias deseadas han traído las tiendas.
+   * How many wished-for copies the stores gave.
    *
-   * No es lo mismo que la longitud de la lista, y la diferencia es justo lo que
-   * hay que explicar: esta pantalla enseña fichas, y una copia sin ficha no
-   * aparece por ningún lado. Sin esto, la cabecera decía «84 deseados» y la
-   * pantalla enseñaba cero, sin una palabra de por qué.
+   * It is not the same as the length of the list, and the difference is exactly
+   * what must be explained: this screen shows records, and a copy with no record
+   * appears in no place. Without this, the header said "84 wished for" and the
+   * screen showed zero, with no word about why.
    */
-  copias: number;
+  copies: number;
   hasItad: boolean;
   busy: boolean;
   onRefresh: () => void;
   onSetup: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const lista = useMemo(() => deseados(rows, precios), [rows, precios]);
-  const conPrecio = lista.filter((deseado) => deseado.precio !== null).length;
-  // Cuándo se miraron. Un precio de hace una semana ya no es un precio, y sin
-  // la fecha no hay forma de saber si lo que se está viendo sigue en pie.
-  const capturado = precios.reduce((ultimo, precio) => Math.max(ultimo, precio.captured_at), 0);
+  const list = useMemo(() => wishes(rows, prices), [rows, prices]);
+  const withPrice = list.filter((wish) => wish.price !== null).length;
+  // When the prices were read. A price from one week ago is no longer a price,
+  // and with no date there is no way to know whether what you see still applies.
+  const captured = prices.reduce((last, price) => Math.max(last, price.captured_at), 0);
 
-  const abrir = (url: string) => {
+  const open = (url: string) => {
     openUrl(url).catch((cause: unknown) =>
-      setError(`No he podido abrir ${url}: ${errorMessage(cause)}`),
+      setError(`Could not open ${url}: ${errorMessage(cause)}`),
     );
   };
 
   return (
-    <section className="deseados">
-      {/* La barra se pinta siempre, también con la lista vacía. Es donde vive
-          la única puerta hacia la clave de ITAD, y esconderla hasta que
-          hubiera deseados dejaba sin ninguna forma de configurarla a quien
-          todavía no había sincronizado. */}
-      <div className="deseados-barra">
+    <section className="wishlist">
+      {/* The bar is always shown, also with an empty list. It is where the only
+          door to the ITAD key lives, and to hide it until there were wished-for
+          games left a user who had not yet synchronised with no way to configure
+          it. */}
+      <div className="wishlist-bar">
         <p className="hint">
-          {lista.length} deseados
-          {conPrecio > 0 && ` · ${conPrecio} con precio`}
-          {capturado > 0 && ` · consultados el ${new Date(capturado * 1000).toLocaleString()}`}
+          {list.length} wished for
+          {withPrice > 0 && ` · ${withPrice} with a price`}
+          {captured > 0 && ` · read on ${new Date(captured * 1000).toLocaleString()}`}
         </p>
         {hasItad ? (
-          // Con la lista vacía no hay nada que consultar, así que el botón no
-          // sale: un botón que no puede hacer nada es una promesa falsa.
-          lista.length > 0 && (
+          // With an empty list there is nothing to ask about, thus the button
+          // does not appear: a button that can do nothing is a false promise.
+          list.length > 0 && (
             <button disabled={busy} onClick={onRefresh}>
-              {busy ? "Consultando precios…" : "Actualizar precios"}
+              {busy ? "Reading prices…" : "Update the prices"}
             </button>
           )
         ) : (
-          // Sin clave la lista funciona igual, solo que sin precios. Se dice, y
-          // no como error: no lo es, igual que no lo es no tener IGDB.
+          // With no key the list operates in the same way, only with no prices.
+          // The interface says that, and not as an error: it is not an error, in
+          // the same way as no IGDB is not an error.
           <p className="hint">
-            Sin precios: hace falta una clave de ITAD, que es gratis.{" "}
+            No prices: an ITAD key is necessary, and it is free.{" "}
             <button className="link" onClick={onSetup}>
-              Configurar ITAD
+              Configure ITAD
             </button>
           </p>
         )}
@@ -98,23 +102,23 @@ export function Wishlist({
 
       {error && <p role="alert">{error}</p>}
 
-      {lista.length === 0 &&
-        (copias > 0 ? (
+      {list.length === 0 &&
+        (copies > 0 ? (
           <p className="hint">
-            Las tiendas han traído {copias} copias deseadas, pero ninguna tiene
-            ficha todavía: esta pantalla enseña fichas, así que sale vacía.
-            Pulsa «Emparejar» y déjalo terminar; después vuelve aquí.
+            The stores gave {copies} wished-for copies, but none of them has a
+            record yet: this screen shows records, thus it is empty. Click
+            "Match" and let it finish; then come back here.
           </p>
         ) : (
           <p className="hint">
-            No hay ningún juego en tu lista de deseados. Sincroniza una tienda y
-            aquí aparecerá lo que te falta por comprar, con su precio.
+            There is no game in your wishlist. Synchronise a store and this screen
+            will show what you must still buy, with its price.
           </p>
         ))}
 
-      {lista.length > 0 && (
-        <div className="deseados-viewport">
-          <table className="deseados-tabla">
+      {list.length > 0 && (
+        <div className="wishlist-viewport">
+          <table className="wishlist-table">
             <colgroup>
               <col />
               <col style={{ width: "9rem" }} />
@@ -125,17 +129,17 @@ export function Wishlist({
             </colgroup>
             <thead>
               <tr>
-                <th>Juego</th>
-                <th className="num">Mejor precio</th>
-                <th className="num">Descuento</th>
-                <th className="num">Mínimo histórico</th>
-                <th className="num">Mínimo del año</th>
+                <th>Game</th>
+                <th className="num">Best price</th>
+                <th className="num">Discount</th>
+                <th className="num">All-time low</th>
+                <th className="num">Low of the year</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {lista.map((deseado) => (
-                <Fila key={deseado.juego.game_id} deseado={deseado} onAbrir={abrir} />
+              {list.map((wish) => (
+                <Row key={wish.game.game_id} wish={wish} onOpen={open} />
               ))}
             </tbody>
           </table>
@@ -145,24 +149,25 @@ export function Wishlist({
   );
 }
 
-function Fila({ deseado, onAbrir }: { deseado: Deseado; onAbrir: (url: string) => void }) {
-  const { juego, precio } = deseado;
+function Row({ wish, onOpen }: { wish: Wish; onOpen: (url: string) => void }) {
+  const { game, price } = wish;
 
   return (
     <tr>
       <td>
-        <strong className="deseado-titulo">{juego.title}</strong>
+        <strong className="wish-title">{game.title}</strong>
         <span className="hint">
-          {juego.wishlist_stores.join(" · ")}
-          {/* Lo tienes y lo sigues queriendo: pasa cuando lo quieres en otra
-              tienda, y verlo aquí sin explicación parece un fallo. */}
-          {juego.owned_stores.length > 0 && ` · ya lo tienes en ${juego.owned_stores.join(", ")}`}
+          {game.wishlist_stores.join(" · ")}
+          {/* You have it and you still want it: that occurs when you want it in
+              a different store, and to see it here with no explanation looks
+              like a defect. */}
+          {game.owned_stores.length > 0 && ` · you already have it in ${game.owned_stores.join(", ")}`}
         </span>
       </td>
 
-      {precio === null ? (
+      {price === null ? (
         <>
-          <td className="num hint">sin precio</td>
+          <td className="num hint">no price</td>
           <td className="num hint">—</td>
           <td className="num hint">—</td>
           <td className="num hint">—</td>
@@ -171,46 +176,46 @@ function Fila({ deseado, onAbrir }: { deseado: Deseado; onAbrir: (url: string) =
       ) : (
         <>
           <td className="num">
-            <strong>{dinero(precio.amount, precio.currency)}</strong>
+            <strong>{money(price.amount, price.currency)}</strong>
             <span className="hint">
-              {precio.shop}
-              {precio.shops > 1 && ` · ${precio.shops} tiendas`}
+              {price.shop}
+              {price.shops > 1 && ` · ${price.shops} stores`}
             </span>
           </td>
           <td className="num">
-            {precio.cut > 0 ? (
+            {price.cut > 0 ? (
               <>
-                <span className="descuento">−{precio.cut}%</span>
-                <span className="hint">{dinero(precio.regular, precio.currency)}</span>
+                <span className="discount">−{price.cut}%</span>
+                <span className="hint">{money(price.regular, price.currency)}</span>
               </>
             ) : (
-              <span className="hint">sin rebaja</span>
+              <span className="hint">no discount</span>
             )}
           </td>
           <td className="num">
-            {precio.low_all_time === null ? (
-              <span className="hint">nunca rebajado</span>
+            {price.low_all_time === null ? (
+              <span className="hint">never discounted</span>
             ) : (
               <>
-                {dinero(precio.low_all_time, precio.currency)}
-                {enMinimoHistorico(precio) && <span className="minimo">en su mínimo</span>}
+                {money(price.low_all_time, price.currency)}
+                {atAllTimeLow(price) && <span className="low">at its low</span>}
               </>
             )}
           </td>
           <td className="num">
-            {precio.low_year === null ? (
+            {price.low_year === null ? (
               <span className="hint">—</span>
             ) : (
-              dinero(precio.low_year, precio.currency)
+              money(price.low_year, price.currency)
             )}
           </td>
           <td className="num">
-            {precio.itad_slug !== null && (
+            {price.itad_slug !== null && (
               <button
                 className="link"
-                onClick={() => onAbrir(`${ITAD_GAME_URL}${precio.itad_slug}/info/`)}
+                onClick={() => onOpen(`${ITAD_GAME_URL}${price.itad_slug}/info/`)}
               >
-                Ver precios ↗
+                See the prices ↗
               </button>
             )}
           </td>

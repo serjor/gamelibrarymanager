@@ -446,7 +446,7 @@ impl StoreConnector for EpicConnector {
             }
 
             AuthContext::ApiKey { .. } => Err(ConnectorError::Unexpected(
-                "Epic no usa clave de API".to_owned(),
+                "Epic does not use an API key".to_owned(),
             )),
         }
     }
@@ -500,9 +500,9 @@ fn auth_error(body: &str) -> ConnectorError {
         Some(url) => {
             let reason = error
                 .error_message
-                .unwrap_or_else(|| "Epic pide una acción en tu cuenta".to_owned());
+                .unwrap_or_else(|| "Epic asks for an action on your account".to_owned());
             ConnectorError::Unexpected(format!(
-                "{reason}. Abre esta página de Epic y vuelve a conectar la cuenta: {url}"
+                "{reason}. Open this Epic page and connect the account again: {url}"
             ))
         }
         None => ConnectorError::Unauthorized,
@@ -548,7 +548,7 @@ mod tests {
                        "redirectUrl":"https://localhost/launcher/authorized",
                        "authorizationCode":null,"exchangeCode":null,"sid":null}"#;
         assert_eq!(EpicConnector::code_from_body(body), None);
-        assert_eq!(EpicConnector::code_from_body("no es json"), None);
+        assert_eq!(EpicConnector::code_from_body("not json"), None);
     }
 
     #[test]

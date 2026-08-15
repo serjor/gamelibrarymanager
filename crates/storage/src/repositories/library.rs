@@ -6,31 +6,32 @@ use sqlx::sqlite::SqliteRow;
 use crate::mapping::{game_id_from_text, status_from_str};
 use crate::{Database, Result};
 
-/// Una fila de la biblioteca: la ficha más todo lo que hay que enseñar de ella.
+/// A row of the library: the game record and all of the data to show with it.
 ///
-/// Se resuelve en una sola consulta a propósito. Pintar mil juegos haciendo una
-/// consulta por juego para saber en qué tiendas está es la forma más fácil de
-/// que la rejilla dé tirones.
+/// It is resolved in one query, and that is deliberate. To show one thousand
+/// games with one query for each game to find its stores is the easiest way to
+/// make the grid jump.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LibraryRow {
     pub game_id: GameId,
     pub title: String,
     pub sort_title: String,
     pub cover_url: Option<String>,
-    /// El resumen de IGDB. Falta en las fichas nacidas del título de la tienda.
+    /// The summary from IGDB. It is absent in the records that come from the
+    /// title of the store.
     pub summary: Option<String>,
     pub release_year: Option<i32>,
     pub genres: Vec<String>,
     pub owned_stores: Vec<String>,
     pub wishlist_stores: Vec<String>,
-    /// La imagen apaisada de la tienda, que es otra cosa que `cover_url`: IGDB
-    /// sirve carátulas 3:4 y la tienda sirve cabeceras panorámicas.
+    /// The horizontal image of the store, which is different from `cover_url`:
+    /// IGDB gives 3:4 covers and the store gives wide headers.
     pub store_cover_url: Option<String>,
     pub store_url: Option<String>,
     pub playtime_minutes: i64,
-    /// Última partida, en segundos desde la época. Solo lo publica Steam: GOG
-    /// no da ni horas ni fecha, así que un juego solo de GOG lo tiene a `None`
-    /// aunque se haya jugado.
+    /// The last time played, in seconds from the epoch. Only Steam publishes
+    /// it: GOG gives neither hours nor date, thus a game that is only from GOG
+    /// keeps `None` even if the user has played it.
     pub last_played_at: Option<i64>,
     pub status: Option<PlayStatus>,
     pub rating: Option<u8>,
@@ -50,16 +51,17 @@ impl LibraryRepository<'_> {
     }
 }
 
-/// La consulta de la biblioteca entera.
+/// The query for all of the library.
 ///
-/// `CROSS JOIN` no es un producto cartesiano: en SQLite es la forma documentada
-/// de fijar el orden de las tablas, y aquí hace falta. Con un `JOIN` normal el
-/// planificador arrancaba desde `store_entry` por el índice `(kind, deleted_at)`
-/// —que con `kind = 'owned'` no descarta casi nada— y comprobaba después contra
-/// `game_link`: por cada juego recorría las copias de la biblioteca entera.
-/// Forzando que mande `game_link`, cada subconsulta mira solo las copias de su
-/// juego y busca la entrada por su clave. Con mil juegos son 10 ms en vez de
-/// 839. El test `el_planificador_arranca_por_game_link` lo vigila.
+/// `CROSS JOIN` is not a Cartesian product: in SQLite it is the documented way
+/// to set the order of the tables, and it is necessary here. With a usual
+/// `JOIN`, the planner started at `store_entry` through the `(kind, deleted_at)`
+/// index — which with `kind = 'owned'` removes almost nothing — and then
+/// compared against `game_link`: for each game it went through the copies of all
+/// of the library. When you make `game_link` control the plan, each subquery
+/// looks only at the copies of its own game and finds the entry by its key. With
+/// one thousand games that is 10 ms and not 839. The test
+/// `el_planificador_arranca_por_game_link` makes sure of it.
 const SQL: &str = "SELECT
                  g.id, g.canonical_title, g.sort_title, g.cover_url, g.released_at, g.genres,
                  g.summary,
@@ -76,11 +78,11 @@ const SQL: &str = "SELECT
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.deleted_at IS NULL
                  ) AS playtime_minutes,
-                 -- La imagen y el enlace salen de la misma copia: el mismo
-                 -- ORDER BY en las dos subconsultas es lo que evita enseñar la
-                 -- cabecera de Steam con el enlace a GOG. Steam va primero
-                 -- porque su `header.jpg` es una cabecera pensada para esto,
-                 -- mientras que GOG sirve el logo del producto.
+                 -- The image and the link come from the same copy: the same
+                 -- ORDER BY in the two subqueries is what prevents a Steam
+                 -- header with a GOG link. Steam is first because its
+                 -- `header.jpg` is a header made for this, while GOG gives the
+                 -- logo of the product.
                  (SELECT e.cover_url FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.kind = 'owned' AND e.deleted_at IS NULL
@@ -93,12 +95,12 @@ const SQL: &str = "SELECT
                      AND e.store_url IS NOT NULL
                    ORDER BY e.store = 'steam' DESC, e.store LIMIT 1
                  ) AS store_url,
-                 -- Steam guarda la última partida dentro del JSON crudo desde
-                 -- que existe el conector, así que se lee de ahí en vez de
-                 -- materializar una columna: el dato se reescribe entero en
-                 -- cada sincronización, y una columna propia habría que
-                 -- migrarla y rellenarla para nada. El 0 de Steam significa
-                 -- «nunca jugado», no «jugado en 1970».
+                 -- Steam has kept the last time played in the raw JSON since
+                 -- the connector started, thus it is read from there and not
+                 -- materialised in a column: the data is written again complete
+                 -- at each synchronisation, and a column of its own would need
+                 -- a migration and a fill for no gain. The 0 from Steam means
+                 -- never played, not played in 1970.
                  (SELECT MAX(NULLIF(json_extract(e.raw, '$.rtime_last_played'), 0))
                     FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
@@ -133,9 +135,9 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
     })
 }
 
-/// `GROUP_CONCAT` devuelve NULL cuando no hay filas, no una cadena vacía, y no
-/// garantiza el orden: sin ordenar aquí, las insignias de tienda de un juego
-/// podrían cambiar de sitio entre dos aperturas de la aplicación.
+/// `GROUP_CONCAT` gives back NULL when there are no rows, not an empty string,
+/// and it does not make sure of the order: without a sort here, the store badges
+/// of a game could change position between two starts of the application.
 fn split(value: Option<String>) -> Vec<String> {
     let mut items: Vec<String> = value
         .unwrap_or_default()

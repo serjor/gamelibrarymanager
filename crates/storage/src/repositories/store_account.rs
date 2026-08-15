@@ -9,8 +9,9 @@ use crate::{Database, Result};
 pub struct StoreAccountRepository<'a>(pub &'a Database);
 
 impl StoreAccountRepository<'_> {
-    /// Alta o reconexión de una cuenta. Reconectar no crea una fila nueva: la
-    /// biblioteca ya sincronizada sigue colgando de la misma cuenta.
+    /// A new account or a new connection of an account. A new connection does
+    /// not create a new row: the library that is already synchronised stays
+    /// attached to the same account.
     pub async fn upsert(&self, account: &StoreAccount) -> Result<StoreAccountId> {
         let now = OffsetDateTime::now_utc();
         let row = sqlx::query(

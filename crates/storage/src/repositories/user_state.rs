@@ -6,8 +6,9 @@ use time::OffsetDateTime;
 use crate::mapping::{game_id_from_text, game_id_to_text, status_as_str, status_from_str};
 use crate::{Database, Result};
 
-/// Lo único que escribe el usuario. Ninguna sincronización ni emparejamiento
-/// pasa por aquí: por eso vive en su propia tabla y en su propio repositorio.
+/// The only data that the user writes. No synchronisation and no matching comes
+/// through here: thus it lives in a table of its own and in a repository of its
+/// own.
 pub struct UserStateRepository<'a>(pub &'a Database);
 
 impl UserStateRepository<'_> {

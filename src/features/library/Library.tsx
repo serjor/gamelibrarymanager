@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LibraryRow } from "../../lib/api";
-import { GameDetail, type Presentacion } from "../game/GameDetail";
+import { GameDetail, type Presentation } from "../game/GameDetail";
 import { BulkBar } from "./BulkBar";
 import { LibraryFilters } from "./LibraryFilters";
 import { LibraryTable } from "./LibraryTable";
@@ -8,167 +8,170 @@ import { LibraryWall } from "./LibraryWall";
 import { EMPTY_FILTERS, applyFilters, collectGenres, collectStores, type Filters } from "./filters";
 import { DEFAULT_SORT, applySort } from "./sort";
 
-/** Dos maneras de mirar lo mismo, no dos conjuntos de juegos. */
-export type Vista = "tabla" | "pared";
+/** Two ways to look at the same games, not two sets of games. */
+export type View = "table" | "wall";
 
 /**
- * El ancho a partir del cual el inspector cabe al lado de la tabla.
+ * The width at which the inspector goes beside the table.
  *
- * No es un número redondo ni sale de la ventana de `tauri.conf.json`: es la
- * suma de lo que cada pieza necesita para funcionar. La tabla deja de servir
- * por debajo de 56rem (`.tabla` en `styles.css`), el inspector mide 20rem
- * (`.detail`), entre los dos hay 1rem de hueco (`--e-5`) y `main` se lleva 3rem
- * de relleno: 80rem. Los 2rem de más son para la barra de desplazamiento, que
- * entra en lo que mide una media query y no en lo que le queda a la ventana.
+ * It is not a round number and it does not come from the window of
+ * `tauri.conf.json`: it is the sum of what each piece needs to operate. The
+ * table stops being usable below 56rem (`.table` in `styles.css`), the inspector
+ * is 20rem (`.detail`), between the two there is 1rem of space (`--e-5`) and
+ * `main` uses 3rem of padding: 80rem. The 2rem more are for the scroll bar,
+ * which counts in what a media query measures and not in what stays for the
+ * window.
  *
- * Por debajo, la ficha se abre como hoja. La alternativa —dejar el inspector y
- * que la tabla se desplace en horizontal a su lado— recorta el título a «Ba…»
- * justo cuando estás comparando fichas, que es cuando más falta hace leerlo.
+ * Below that width, the game record opens as a sheet. The other option — to keep
+ * the inspector and let the table scroll horizontally beside it — cuts the title
+ * to "Ba…" exactly when you compare records, which is when you most need to read
+ * it.
  */
-const CABE_EL_INSPECTOR = "(min-width: 82rem)";
+const INSPECTOR_FITS = "(min-width: 82rem)";
 
-/** Donde ↑↓ ya significa algo: el cursor de un texto, las opciones de una lista. */
-function escribiendo(destino: EventTarget | null): boolean {
-  if (!(destino instanceof HTMLElement)) return false;
-  if (destino.tagName === "TEXTAREA" || destino.tagName === "SELECT") return true;
-  return destino.tagName === "INPUT" && (destino as HTMLInputElement).type !== "checkbox";
+/** Where ↑↓ already means something: the cursor of a text, the options of a list. */
+function isTyping(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.tagName === "TEXTAREA" || target.tagName === "SELECT") return true;
+  return target.tagName === "INPUT" && (target as HTMLInputElement).type !== "checkbox";
 }
 
 export function Library({
   rows,
-  vista,
-  onVista,
+  view,
+  onView,
   onSaved,
 }: {
   rows: LibraryRow[];
-  vista: Vista;
-  onVista: (vista: Vista) => void;
+  view: View;
+  onView: (view: View) => void;
   onSaved: () => void;
 }) {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [abierto, setAbierto] = useState<string | null>(null);
-  const cabe = useCabe(CABE_EL_INSPECTOR);
+  const [opened, setOpened] = useState<string | null>(null);
+  const fits = useFits(INSPECTOR_FITS);
 
-  // Filtrado y orden se aplican una vez, aquí, y las dos vistas pintan el
-  // resultado. Que cambiar de vista no pueda cambiar qué juegos hay delante no
-  // es una comprobación que haya que hacer: es que no hay dos sitios donde
-  // pudiera divergir.
+  // The filter and the sort are applied one time, here, and the two views show
+  // the result. That a change of view cannot change which games are in front of
+  // you is not a condition to test: there are not two places where they could
+  // become different.
   const visible = useMemo(
     () => applySort(applyFilters(rows, filters), sort),
     [rows, filters, sort],
   );
   const stores = useMemo(() => collectStores(rows), [rows]);
   const genres = useMemo(() => collectGenres(rows), [rows]);
-  const abiertoRow = useMemo(
-    () => rows.find((row) => row.game_id === abierto) ?? null,
-    [rows, abierto],
+  const openedRow = useMemo(
+    () => rows.find((row) => row.game_id === opened) ?? null,
+    [rows, opened],
   );
 
-  const marcar = (gameIds: string[], marcar: boolean) =>
-    setSelected((previos) => {
-      const siguiente = new Set(previos);
+  const mark = (gameIds: string[], checked: boolean) =>
+    setSelected((previous) => {
+      const next = new Set(previous);
       for (const id of gameIds) {
-        if (marcar) siguiente.add(id);
-        else siguiente.delete(id);
+        if (checked) next.add(id);
+        else next.delete(id);
       }
-      return siguiente;
+      return next;
     });
 
-  // Cambiar el filtro vacía la selección. Si no, lo seleccionado sigue ahí sin
-  // verse y la barra de lote acabaría escribiendo sobre juegos que ya no están
-  // en pantalla, que es la clase de sorpresa que hace desconfiar de un botón
-  // que toca cuatrocientas fichas.
-  const filtrar = (siguientes: Filters) => {
-    setFilters(siguientes);
+  // A change of the filter empties the selection. Without that, the selected
+  // games stay there and you do not see them, and the bulk bar would write on
+  // games that are no longer on the screen. That is the kind of surprise that
+  // makes a user distrust a button that touches four hundred records.
+  const filter = (next: Filters) => {
+    setFilters(next);
     setSelected(new Set());
   };
 
-  const compartido = {
+  const shared = {
     rows: visible,
     selected,
-    onSelect: marcar,
-    onOpen: (row: LibraryRow) => setAbierto(row.game_id),
-    abierto,
+    onSelect: mark,
+    onOpen: (row: LibraryRow) => setOpened(row.game_id),
+    opened,
   };
 
-  // Desde la pared siempre en hoja: el inspector desaprovecha el arte, que es
-  // lo único que distingue esa vista. Desde la tabla, acoplado mientras quepa.
-  const presentacion: Presentacion = vista === "pared" || !cabe ? "sheet" : "inspector";
+  // From the wall it is always a sheet: the inspector wastes the art, which is
+  // the only thing that makes that view different. From the table, it is beside
+  // the table while it fits.
+  const presentation: Presentation = view === "wall" || !fits ? "sheet" : "inspector";
 
-  // ↑↓ recorre la lista sin cerrar la ficha, que es la razón de que el
-  // inspector exista: comparar juegos de uno en uno sin volver a la tabla a
-  // buscar el siguiente.
+  // ↑↓ goes through the list and does not close the game record, which is the
+  // reason that the inspector exists: to compare games one at a time without you
+  // go back to the table to find the next one.
   //
-  // El oyente va en la ventana y no en la tabla porque la tabla está
-  // virtualizada: al cambiar de juego, la fila que tenía el foco puede dejar de
-  // estar pintada, el foco se cae al `body` y la segunda pulsación ya no
-  // encontraría a nadie escuchando.
+  // The listener is on the window and not on the table because the table is
+  // virtual: at a change of game, the row that had the focus can stop being
+  // shown, the focus falls to the `body` and the second key press would find
+  // nobody who listens.
   useEffect(() => {
-    if (abierto === null || presentacion !== "inspector") return;
+    if (opened === null || presentation !== "inspector") return;
 
-    const alPulsar = (evento: KeyboardEvent) => {
-      if (evento.key !== "ArrowDown" && evento.key !== "ArrowUp") return;
-      if (escribiendo(evento.target)) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+      if (isTyping(event.target)) return;
 
-      const actual = visible.findIndex((row) => row.game_id === abierto);
-      const siguiente = visible[actual + (evento.key === "ArrowDown" ? 1 : -1)];
-      if (actual === -1 || siguiente === undefined) return;
+      const current = visible.findIndex((row) => row.game_id === opened);
+      const next = visible[current + (event.key === "ArrowDown" ? 1 : -1)];
+      if (current === -1 || next === undefined) return;
 
-      evento.preventDefault();
-      setAbierto(siguiente.game_id);
+      event.preventDefault();
+      setOpened(next.game_id);
     };
 
-    window.addEventListener("keydown", alPulsar);
-    return () => window.removeEventListener("keydown", alPulsar);
-  }, [abierto, presentacion, visible]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [opened, presentation, visible]);
 
-  const ficha = abiertoRow && (
+  const record = openedRow && (
     <GameDetail
-      key={abiertoRow.game_id}
-      row={abiertoRow}
-      variant={presentacion}
-      onClose={() => setAbierto(null)}
+      key={openedRow.game_id}
+      row={openedRow}
+      variant={presentation}
+      onClose={() => setOpened(null)}
       onSaved={onSaved}
     />
   );
 
   return (
     <section className="library">
-      <div className="barra">
+      <div className="bar">
         <LibraryFilters
           filters={filters}
           stores={stores}
           genres={genres}
           total={rows.length}
           shown={visible.length}
-          onChange={filtrar}
+          onChange={filter}
         />
-        <div className="vistas" role="group" aria-label="Modo de vista">
+        <div className="views" role="group" aria-label="View mode">
           <button
-            className={vista === "tabla" ? "vista activa" : "vista"}
-            aria-pressed={vista === "tabla"}
-            onClick={() => onVista("tabla")}
+            className={view === "table" ? "view active" : "view"}
+            aria-pressed={view === "table"}
+            onClick={() => onView("table")}
           >
-            Tabla
+            Table
           </button>
           <button
-            className={vista === "pared" ? "vista activa" : "vista"}
-            aria-pressed={vista === "pared"}
-            onClick={() => onVista("pared")}
+            className={view === "wall" ? "view active" : "view"}
+            aria-pressed={view === "wall"}
+            onClick={() => onView("wall")}
           >
-            Portadas
+            Covers
           </button>
         </div>
       </div>
 
       <div className="library-body">
         <div className="library-main">
-          {vista === "tabla" ? (
-            <LibraryTable {...compartido} sort={sort} onSort={setSort} />
+          {view === "table" ? (
+            <LibraryTable {...shared} sort={sort} onSort={setSort} />
           ) : (
-            <LibraryWall {...compartido} />
+            <LibraryWall {...shared} />
           )}
           <BulkBar
             rows={visible}
@@ -177,32 +180,33 @@ export function Library({
             onClear={() => setSelected(new Set())}
           />
         </div>
-        {presentacion === "inspector" && ficha}
+        {presentation === "inspector" && record}
       </div>
-      {/* La hoja se superpone a la pantalla entera, así que cuelga de la
-          sección y no de la fila donde vive el inspector. */}
-      {presentacion === "sheet" && ficha}
+      {/* The sheet covers all of the screen, thus it is attached to the section
+          and not to the row where the inspector lives. */}
+      {presentation === "sheet" && record}
     </section>
   );
 }
 
 /**
- * Si la ventana da de sí, medido contra el navegador y no supuesto.
+ * Whether the window is wide enough, measured against the browser and not
+ * assumed.
  *
- * `matchMedia` y no un `ResizeObserver` sobre el contenedor: lo que hay que
- * saber es si la ventana da para las dos piezas, y eso se sabe antes de pintar
- * ninguna. Midiendo el contenedor habría que pintar el inspector para
- * descubrir que no cabía.
+ * `matchMedia` and not a `ResizeObserver` on the container: what you must know is
+ * whether the window is sufficient for the two pieces, and you know that before
+ * you show either of them. With a measurement of the container you would have to
+ * show the inspector to find that it did not fit.
  */
-function useCabe(consulta: string): boolean {
-  const [cabe, setCabe] = useState(() => window.matchMedia(consulta).matches);
+function useFits(query: string): boolean {
+  const [fits, setFits] = useState(() => window.matchMedia(query).matches);
 
   useEffect(() => {
-    const media = window.matchMedia(consulta);
-    const alCambiar = () => setCabe(media.matches);
-    media.addEventListener("change", alCambiar);
-    return () => media.removeEventListener("change", alCambiar);
-  }, [consulta]);
+    const media = window.matchMedia(query);
+    const onChange = () => setFits(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [query]);
 
-  return cabe;
+  return fits;
 }

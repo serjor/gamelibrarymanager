@@ -1,5 +1,5 @@
-//! Traducción entre el dominio y la representación en SQLite. La ortografía que
-//! espera la base de datos vive aquí y no en el dominio.
+//! The translation between the domain and the SQLite representation. The
+//! spelling that the database expects lives here and not in the domain.
 
 use domain::{EntryKind, GameId, LinkMethod, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
 use uuid::Uuid;

@@ -7,12 +7,12 @@ use time::OffsetDateTime;
 use crate::mapping::{game_id_from_text, game_id_to_text};
 use crate::{Database, Result};
 
-/// Un juego deseado y lo que hace falta para preguntar por su precio.
+/// A wished-for game and the data necessary to ask for its price.
 ///
-/// El identificador de ITAD viene si ya se resolvió alguna vez. El appid de
-/// Steam viene cuando alguna copia del juego es de Steam, y es lo que convierte
-/// la búsqueda en exacta: por título, ITAD decide por su cuenta y puede
-/// equivocarse igual que se equivoca IGDB.
+/// The ITAD identifier is present if it was resolved before. The Steam appid is
+/// present when one copy of the game is from Steam, and it is what makes the
+/// search exact: by title, ITAD decides alone and can be incorrect in the same
+/// way as IGDB.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PriceTarget {
     pub game_id: GameId,
@@ -21,12 +21,12 @@ pub struct PriceTarget {
     pub steam_app_id: Option<String>,
 }
 
-/// El precio de un juego tal y como se enseña: la oferta más barata de ahora
-/// mismo, cuántas tiendas lo venden, y hasta dónde ha llegado a bajar.
+/// The price of a game as it is shown: the least expensive offer at this
+/// moment, how many stores sell it, and the lowest price that it has had.
 ///
-/// Los importes son céntimos. Se formatean al pintarlos y no antes: la moneda
-/// viaja al lado, y dividir entre cien aquí sería devolver un número que ya no
-/// se puede sumar sin error.
+/// The quantities are cents. They are formatted when they are shown and not
+/// before: the currency goes with them, and to divide by one hundred here would
+/// give back a number that you can no longer add without an error.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PriceRow {
     pub game_id: GameId,
@@ -35,13 +35,14 @@ pub struct PriceRow {
     pub regular: i64,
     pub cut: i64,
     pub currency: String,
-    /// Cuántas tiendas lo venden ahora mismo.
+    /// How many stores sell it at this moment.
     pub shops: i64,
     pub low_all_time: Option<i64>,
     pub low_year: Option<i64>,
-    /// Con qué nombre publica ITAD la página del juego. Es la única dirección
-    /// que la interfaz abre: la oferta apunta a la tienda que sea, y la
-    /// capacidad de la ventana no puede permitir un host que no conoce.
+    /// The name with which ITAD publishes the page of the game. It is the only
+    /// address that the interface opens: the offer points to a store that can be
+    /// any store, and the capability of the window cannot permit an unknown
+    /// host.
     pub itad_slug: Option<String>,
     pub captured_at: i64,
 }
@@ -49,20 +50,20 @@ pub struct PriceRow {
 pub struct PriceRepository<'a>(pub &'a Database);
 
 impl PriceRepository<'_> {
-    /// Los juegos deseados, con lo que se sabe de ellos para preguntar el
-    /// precio.
+    /// The wished-for games, with the data known about them to ask for the
+    /// price.
     ///
-    /// Un juego cuenta como deseado si le queda **alguna** copia de tipo
-    /// `wishlist` viva. Que además se posea en otra tienda no lo saca de aquí:
-    /// tener Disco Elysium en GOG y quererlo en Steam es una situación real, y
-    /// el usuario sabrá por qué.
+    /// A game counts as wished for if it keeps **one or more** live copies of
+    /// the `wishlist` kind. If the user also owns it in a different store, that
+    /// does not remove it from this list: to have Disco Elysium in GOG and to
+    /// want it in Steam is a real condition, and the user will know why.
     ///
-    /// Los `CROSS JOIN` son los de la consulta de la biblioteca y por el mismo
-    /// motivo: fijan que mande `game_link`, para que cada subconsulta mire las
-    /// copias de su juego en vez de recorrer las de la biblioteca entera.
-    /// `MIN` sobre el appid no es un cálculo, es un desempate: un juego puede
-    /// tener dos copias de Steam —la deseada y la que se posee— y la búsqueda
-    /// en ITAD tiene que salir siempre con el mismo appid.
+    /// The `CROSS JOIN` clauses are those of the library query, and for the same
+    /// reason: they make `game_link` control the plan, so that each subquery
+    /// looks at the copies of its own game and does not go through the copies of
+    /// all of the library. `MIN` on the appid is not a calculation, it breaks a
+    /// tie: a game can have two Steam copies — the wished-for copy and the owned
+    /// copy — and the search in ITAD must always use the same appid.
     pub async fn targets(&self) -> Result<Vec<PriceTarget>> {
         sqlx::query(
             "SELECT g.id, g.canonical_title, g.itad_id,
@@ -93,12 +94,12 @@ impl PriceRepository<'_> {
         .collect()
     }
 
-    /// Sustituye los precios de un juego por los que acaban de llegar.
+    /// Replaces the prices of a game with the prices that have just come in.
     ///
-    /// Sustituye, no acumula: las filas viejas se borran de verdad. Es la única
-    /// excepción del esquema a la baja lógica, y está razonada en la migración
-    /// `0007_prices`. Una oferta que terminó y se queda marcada sigue pareciendo
-    /// una oferta.
+    /// It replaces, it does not accumulate: the old rows are really deleted.
+    /// This is the only exception in the schema to the logical delete, and the
+    /// migration `0007_prices` gives the reason. An offer that ended and stays
+    /// marked continues to look like an offer.
     pub async fn save(&self, game_id: GameId, prices: &GamePrices) -> Result<()> {
         let now = OffsetDateTime::now_utc();
         let id = game_id_to_text(game_id);
@@ -132,9 +133,9 @@ impl PriceRepository<'_> {
             .await?;
         }
 
-        // La moneda del mínimo sale de la del propio mínimo, y si no hay
-        // ninguno, de la de la primera oferta: los dos vienen del mismo país que
-        // se pidió, así que no pueden discrepar.
+        // The currency of the low comes from the low itself, and if there is
+        // no low, from the first offer: the two come from the same country that
+        // was requested, thus they cannot disagree.
         let currency = prices
             .low_all_time
             .as_ref()
@@ -164,11 +165,12 @@ impl PriceRepository<'_> {
         Ok(())
     }
 
-    /// Olvida los precios de lo que ya no está en ninguna lista de deseados.
+    /// Forgets the prices of the games that are no longer in a wishlist.
     ///
-    /// Un juego que se compra sale de la lista, y su precio deja de significar
-    /// nada. Se pasa la lista entera de deseados y no los que se acaban de
-    /// refrescar, para que cancelar a mitad no borre lo que todavía vale.
+    /// A game that the user buys leaves the list, and its price stops having a
+    /// meaning. You give all of the wishlist and not only the games that were
+    /// just refreshed, so that a cancel in the middle does not delete the data
+    /// that is still applicable.
     pub async fn forget_missing(&self, keep: &[GameId]) -> Result<u64> {
         let placeholders = vec!["?"; keep.len()].join(",");
         let sql = format!("DELETE FROM price_snapshot WHERE game_id NOT IN ({placeholders})");
@@ -176,7 +178,7 @@ impl PriceRepository<'_> {
         for game_id in keep {
             query = query.bind(game_id_to_text(*game_id));
         }
-        let borradas = query.execute(self.0.pool()).await?.rows_affected();
+        let deleted = query.execute(self.0.pool()).await?.rows_affected();
 
         let sql = format!("DELETE FROM price_low WHERE game_id NOT IN ({placeholders})");
         let mut query = sqlx::query(&sql);
@@ -185,14 +187,14 @@ impl PriceRepository<'_> {
         }
         query.execute(self.0.pool()).await?;
 
-        Ok(borradas)
+        Ok(deleted)
     }
 
-    /// El mejor precio de cada juego, en una consulta.
+    /// The best price of each game, in one query.
     ///
-    /// Por el mismo motivo que la biblioteca entera sale de una sola: la lista
-    /// de deseados se pinta entera, y una consulta por juego para saber cuál es
-    /// la tienda más barata es la forma más fácil de que dé tirones.
+    /// For the same reason that all of the library comes from one query: the
+    /// wishlist is shown complete, and one query for each game to find the least
+    /// expensive store is the easiest way to make the display jump.
     pub async fn all(&self) -> Result<Vec<PriceRow>> {
         sqlx::query(SQL)
             .fetch_all(self.0.pool())
@@ -203,18 +205,19 @@ impl PriceRepository<'_> {
     }
 }
 
-/// La oferta más barata de cada juego, con las dos que la acompañan.
+/// The least expensive offer of each game, with the two values that go with it.
 ///
-/// `ROW_NUMBER` y no un `MIN(amount)` con columnas sueltas: SQLite deja escribir
-/// eso, pero cuando dos tiendas empatan al céntimo elige una cualquiera, y la
-/// tienda que se enseña cambiaría entre dos aperturas de la aplicación. Con el
-/// desempate por nombre, el mismo dato da siempre la misma fila.
+/// `ROW_NUMBER` and not a `MIN(amount)` with independent columns: SQLite lets
+/// you write that, but when two stores are equal to the cent it selects one at
+/// random, and the store that is shown would change between two starts of the
+/// application. With the tie broken by name, the same data always gives the
+/// same row.
 ///
-/// Manda `price_snapshot`: un juego que ahora mismo no vende nadie no tiene
-/// precio que enseñar, y su fila no existe. El mínimo histórico llega al lado,
-/// nunca solo.
-const SQL: &str = "SELECT mejor.game_id, mejor.shop, mejor.amount, mejor.regular, mejor.cut,
-                          mejor.currency, mejor.captured_at, mejor.shops,
+/// `price_snapshot` controls the result: a game that nobody sells at this moment
+/// has no price to show, and its row does not exist. The all-time low comes with
+/// the offer, never alone.
+const SQL: &str = "SELECT best.game_id, best.shop, best.amount, best.regular, best.cut,
+                          best.currency, best.captured_at, best.shops,
                           g.itad_slug,
                           l.all_time AS low_all_time,
                           l.year     AS low_year
@@ -223,12 +226,12 @@ const SQL: &str = "SELECT mejor.game_id, mejor.shop, mejor.amount, mejor.regular
                                  p.captured_at,
                                  COUNT(*)     OVER (PARTITION BY p.game_id) AS shops,
                                  ROW_NUMBER() OVER (PARTITION BY p.game_id
-                                                    ORDER BY p.amount, p.shop) AS puesto
+                                                    ORDER BY p.amount, p.shop) AS ordinal
                             FROM price_snapshot p
-                     ) mejor
-                     JOIN game g ON g.id = mejor.game_id
-                     LEFT JOIN price_low l ON l.game_id = mejor.game_id
-                    WHERE mejor.puesto = 1 AND g.deleted_at IS NULL";
+                     ) best
+                     JOIN game g ON g.id = best.game_id
+                     LEFT JOIN price_low l ON l.game_id = best.game_id
+                    WHERE best.ordinal = 1 AND g.deleted_at IS NULL";
 
 fn hydrate(row: &SqliteRow) -> Result<PriceRow> {
     let captured: OffsetDateTime = row.get("captured_at");

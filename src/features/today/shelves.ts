@@ -1,146 +1,148 @@
 import type { LibraryRow } from "../../lib/api";
 
 /**
- * Las reglas de «Hoy», puras y fuera de React, como el filtrado y la
- * ordenación de la biblioteca.
+ * The rules of "Today", pure and out of React, as the filter and the sort of the
+ * library are.
  *
- * `ahora` entra por parámetro y no se lee del reloj aquí dentro: una regla que
- * mira la hora por su cuenta no se puede probar sin viajar en el tiempo, y
- * media estantería depende de cuánto hace de la última partida.
+ * `now` comes in as a parameter and the clock is not read here: a rule that
+ * looks at the time alone is not testable without you go through time, and one
+ * half of the shelves depends on how long ago the last game was.
  */
 
-const DIA = 86_400;
-const SEIS_MESES = 182 * DIA;
+const DAY = 86_400;
+const SIX_MONTHS = 182 * DAY;
 
-/** Lo que cabe en un estante. Pasado eso, la sugerencia ya es una lista. */
-const POR_ESTANTE = 12;
+/** How many games go on a shelf. More than that, and the proposal is a list. */
+const PER_SHELF = 12;
 
-export interface Estanteria {
+export interface Shelf {
   id: string;
-  titulo: string;
-  /** Por qué están ahí estos juegos. Una estantería sin motivo es una lista. */
-  motivo: string;
-  juegos: LibraryRow[];
+  title: string;
+  /** Why these games are there. A shelf with no reason is a list. */
+  reason: string;
+  games: LibraryRow[];
 }
 
-export interface Destacado {
-  juego: LibraryRow;
-  motivo: string;
+export interface Featured {
+  game: LibraryRow;
+  reason: string;
 }
 
-/** Sin copia no hay nada que proponer: un deseado no se puede jugar hoy. */
-function enPropiedad(rows: LibraryRow[]): LibraryRow[] {
+/** With no copy there is nothing to propose: you cannot play a wished-for game
+ *  today. */
+function owned(rows: LibraryRow[]): LibraryRow[] {
   return rows.filter((row) => row.owned_stores.length > 0);
 }
 
-/** Terminado o abandonado es una decisión tomada, y «Hoy» no la reabre. */
-function pendiente(row: LibraryRow): boolean {
+/** Finished or abandoned is a decision already made, and "Today" does not open
+ *  it again. */
+function pending(row: LibraryRow): boolean {
   return row.status !== "finished" && row.status !== "abandoned";
 }
 
-function porTitulo(a: LibraryRow, b: LibraryRow): number {
-  return a.sort_title.localeCompare(b.sort_title, "es");
+function byTitle(a: LibraryRow, b: LibraryRow): number {
+  return a.sort_title.localeCompare(b.sort_title, "en");
 }
 
 /**
- * Lo más reciente primero, y lo que no publica fecha al final.
+ * The most recent first, and the games that publish no date last.
  *
- * Solo Steam publica la última partida, así que un juego de GOG llega aquí sin
- * fecha aunque se haya jugado ayer. Se va al final, que es lo que se puede
- * afirmar; tratarlo como «nunca jugado» sería fingir un dato.
+ * Only Steam publishes the last time played, thus a GOG game comes here with no
+ * date even if you played it yesterday. It goes last, which is what you can
+ * declare; to hold it as "never played" would be to invent data.
  */
-function porUltimaPartida(a: LibraryRow, b: LibraryRow): number {
-  if (a.last_played_at === null && b.last_played_at === null) return porTitulo(a, b);
+function byLastPlayed(a: LibraryRow, b: LibraryRow): number {
+  if (a.last_played_at === null && b.last_played_at === null) return byTitle(a, b);
   if (a.last_played_at === null) return 1;
   if (b.last_played_at === null) return -1;
   return b.last_played_at - a.last_played_at;
 }
 
 /**
- * Las estanterías que tienen algo dentro, en el orden en que se pintan.
+ * The shelves that have something in them, in the order in which they are shown.
  *
- * Una estantería vacía no se devuelve. Enseñar «hace mucho que no lo tocas» sin
- * un solo juego debajo no informa de nada y convierte la pantalla en una lista
- * de encabezados, que es justo lo contrario de una recomendación.
+ * An empty shelf is not given back. To show "you have not touched it for a long
+ * time" with no game below it tells you nothing and turns the screen into a list
+ * of headings, which is the opposite of a proposal.
  */
-export function estanterias(rows: LibraryRow[], ahora: number): Estanteria[] {
-  const mios = enPropiedad(rows);
+export function shelves(rows: LibraryRow[], now: number): Shelf[] {
+  const mine = owned(rows);
 
-  const candidatas: Estanteria[] = [
+  const candidates: Shelf[] = [
     {
-      id: "a-medias",
-      titulo: "Lo dejaste a medias",
-      motivo: "Marcados como «jugando»",
-      juegos: mios.filter((row) => row.status === "playing").sort(porUltimaPartida),
+      id: "half-done",
+      title: "You stopped in the middle",
+      reason: 'Marked as "playing"',
+      games: mine.filter((row) => row.status === "playing").sort(byLastPlayed),
     },
     {
-      id: "sin-tocar",
-      titulo: "Hace mucho que no lo tocas",
-      motivo: "Más de seis meses desde la última partida que publica la tienda",
-      juegos: mios
+      id: "not-touched",
+      title: "You have not touched it for a long time",
+      reason: "More than six months since the last game that the store publishes",
+      games: mine
         .filter(
           (row) =>
-            pendiente(row) && row.last_played_at !== null && ahora - row.last_played_at > SEIS_MESES,
+            pending(row) && row.last_played_at !== null && now - row.last_played_at > SIX_MONTHS,
         )
-        // Al revés que el resto: primero el que lleva más tiempo criando polvo.
+        // The opposite of the others: the game that has waited the longest first.
         .sort((a, b) => (a.last_played_at ?? 0) - (b.last_played_at ?? 0)),
     },
     {
-      id: "sin-estrenar",
-      titulo: "Sin estrenar",
-      motivo: "En tu biblioteca y sin una sola partida",
-      juegos: mios
-        .filter((row) => pendiente(row) && row.playtime_minutes === 0 && row.last_played_at === null)
-        .sort(porTitulo),
+      id: "never-started",
+      title: "Never started",
+      reason: "In your library and with no game played",
+      games: mine
+        .filter((row) => pending(row) && row.playtime_minutes === 0 && row.last_played_at === null)
+        .sort(byTitle),
     },
     {
-      id: "dos-veces",
-      titulo: "Lo tienes dos veces",
-      motivo: "La misma ficha con copia en más de una tienda",
-      juegos: mios.filter((row) => row.owned_stores.length > 1).sort(porTitulo),
+      id: "two-times",
+      title: "You have it two times",
+      reason: "The same record with a copy in more than one store",
+      games: mine.filter((row) => row.owned_stores.length > 1).sort(byTitle),
     },
   ];
 
-  return candidatas
-    .filter((estante) => estante.juegos.length > 0)
-    .map((estante) => ({ ...estante, juegos: estante.juegos.slice(0, POR_ESTANTE) }));
+  return candidates
+    .filter((shelf) => shelf.games.length > 0)
+    .map((shelf) => ({ ...shelf, games: shelf.games.slice(0, PER_SHELF) }));
 }
 
 /**
- * El juego que se propone hoy, con la razón por la que se propone.
+ * The game proposed today, with the reason for the proposal.
  *
- * El orden de preferencia es el de lo que menos cuesta retomar: lo que estabas
- * jugando gana siempre, porque proponerte empezar otra cosa mientras tienes una
- * a medias es justo lo que hace crecer la pila.
+ * The order of preference is the order of what is easiest to start again: the
+ * game that you were playing always wins, because a proposal to start something
+ * else while you have a game half done is exactly what makes the pile grow.
  *
- * Cuando no hay nada empezado, la elección rota con el día. El corte sale de
- * `ahora`, así que dentro del mismo día siempre sale el mismo juego —cambiar de
- * recomendación cada vez que se pinta la pantalla la convierte en una
- * tragaperras— y al día siguiente sale otro.
+ * When nothing is started, the selection changes with the day. The division uses
+ * `now`, thus in the same day the result is always the same game — a proposal
+ * that changes each time that the screen is shown is a slot machine — and on the
+ * next day the result is a different game.
  */
-export function destacado(rows: LibraryRow[], ahora: number): Destacado | null {
-  const mios = enPropiedad(rows);
+export function featured(rows: LibraryRow[], now: number): Featured | null {
+  const mine = owned(rows);
 
-  const jugando = mios.filter((row) => row.status === "playing").sort(porUltimaPartida);
-  if (jugando[0]) {
-    return { juego: jugando[0], motivo: "Lo tienes a medias" };
+  const playing = mine.filter((row) => row.status === "playing").sort(byLastPlayed);
+  if (playing[0]) {
+    return { game: playing[0], reason: "You have it half done" };
   }
 
-  const sinEstrenar = mios
-    .filter((row) => pendiente(row) && row.playtime_minutes === 0)
-    .sort(porTitulo);
-  if (sinEstrenar.length > 0) {
-    return { juego: delDia(sinEstrenar, ahora), motivo: "Lo tienes sin estrenar" };
+  const neverStarted = mine
+    .filter((row) => pending(row) && row.playtime_minutes === 0)
+    .sort(byTitle);
+  if (neverStarted.length > 0) {
+    return { game: ofTheDay(neverStarted, now), reason: "You have never started it" };
   }
 
-  const resto = mios.filter(pendiente).sort(porTitulo);
-  if (resto.length > 0) {
-    return { juego: delDia(resto, ahora), motivo: "De lo que tienes pendiente" };
+  const rest = mine.filter(pending).sort(byTitle);
+  if (rest.length > 0) {
+    return { game: ofTheDay(rest, now), reason: "From the games that you have pending" };
   }
 
   return null;
 }
 
-function delDia(juegos: LibraryRow[], ahora: number): LibraryRow {
-  return juegos[Math.floor(ahora / DIA) % juegos.length]!;
+function ofTheDay(games: LibraryRow[], now: number): LibraryRow {
+  return games[Math.floor(now / DAY) % games.length]!;
 }

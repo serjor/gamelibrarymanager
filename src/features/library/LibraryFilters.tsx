@@ -2,11 +2,11 @@ import type { PlayStatus } from "../../lib/api";
 import type { Filters } from "./filters";
 
 const STATUSES: { value: PlayStatus | "unset"; label: string }[] = [
-  { value: "backlog", label: "Pendiente" },
-  { value: "playing", label: "Jugando" },
-  { value: "finished", label: "Terminado" },
-  { value: "abandoned", label: "Abandonado" },
-  { value: "unset", label: "Sin marcar" },
+  { value: "backlog", label: "Backlog" },
+  { value: "playing", label: "Playing" },
+  { value: "finished", label: "Finished" },
+  { value: "abandoned", label: "Abandoned" },
+  { value: "unset", label: "Not marked" },
 ];
 
 export function LibraryFilters({
@@ -30,16 +30,16 @@ export function LibraryFilters({
         type="search"
         value={filters.search}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
-        placeholder="Buscar en la biblioteca"
-        aria-label="Buscar en la biblioteca"
+        placeholder="Search in the library"
+        aria-label="Search in the library"
       />
 
       <select
         value={filters.store ?? ""}
         onChange={(e) => onChange({ ...filters, store: e.target.value || null })}
-        aria-label="Tienda"
+        aria-label="Store"
       >
-        <option value="">Todas las tiendas</option>
+        <option value="">All of the stores</option>
         {stores.map((store) => (
           <option key={store} value={store}>
             {store}
@@ -52,9 +52,9 @@ export function LibraryFilters({
         onChange={(e) =>
           onChange({ ...filters, status: (e.target.value || null) as Filters["status"] })
         }
-        aria-label="Estado"
+        aria-label="Status"
       >
-        <option value="">Cualquier estado</option>
+        <option value="">Any status</option>
         {STATUSES.map((status) => (
           <option key={status.value} value={status.value}>
             {status.label}
@@ -65,9 +65,9 @@ export function LibraryFilters({
       <select
         value={filters.genre ?? ""}
         onChange={(e) => onChange({ ...filters, genre: e.target.value || null })}
-        aria-label="Género"
+        aria-label="Genre"
       >
-        <option value="">Cualquier género</option>
+        <option value="">Any genre</option>
         {genres.map((genre) => (
           <option key={genre} value={genre}>
             {genre}
@@ -76,7 +76,7 @@ export function LibraryFilters({
       </select>
 
       <span className="hint">
-        {shown === total ? `${total} juegos` : `${shown} de ${total}`}
+        {shown === total ? `${total} games` : `${shown} of ${total}`}
       </span>
     </div>
   );

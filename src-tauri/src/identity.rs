@@ -1,19 +1,20 @@
-//! Caso de uso de identidad: convertir entradas de tienda en fichas de juego.
+//! The identity use case: to turn store entries into game records.
 //!
-//! El orden no es negociable. Primero el identificador externo, que es exacto;
-//! solo cuando no lo hay se recurre al parecido de títulos, y ahí decide
-//! `domain::matching`, que ante la duda manda a revisión.
+//! The order is not negotiable. The external identifier is first, because it is
+//! exact; the similarity of titles applies only when there is no identifier, and
+//! there `domain::matching` decides and sends to review when there is doubt.
 //!
-//! Las tres tiendas tienen identificador externo, y cada una el suyo: el appid
-//! de Steam, el `external_id` de Galaxy y la oferta de Epic. Los cruces se piden
-//! **todos de golpe antes del bucle**, en lotes de 500, y no copia a copia. A 4
-//! peticiones por segundo, una biblioteca de 1.200 copias tardaba cinco minutos
-//! en cruzarse y el usuario cancelaba antes del final; lo que se quedaba sin
-//! cruzar caía en la búsqueda por título, que es justo la vía dudosa que el
-//! identificador existe para evitar.
+//! The three stores have an external identifier, and each one has its own: the
+//! Steam appid, the `external_id` of Galaxy and the offer of Epic. The joins are
+//! requested **all together before the loop**, in batches of 500, and not one
+//! copy at a time. At 4 requests each second, a library of 1,200 copies took five
+//! minutes to join and the user cancelled before the end; the copies that did not
+//! join fell to the search by title, which is the method with doubt that the
+//! identifier exists to prevent.
 //!
-//! Escribe en `game`, `game_link` y `match_candidate`. Nunca en `store_entry`
-//! —eso es de la tienda— ni en `user_state` —eso es del usuario—.
+//! It writes in `game`, `game_link` and `match_candidate`. Never in `store_entry`
+//! — that belongs to the store — and never in `user_state` — that belongs to the
+//! user.
 
 use std::collections::HashMap;
 
@@ -33,34 +34,36 @@ use crate::sync::{ProgressSink, SyncProgress};
 
 #[derive(Debug, Default, Serialize)]
 pub struct IdentityReport {
-    /// Enlazadas sin preguntar.
+    /// The entries linked with no question.
     pub linked: usize,
-    /// A la cola de revisión.
+    /// The entries sent to the review queue.
     pub review: usize,
-    /// Sin ningún candidato: ni IGDB las conoce.
+    /// The entries with no candidate: not even IGDB knows them.
     pub unknown: usize,
-    /// El usuario paró a mitad. Lo emparejado se queda: es idempotente.
+    /// The user stopped in the middle. The matches stay: the operation is
+    /// idempotent.
     pub cancelled: bool,
-    /// El proveedor cortó y la pasada se detuvo ahí, con el motivo.
+    /// The provider stopped the requests and the pass stopped there, with the
+    /// reason.
     ///
-    /// Es un resultado, no un error: lo emparejado hasta ese punto está
-    /// guardado y la siguiente pasada sigue por donde iba. Sube como error solo
-    /// lo que no deja seguir, que es un fallo de la base de datos.
+    /// This is a result, not an error: the matches made to that point are kept
+    /// and the next pass continues from there. Only a condition that prevents
+    /// all progress goes up as an error, and that is a failure of the
+    /// database.
     pub stopped: Option<String>,
 }
 
-/// Cada cuántos juegos se guarda lo que se lleva emparejado.
+/// How many games the pass matches before it keeps the result.
 ///
-/// Antes se escribía una sola vez, al final. Con mil juegos eso son minutos
-/// —IGDB admite cuatro peticiones por segundo—, y un 429 en el juego trescientos
-/// tiraba la pasada entera: ni un enlace escrito, y a empezar. Veinticinco
-/// juegos son unos diez segundos de trabajo, que es lo que se puede perder
-/// ahora.
+/// Before, the pass wrote one time only, at the end. With one thousand games
+/// that is minutes — IGDB accepts four requests each second — and a 429 at game
+/// three hundred lost all of the pass: no link written, and the user had to
+/// start again. Twenty-five games is approximately ten seconds of work, and that
+/// is what you can lose now.
 ///
-/// Guardar de más no rompe nada: `rebuild_auto` reescribe el mismo conjunto de
-/// enlaces cada vez, así que llamarlo veinte veces deja lo mismo que llamarlo
-/// una.
-const TRAMO: usize = 25;
+/// An extra write breaks nothing: `rebuild_auto` writes the same set of links
+/// each time, thus twenty calls give the same result as one call.
+const BATCH: usize = 25;
 
 pub async fn resolve(
     db: &Database,
@@ -70,47 +73,47 @@ pub async fn resolve(
     progress: &dyn ProgressSink,
 ) -> Result<IdentityReport, AppError> {
     let entries = StoreEntryRepository(db);
-    // Las que nunca tuvieron ficha y las que tienen una hecha solo con el
-    // título de la tienda: estas segundas ya se ven en la biblioteca, pero
-    // siguen esperando una identidad de verdad.
+    // The entries that never had a record and the entries that have a record
+    // made only with the title of the store: you already see the second group in
+    // the library, but they still wait for a true identity.
     let mut pending = entries.unlinked().await?;
     pending.extend(entries.pending_metadata().await?);
 
     let mut report = IdentityReport::default();
     let mut links = GameLinkRepository(db).all().await?;
     let total = pending.len();
-    let mut desde_el_ultimo_guardado = 0;
+    let mut since_last_save = 0;
 
     progress.report(SyncProgress {
         store: "igdb".to_owned(),
-        stage: "cruzando identificadores",
+        stage: "joining identifiers",
         done: 0,
         total,
     });
-    // El cruce va antes del bucle, así que un corte aquí no deja nada a medias:
-    // es el tramo cero. Se dice por qué se para y no se empareja nada, en vez de
-    // dejar caer la biblioteca entera en la búsqueda por título, que enlazaría
-    // peor de lo que enlaza el identificador.
+    // The join goes before the loop, thus a stop here leaves nothing
+    // incomplete: it is batch zero. The pass says why it stops and matches
+    // nothing, and does not let all of the library fall to the search by title,
+    // which links worse than the identifier links.
     let external = match external_ids(igdb, credentials, token, &pending).await {
         Ok(external) => external,
         Err(AppError::Metadata(error)) => {
             report.stopped = Some(error.to_string());
             return Ok(report);
         }
-        Err(otro) => return Err(otro),
+        Err(other) => return Err(other),
     };
 
-    for (indice, entry) in pending.into_iter().enumerate() {
-        // Se para entre juegos, nunca a mitad de uno. Lo ya decidido se
-        // conserva y la siguiente pasada sigue por donde iba.
+    for (index, entry) in pending.into_iter().enumerate() {
+        // It stops between games, never in the middle of one. The decisions
+        // already made stay and the next pass continues from there.
         if progress.cancelled() {
             report.cancelled = true;
             break;
         }
         progress.report(SyncProgress {
             store: entry.store.as_str().to_owned(),
-            stage: "emparejando",
-            done: indice,
+            stage: "matching",
+            done: index,
             total,
         });
 
@@ -124,16 +127,16 @@ pub async fn resolve(
         .await
         {
             Ok(decision) => decision,
-            // Un corte del proveedor para la pasada aquí mismo, y lo de atrás se
-            // guarda igual. Un fallo de la base de datos sí sube: si no se puede
-            // escribir, no hay nada que salvar.
+            // A stop from the provider stops the pass at this point, and the
+            // earlier work is still kept. A failure of the database goes up: if
+            // you cannot write, there is nothing to keep.
             Err(AppError::Metadata(error)) => {
                 report.stopped = Some(error.to_string());
                 break;
             }
-            Err(otro) => return Err(otro),
+            Err(other) => return Err(other),
         };
-        let ficha_local = links
+        let local_record = links
             .iter()
             .find(|link| link.store_entry_id == entry.id)
             .map(|link| link.game_id);
@@ -144,7 +147,7 @@ pub async fn resolve(
                 confidence,
             } => {
                 let game_id =
-                    match ensure_game(db, igdb, credentials, token, igdb_id, &entry, ficha_local)
+                    match ensure_game(db, igdb, credentials, token, igdb_id, &entry, local_record)
                         .await
                     {
                         Ok(game_id) => game_id,
@@ -152,11 +155,12 @@ pub async fn resolve(
                             report.stopped = Some(error.to_string());
                             break;
                         }
-                        Err(otro) => return Err(otro),
+                        Err(other) => return Err(other),
                     };
-                // La entrada puede traer ya un enlace local: se sustituye, no se
-                // acumula. Con dos propuestas para la misma entrada, el índice
-                // único decidiría por orden de inserción cuál gana.
+                // The entry can already carry a local link: the new link
+                // replaces it and does not accumulate. With two proposals for
+                // the same entry, the unique index would decide the winner by
+                // the order of insertion.
                 links.retain(|link| link.store_entry_id != entry.id);
                 links.push(GameLink {
                     game_id,
@@ -167,9 +171,9 @@ pub async fn resolve(
                 MatchCandidateRepository(db).clear(entry.id).await?;
                 report.linked += 1;
             }
-            // Sin decisión, el enlace local que hubiera se queda como estaba: ya
-            // está en `links` y `rebuild_auto` lo reescribirá igual. Quitarlo
-            // haría desaparecer de la biblioteca un juego que el usuario ya veía.
+            // With no decision, the local link stays as it was: it is already in
+            // `links` and `rebuild_auto` will write it again. To remove it would
+            // make a game that the user already saw go out of the library.
             MatchDecision::Review { candidates } => {
                 if candidates.is_empty() {
                     report.unknown += 1;
@@ -182,29 +186,29 @@ pub async fn resolve(
             }
         }
 
-        desde_el_ultimo_guardado += 1;
-        if desde_el_ultimo_guardado == TRAMO {
+        since_last_save += 1;
+        if since_last_save == BATCH {
             GameLinkRepository(db).rebuild_auto(&links).await?;
-            desde_el_ultimo_guardado = 0;
+            since_last_save = 0;
         }
     }
 
-    // Y el último tramo, que casi nunca cae justo en el corte. `rebuild_auto`
-    // reescribe los enlaces automáticos de una vez y respeta los manuales, que
-    // es la garantía de la fase 2.
+    // And the last batch, which almost never ends exactly at the limit.
+    // `rebuild_auto` writes the automatic links in one operation and keeps the
+    // manual links, which is the guarantee of phase 2.
     GameLinkRepository(db).rebuild_auto(&links).await?;
     GameRepository(db).soft_delete_orphans().await?;
     Ok(report)
 }
 
-/// Emparejamiento sin IGDB: agrupa las copias por título normalizado y les crea
-/// una ficha con lo que dice la tienda.
+/// The matching with no IGDB: it groups the copies by normalised title and makes
+/// a record for them with what the store says.
 ///
-/// Existe porque bloquear la aplicación entera hasta que el usuario consiga unas
-/// credenciales de Twitch es muy duro en el primer arranque. Lo que sale de aquí
-/// es una biblioteca de verdad —con su estado y sus insignias de tienda— a la
-/// espera de metadatos, y el mismo título en dos tiendas ya cae en una sola
-/// ficha: para eso basta la normalización, IGDB solo añade la certeza.
+/// It exists because to block all of the application until the user gets Twitch
+/// credentials is very hard at the first start. What comes out of here is a true
+/// library — with its status and its store badges — that waits for metadata, and
+/// the same title in two stores already falls into one record: the normalisation
+/// is sufficient for that, and IGDB only adds the certainty.
 pub async fn resolve_local(
     db: &Database,
     progress: &dyn ProgressSink,
@@ -216,15 +220,15 @@ pub async fn resolve_local(
     let pending = StoreEntryRepository(db).unlinked().await?;
     let total = pending.len();
 
-    for (indice, entry) in pending.into_iter().enumerate() {
+    for (index, entry) in pending.into_iter().enumerate() {
         if progress.cancelled() {
             report.cancelled = true;
             break;
         }
         progress.report(SyncProgress {
             store: entry.store.as_str().to_owned(),
-            stage: "agrupando por título",
-            done: indice,
+            stage: "grouping by title",
+            done: index,
             total,
         });
 
@@ -252,63 +256,64 @@ pub async fn resolve_local(
     Ok(report)
 }
 
-/// Cruza contra `external_games` todo lo que traiga identificador, tienda por
-/// tienda y en lotes.
+/// Joins against `external_games` each entry that carries an identifier, one
+/// store at a time and in batches.
 ///
-/// Lo que no cruce no aparece en el mapa, y eso es lo normal: las claves de
-/// Amazon que GOG regala, las bandas sonoras y los prólogos no tienen ficha en
-/// IGDB, y son la mayor parte de lo que falla. Esas copias siguen su camino por
-/// el título.
+/// The entries that do not join do not appear in the map, and that is usual: the
+/// Amazon keys that GOG gives, the sound tracks and the prologues have no record
+/// in IGDB, and they are most of what fails. Those copies continue on the path
+/// of the title.
 async fn external_ids(
     igdb: &IgdbClient,
     credentials: &IgdbCredentials,
     token: &IgdbToken,
     pending: &[StoreEntry],
 ) -> Result<HashMap<StoreEntryId, i64>, AppError> {
-    const FUENTES: [(StoreId, ExternalSource); 3] = [
+    const SOURCES: [(StoreId, ExternalSource); 3] = [
         (StoreId::Steam, ExternalSource::Steam),
         (StoreId::Gog, ExternalSource::Gog),
         (StoreId::Epic, ExternalSource::Epic),
     ];
 
-    let mut resueltos = HashMap::new();
+    let mut resolved = HashMap::new();
 
-    for (store, source) in FUENTES {
-        let de_la_tienda: Vec<(StoreEntryId, String)> = pending
+    for (store, source) in SOURCES {
+        let from_store: Vec<(StoreEntryId, String)> = pending
             .iter()
             .filter(|entry| entry.store == store)
             .filter_map(|entry| external_uid(entry).map(|uid| (entry.id, uid)))
             .collect();
-        if de_la_tienda.is_empty() {
+        if from_store.is_empty() {
             continue;
         }
 
-        // El mismo juego puede estar en dos cuentas de la misma tienda, y
-        // preguntar dos veces por él gastaría hueco del lote.
-        let mut uids: Vec<String> = de_la_tienda.iter().map(|(_, uid)| uid.clone()).collect();
+        // The same game can be in two accounts of the same store, and to ask
+        // twice for it would use space of the batch.
+        let mut uids: Vec<String> = from_store.iter().map(|(_, uid)| uid.clone()).collect();
         uids.sort_unstable();
         uids.dedup();
 
-        let cruces = igdb
+        let joins = igdb
             .by_external_ids(credentials, token, source, &uids)
             .await?;
-        for (id, uid) in de_la_tienda {
-            if let Some(igdb_id) = cruces.get(&uid) {
-                resueltos.insert(id, *igdb_id);
+        for (id, uid) in from_store {
+            if let Some(igdb_id) = joins.get(&uid) {
+                resolved.insert(id, *igdb_id);
             }
         }
     }
 
-    Ok(resueltos)
+    Ok(resolved)
 }
 
-/// El identificador con el que cada tienda aparece en `external_games`.
+/// The identifier with which each store appears in `external_games`.
 ///
-/// Steam y GOG publican el suyo en la propia copia. Epic no: lo que IGDB indexa
-/// es la **oferta** de su tienda, que no viaja en el asset del lanzador, y por
-/// eso el conector la resuelve durante la sincronización y la deja en `raw`.
-/// Una copia de Epic sincronizada antes de que existiera ese campo no lo tiene
-/// y se empareja por título hasta la siguiente pasada.
+/// Steam and GOG publish their identifier in the copy itself. Epic does not:
+/// IGDB indexes the **offer** of its store, which does not go in the asset of
+/// the launcher, thus the connector resolves the offer during the
+/// synchronisation and puts it in `raw`. An Epic copy synchronised before that
+/// field existed does not have it, and it matches by title until the next
+/// pass.
 fn external_uid(entry: &StoreEntry) -> Option<String> {
     match entry.store {
         StoreId::Steam | StoreId::Gog => Some(entry.store_app_id.clone()),
@@ -327,8 +332,8 @@ async fn decide(
     entry: &StoreEntry,
     external: Option<i64>,
 ) -> Result<MatchDecision, AppError> {
-    // El identificador de la tienda es exacto y ahorra toda la incertidumbre
-    // del parecido de títulos.
+    // The identifier of the store is exact and removes all of the uncertainty
+    // of the similarity of titles.
     if let Some(igdb_id) = external {
         return Ok(matching::decide_by_external_id(igdb_id));
     }
@@ -337,13 +342,14 @@ async fn decide(
     Ok(matching::decide_by_title(&entry.title, None, &candidates))
 }
 
-/// Crea la ficha si no existe. La tabla `game` es también la caché de IGDB: si
-/// el juego ya está, no se vuelve a preguntar nunca.
+/// Creates the record if it does not exist. The `game` table is also the cache
+/// of IGDB: if the game is already there, the code never asks again.
 ///
-/// `ficha_local` es la ficha sin metadatos de la que ya colgaba esta copia, si
-/// la había. Se **reutiliza su identificador** en vez de crear otra, y esa es
-/// toda la diferencia: `user_state` cuelga del `game_id`, así que crear una
-/// ficha nueva dejaría huérfano el estado que el usuario ya había escrito.
+/// `local_record` is the record with no metadata to which this copy was already
+/// attached, if there was one. The code **uses its identifier again** and does
+/// not create a new record, and that is all of the difference: `user_state` is
+/// attached to the `game_id`, thus a new record would leave the status that the
+/// user wrote with no owner.
 async fn ensure_game(
     db: &Database,
     igdb: &IgdbClient,
@@ -351,16 +357,17 @@ async fn ensure_game(
     token: &IgdbToken,
     igdb_id: i64,
     entry: &StoreEntry,
-    ficha_local: Option<GameId>,
+    local_record: Option<GameId>,
 ) -> Result<GameId, AppError> {
     let games = GameRepository(db);
     if let Some(existing) = games.find_by_igdb(igdb_id).await? {
         return Ok(existing.id);
     }
 
-    // Sin ficha previa se crea una; con ella se reescribe la que ya existía.
-    // `GameId::default()` es `GameId::new()`, con su UUIDv7 recién hecho.
-    let id = ficha_local.unwrap_or_default();
+    // With no earlier record the code creates one; with a record it writes the
+    // record that existed again. `GameId::default()` is `GameId::new()`, with a
+    // new UUIDv7.
+    let id = local_record.unwrap_or_default();
     let fetched = igdb.game(credentials, token, igdb_id).await?;
     let game = match fetched {
         Some(meta) => Game {
@@ -373,8 +380,8 @@ async fn ensure_game(
             released_at: meta.released_at,
             genres: meta.genres,
         },
-        // IGDB conoce el identificador pero no devuelve la ficha: mejor una
-        // ficha con el título de la tienda que ninguna.
+        // IGDB knows the identifier but does not give back the record: a record
+        // with the title of the store is better than no record.
         None => Game {
             id,
             ..local_game(entry)
@@ -385,8 +392,8 @@ async fn ensure_game(
     Ok(game.id)
 }
 
-/// Ficha sin metadatos, construida con lo que dice la tienda. Es lo que se crea
-/// cuando el usuario declara que un juego no está en IGDB.
+/// A record with no metadata, built with what the store says. This is what the
+/// code creates when the user declares that a game is not in IGDB.
 pub fn local_game(entry: &StoreEntry) -> Game {
     Game {
         id: GameId::new(),

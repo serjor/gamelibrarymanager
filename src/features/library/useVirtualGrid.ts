@@ -4,32 +4,32 @@ interface Options {
   itemCount: number;
   rowHeight: number;
   /**
-   * Ancho de cada columna. Sin él la rejilla es de una sola columna, que es lo
-   * que necesita una tabla: una lista es una rejilla que no tiene nada que
-   * dividir.
+   * The width of each column. Without it the grid has one column, which is what
+   * a table needs: a list is a grid that has nothing to divide.
    */
   columnWidth?: number;
-  /** Filas de más arriba y abajo, para que no se vea el hueco al desplazar. */
+  /** The extra rows above and below, so that you do not see an empty space
+   *  while the list scrolls. */
   overscan?: number;
 }
 
 interface VirtualGrid {
   containerRef: React.RefObject<HTMLDivElement | null>;
   columns: number;
-  /** Alto total, para que la barra de desplazamiento sea la de verdad. */
+  /** The total height, so that the scroll bar is the true scroll bar. */
   totalHeight: number;
-  /** Desplazamiento de la ventana visible dentro del alto total. */
+  /** The position of the visible window in the total height. */
   offsetY: number;
   range: { start: number; end: number };
 }
 
 /**
- * Ventana de elementos visibles sobre una rejilla de altura fija.
+ * The window of visible items over a grid with a fixed height.
  *
- * Cien líneas de dependencia menos: pintar mil portadas de golpe son mil nodos
- * y mil descargas de imagen, y ahí es donde la rejilla empieza a dar tirones.
- * Con altura fija el cálculo es aritmética, no medición, así que no hace falta
- * ninguna librería.
+ * One hundred lines of dependency fewer: to show one thousand covers together is
+ * one thousand nodes and one thousand image downloads, and that is where the
+ * grid starts to jump. With a fixed height the calculation is arithmetic and not
+ * measurement, thus no library is necessary.
  */
 export function useVirtualGrid({
   itemCount,

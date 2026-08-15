@@ -1,32 +1,33 @@
-//! Identidad de juegos: decidir cuándo dos títulos son el mismo juego.
+//! Game identity: to decide when two titles are the same game.
 //!
-//! Es la parte difícil del producto y la única que no puede fallar en silencio.
-//! La regla que gobierna todo el módulo: **un duplicado visible molesta, una
-//! fusión errónea hace perder datos del usuario**. Por eso, ante la duda, la
-//! decisión es mandar a revisión y no enlazar.
+//! This is the difficult part of the product, and the only part that cannot
+//! fail quietly. The rule that controls all of the module: **a duplicate that
+//! you see is a nuisance, an incorrect merge loses data of the user**. Thus,
+//! when there is doubt, the decision is to send to review and not to link.
 //!
-//! Puro y sin IO: se prueba con un corpus de títulos reales y sin red.
+//! Pure and with no IO: it is tested with a corpus of real titles and with no
+//! network.
 
 use serde::{Deserialize, Serialize};
 
-/// Parecido mínimo para enlazar sin preguntar.
+/// The minimum similarity to link without a question.
 pub const AUTO_THRESHOLD: f64 = 0.90;
 
-/// Distancia mínima entre el mejor candidato y el segundo. Si dos fichas se
-/// parecen igual de bien, ninguna gana: casi siempre son un juego y su
-/// remaster, o dos entregas de la misma saga.
+/// The minimum distance between the best candidate and the second. If two
+/// records are equally similar, neither one wins: almost always they are a game
+/// and its remaster, or two parts of the same series.
 pub const AMBIGUITY_MARGIN: f64 = 0.06;
 
-/// Confianza de un enlace hecho sin base de metadatos, agrupando solo por
-/// título normalizado idéntico.
+/// The confidence of a link made with no metadata database, which groups only
+/// by an identical normalised title.
 ///
-/// No es una identidad y por eso no vale 1.0: eso queda reservado al
-/// identificador externo. Es lo máximo que se puede afirmar sin IGDB, se queda
-/// justo en el umbral automático, y el primer emparejamiento con IGDB lo
-/// sustituye.
+/// It is not an identity and thus it is not 1.0: that value is kept for the
+/// external identifier. It is the most that you can declare without IGDB, it
+/// stays exactly at the automatic threshold, and the first match with IGDB
+/// replaces it.
 pub const LOCAL_TITLE_CONFIDENCE: f64 = AUTO_THRESHOLD;
 
-/// Un candidato de la base de metadatos.
+/// A candidate from the metadata database.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Candidate {
     pub igdb_id: i64,
@@ -37,18 +38,19 @@ pub struct Candidate {
     pub release_year: Option<i32>,
     #[serde(default)]
     pub cover_url: Option<String>,
-    /// Identificador con el que IGDB publica su ficha. Sirve para ir a mirarla.
+    /// The identifier with which IGDB publishes its record. You use it to go
+    /// and look at the record.
     #[serde(default)]
     pub slug: Option<String>,
 }
 
-/// Un candidato ya puntuado, con lo justo para que una persona lo distinga de
-/// otro sin salir de la aplicación.
+/// A candidate with a score, with sufficient data for a person to tell it from
+/// another candidate without they leave the application.
 ///
-/// El año y la portada no los usa el algoritmo: viajan hasta aquí porque cuando
-/// dos candidatos empatan —y empatan a menudo, porque IGDB tiene fichas
-/// duplicadas y ediciones que se normalizan igual— lo único que separa una de
-/// otra a simple vista es la carátula y la fecha.
+/// The algorithm does not use the year and the cover: they come to this point
+/// because when two candidates are equal — and they are equal frequently,
+/// because IGDB has duplicate records and editions that normalise to the same
+/// text — the only difference that you see is the cover and the date.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScoredCandidate {
     pub igdb_id: i64,
@@ -62,20 +64,20 @@ pub struct ScoredCandidate {
     pub slug: Option<String>,
 }
 
-/// Qué hacer con una entrada de tienda.
+/// What to do with a store entry.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum MatchDecision {
-    /// Enlace automático. `confidence` 1.0 solo cuando viene de un
-    /// identificador externo, nunca de un parecido de texto.
+    /// An automatic link. `confidence` is 1.0 only when it comes from an
+    /// external identifier, never from a similarity of text.
     Auto { igdb_id: i64, confidence: f64 },
-    /// A la cola de revisión, con lo que se ha encontrado para que el usuario
-    /// elija sin tener que buscarlo él.
+    /// To the review queue, with the candidates found, so that the user can
+    /// select one without they must search.
     Review { candidates: Vec<ScoredCandidate> },
 }
 
-/// Emparejamiento por identificador externo: el appid de Steam contra
-/// `external_games` de IGDB. Es exacto, así que no se puntúa ni se pregunta.
+/// A match by external identifier: the Steam appid against `external_games` of
+/// IGDB. It is exact, thus there is no score and no question.
 pub fn decide_by_external_id(igdb_id: i64) -> MatchDecision {
     MatchDecision::Auto {
         igdb_id,
@@ -83,8 +85,8 @@ pub fn decide_by_external_id(igdb_id: i64) -> MatchDecision {
     }
 }
 
-/// Emparejamiento por título, para las tiendas que no tienen identificador
-/// cruzado con IGDB.
+/// A match by title, for the stores that have no identifier in common with
+/// IGDB.
 pub fn decide_by_title(
     store_title: &str,
     store_year: Option<i32>,
@@ -112,8 +114,8 @@ pub fn decide_by_title(
     };
 
     let year_ok = match (store_year, year_of(candidates, best.igdb_id)) {
-        // Un año de diferencia es normal: relanzamientos, regiones, y la fecha
-        // que guarda la tienda no siempre es la de salida.
+        // A difference of one year is usual: new releases, regions, and the
+        // date that the store keeps is not always the release date.
         (Some(a), Some(b)) => (a - b).abs() <= 1,
         _ => true,
     };
@@ -146,11 +148,11 @@ fn year_of(candidates: &[Candidate], igdb_id: i64) -> Option<i32> {
         .and_then(|c| c.release_year)
 }
 
-/// Sufijos que solo describen el empaquetado y no un juego distinto.
+/// The suffixes that describe only the packaging and not a different game.
 ///
-/// `remastered`, `remake`, `redux` y `enhanced` **no** están en la lista a
-/// propósito: son juegos diferentes con ficha propia, y borrarlos fusionaría un
-/// original con su reedición.
+/// `remastered`, `remake`, `redux` and `enhanced` are **not** in the list, and
+/// that is deliberate: they are different games with a record of their own, and
+/// to remove them would merge an initial game with its new edition.
 const PACKAGING_SUFFIXES: &[&str] = &[
     "game of the year edition",
     "game of the year",
@@ -167,9 +169,9 @@ const PACKAGING_SUFFIXES: &[&str] = &[
     "digital edition",
 ];
 
-/// Normaliza un título para poder compararlo: minúsculas, sin marcas
-/// comerciales, sin acentos, sin puntuación, romanos a arábigos y sin sufijos
-/// de empaquetado.
+/// Normalises a title so that you can compare it: lower case, no trade marks,
+/// no accents, no punctuation, Roman numerals to Arabic numerals and no
+/// packaging suffixes.
 pub fn normalize(title: &str) -> String {
     let mut text: String = title
         .to_lowercase()
@@ -180,8 +182,8 @@ pub fn normalize(title: &str) -> String {
 
     text = text.split_whitespace().collect::<Vec<_>>().join(" ");
 
-    // Los sufijos se quitan en orden: el más largo primero, para que
-    // "game of the year edition" no se coma solo su cola.
+    // The suffixes are removed in order, the longest first, so that
+    // "game of the year edition" does not lose only its last part.
     loop {
         let before = text.len();
         for suffix in PACKAGING_SUFFIXES {
@@ -220,8 +222,8 @@ fn deaccent(c: char) -> char {
     }
 }
 
-/// Solo números romanos sueltos y hasta el XX: suficiente para las sagas y sin
-/// riesgo de convertir palabras como "mix" o "civil".
+/// Only Roman numerals that are alone, and only to XX: sufficient for the
+/// series and with no risk that words such as "mix" or "civil" change.
 fn roman_to_arabic(token: &str) -> Option<String> {
     const ROMAN: [(&str, u8); 20] = [
         ("i", 1),
@@ -251,13 +253,13 @@ fn roman_to_arabic(token: &str) -> Option<String> {
         .map(|(_, value)| value.to_string())
 }
 
-/// Parecido entre dos títulos ya normalizados.
+/// The similarity between two titles that are already normalised.
 ///
-/// Sobre el parecido textual se impone una regla de dominio: **si los números
-/// no coinciden, no es el mismo juego**. `Portal` y `Portal 2` comparten casi
-/// todos sus trigramas, y sin esta regla el margen de ambigüedad manda a
-/// revisión toda saga numerada; con ella, el número de entrega pesa lo que
-/// pesa de verdad.
+/// A domain rule controls the similarity of the text: **if the numbers are not
+/// the same, it is not the same game**. `Portal` and `Portal 2` share almost
+/// all of their trigrams, and without this rule the ambiguity margin sends
+/// every numbered series to review. With the rule, the number of the part has
+/// the weight that it must have.
 pub fn title_similarity(a: &str, b: &str) -> f64 {
     let base = similarity(a, b);
     if numeric_tokens(a) == numeric_tokens(b) {
@@ -276,11 +278,11 @@ fn numeric_tokens(text: &str) -> Vec<u32> {
     numbers
 }
 
-/// Coeficiente de Dice sobre trigramas de caracteres.
+/// The Dice coefficient on trigrams of characters.
 ///
-/// Se prefiere a la distancia de edición porque castiga menos las palabras
-/// añadidas o quitadas —que es lo que hacen los títulos de tienda— y más el
-/// texto realmente distinto.
+/// It is preferable to the edit distance because it gives a smaller penalty to
+/// words that are added or removed — which is what store titles do — and a
+/// larger penalty to text that is really different.
 pub fn similarity(a: &str, b: &str) -> f64 {
     if a == b {
         return 1.0;

@@ -1,5 +1,5 @@
 import type { LibraryRow } from "../../lib/api";
-import { ESTADOS } from "../../lib/estado";
+import { STATUSES } from "../../lib/status";
 
 export type SortField =
   | "title"
@@ -19,13 +19,14 @@ export interface Sort {
 export const DEFAULT_SORT: Sort = { field: "title", desc: false };
 
 /**
- * Lo que se compara de cada fila, o `null` cuando no hay dato.
+ * What the sort compares in each row, or `null` when there is no data.
  *
- * Cero horas y «nunca jugado» se tratan como falta de dato a propósito, igual
- * que hace la consulta con el `rtime_last_played: 0` de Steam: quien ordena por
- * horas quiere ver primero lo que ha jugado, no una tapia de ceros.
+ * Zero hours and "never played" count as absent data, and that is deliberate. It
+ * is the same as what the query does with the `rtime_last_played: 0` of Steam: a
+ * user who sorts by hours wants to see first the games that they have played,
+ * not a wall of zeros.
  */
-function valor(row: LibraryRow, field: SortField): string | number | null {
+function value(row: LibraryRow, field: SortField): string | number | null {
   switch (field) {
     case "title":
       return row.sort_title;
@@ -40,41 +41,41 @@ function valor(row: LibraryRow, field: SortField): string | number | null {
     case "last":
       return row.last_played_at;
     case "status":
-      return row.status === null ? null : ESTADOS.indexOf(row.status);
+      return row.status === null ? null : STATUSES.indexOf(row.status);
     case "rating":
       return row.rating;
   }
 }
 
-/** El título decide siempre que dos filas empatan, para que el orden no baile. */
-function desempate(a: LibraryRow, b: LibraryRow): number {
-  return a.sort_title.localeCompare(b.sort_title, "es");
+/** The title always decides when two rows are equal, so that the order stays. */
+function tieBreak(a: LibraryRow, b: LibraryRow): number {
+  return a.sort_title.localeCompare(b.sort_title, "en");
 }
 
 /**
- * Ordenación pura, fuera de React, como el filtrado.
+ * A pure sort, out of React, as the filter is.
  *
- * Lo que no tiene dato va al final **en los dos sentidos**. Invertir el orden
- * para ver los juegos con menos horas no debería llenar la primera pantalla de
- * los que no has abierto nunca: eso no es «pocas horas», es «no hay dato», y
- * son dos preguntas distintas.
+ * The rows with no data go last **in the two directions**. To invert the order
+ * to see the games with the fewest hours must not fill the first screen with the
+ * games that you have never opened: that is not "few hours", it is "no data",
+ * and they are two different questions.
  */
 export function applySort(rows: LibraryRow[], sort: Sort): LibraryRow[] {
-  const sentido = sort.desc ? -1 : 1;
+  const direction = sort.desc ? -1 : 1;
 
   return [...rows].sort((a, b) => {
-    const va = valor(a, sort.field);
-    const vb = valor(b, sort.field);
+    const va = value(a, sort.field);
+    const vb = value(b, sort.field);
 
-    if (va === null && vb === null) return desempate(a, b);
+    if (va === null && vb === null) return tieBreak(a, b);
     if (va === null) return 1;
     if (vb === null) return -1;
 
-    const comparados =
+    const compared =
       typeof va === "string" && typeof vb === "string"
-        ? va.localeCompare(vb, "es")
+        ? va.localeCompare(vb, "en")
         : Number(va) - Number(vb);
 
-    return comparados === 0 ? desempate(a, b) : comparados * sentido;
+    return compared === 0 ? tieBreak(a, b) : compared * direction;
   });
 }

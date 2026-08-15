@@ -1,8 +1,9 @@
-//! Comandos expuestos a la UI. Orquestan casos de uso y traducen tipos: la
-//! lógica vive en los crates de dominio y adaptadores.
+//! The commands given to the interface. They control the use cases and
+//! translate types: the logic lives in the domain and adapter crates.
 
-// Público porque `generate_handler!` necesita llegar al elemento que genera
-// `#[tauri::command]`, y un `pub use` de la función sola no lo arrastra.
+// Public because `generate_handler!` must reach the item that
+// `#[tauri::command]` generates, and a `pub use` of the function alone does not
+// bring it.
 pub mod epic;
 pub mod gog;
 
@@ -31,7 +32,8 @@ use crate::sync::{self, ProgressSink, SyncProgress, SyncReport};
 #[derive(Serialize)]
 pub struct AppInfo {
     pub version: &'static str,
-    /// `keyring` o `passphrase`: decide si la UI tiene que pedir contraseña.
+    /// `keyring` or `passphrase`: it decides whether the interface must ask for
+    /// a passphrase.
     pub secrets_backend: secrets::Backend,
     pub unlocked: bool,
 }
@@ -45,7 +47,7 @@ pub async fn app_info(state: State<'_, AppState>) -> Result<AppInfo, AppError> {
     })
 }
 
-/// Abre el almacén cifrado en las máquinas sin keyring.
+/// Opens the encrypted store on the machines with no keyring.
 #[tauri::command]
 pub async fn unlock_secrets(
     state: State<'_, AppState>,
@@ -55,9 +57,9 @@ pub async fn unlock_secrets(
     Ok(())
 }
 
-/// Conecta una cuenta de Steam validando la clave contra la API antes de
-/// guardarla: así un error de copiar y pegar se ve al momento y no como una
-/// biblioteca vacía.
+/// Connects a Steam account and examines the key against the API before it keeps
+/// the key: thus the user sees a copy-and-paste error immediately and not as an
+/// empty library.
 #[tauri::command]
 pub async fn connect_steam(
     state: State<'_, AppState>,
@@ -67,7 +69,7 @@ pub async fn connect_steam(
     let connector = state
         .connectors
         .get(&StoreId::Steam)
-        .ok_or_else(|| AppError::Message("sin conector de Steam".to_owned()))?;
+        .ok_or_else(|| AppError::Message("there is no Steam connector".to_owned()))?;
 
     let session = connector
         .authenticate(&AuthContext::ApiKey {
@@ -86,8 +88,8 @@ pub async fn connect_steam(
     };
     let id = StoreAccountRepository(&state.db).upsert(&account).await?;
 
-    // La credencial va al almacén de secretos. La base de datos solo sabe que
-    // la cuenta existe.
+    // The credential goes to the store of secrets. The database only knows that
+    // the account exists.
     state
         .secrets()
         .await?
@@ -147,7 +149,7 @@ pub async fn set_connector_enabled(
     Ok(())
 }
 
-/// Emite el progreso a la ventana y consulta la bandera de cancelación.
+/// Sends the progress to the window and reads the cancel flag.
 struct WindowProgress<'a> {
     app: AppHandle,
     state: &'a AppState,
@@ -155,8 +157,8 @@ struct WindowProgress<'a> {
 
 impl ProgressSink for WindowProgress<'_> {
     fn report(&self, progress: SyncProgress) {
-        // Si la ventana ya no está, el progreso da igual: no es motivo para
-        // abortar una operación que por lo demás va bien.
+        // If the window is no longer there, the progress does not matter: that
+        // is not a reason to stop an operation that continues correctly.
         let _ = self.app.emit("sync:progress", progress);
     }
 
@@ -165,8 +167,8 @@ impl ProgressSink for WindowProgress<'_> {
     }
 }
 
-/// La sincronización corre en el runtime de Tauri y va emitiendo progreso, así
-/// que la ventana sigue respondiendo mientras dura.
+/// The synchronisation runs in the Tauri runtime and sends progress, thus the
+/// window continues to answer while it runs.
 #[tauri::command]
 pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<SyncReport, AppError> {
     state.begin_operation();
@@ -179,22 +181,22 @@ pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<Sync
     report
 }
 
-/// Vale tanto para la sincronización como para el emparejamiento: los dos son
-/// largos, los dos se paran en el siguiente punto seguro y nunca corren a la vez.
+/// This applies both to the synchronisation and to the matching: the two are
+/// long, the two stop at the next safe point, and they never run at the same
+/// time.
 #[tauri::command]
 pub fn cancel_operation(state: State<'_, AppState>) {
     state.cancel_operation();
 }
 
-/// La biblioteca entera en una consulta. Con mil juegos, hacer una consulta por
-/// juego para saber en qué tiendas está es lo que hace que la rejilla dé
-/// tirones.
+/// All of the library in one query. With one thousand games, one query for each
+/// game to find its stores is what makes the grid jump.
 #[tauri::command]
 pub async fn library(state: State<'_, AppState>) -> Result<Vec<LibraryRow>, AppError> {
     Ok(LibraryRepository(&state.db).all().await?)
 }
 
-/// Lo único que escribe el usuario. Ninguna sincronización posterior lo toca.
+/// The only data that the user writes. No later synchronisation touches it.
 #[tauri::command]
 pub async fn set_user_state(
     state: State<'_, AppState>,
@@ -205,7 +207,7 @@ pub async fn set_user_state(
 ) -> Result<(), AppError> {
     let game_id = Uuid::parse_str(&game_id)
         .map(GameId::from_uuid)
-        .map_err(|_| AppError::Message("identificador de juego inválido".to_owned()))?;
+        .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
 
     let previous = UserStateRepository(&state.db).find(game_id).await?;
     UserStateRepository(&state.db)
@@ -240,9 +242,9 @@ pub async fn library_summary(state: State<'_, AppState>) -> Result<LibrarySummar
     })
 }
 
-/// Guarda las credenciales de IGDB del usuario, comprobándolas antes: si el
-/// client secret está mal, se sabe aquí y no en mitad de la primera
-/// sincronización.
+/// Keeps the IGDB credentials of the user and examines them before: if the
+/// client secret is incorrect, you know it here and not in the middle of the
+/// first synchronisation.
 #[tauri::command]
 pub async fn set_igdb_credentials(
     state: State<'_, AppState>,
@@ -266,15 +268,16 @@ pub async fn has_igdb_credentials(state: State<'_, AppState>) -> Result<bool, Ap
     Ok(state.secrets().await?.get(IGDB_CREDENTIALS)?.is_some())
 }
 
-/// Un juego que ITAD conoce seguro. Sirve para gastar una consulta en probar la
-/// clave antes de guardarla, igual que la de Steam se prueba contra su API.
-const ITAD_SONDA: &str = "620";
+/// A game that ITAD certainly knows. It is used to spend one query to test the
+/// key before the application keeps it, in the same way as the Steam key is
+/// tested against its API.
+const ITAD_PROBE: &str = "620";
 
-/// Guarda la clave de ITAD y el país del usuario, comprobándolos antes.
+/// Keeps the ITAD key and the country of the user, and examines them before.
 ///
-/// El país no es un adorno: ITAD devuelve las tiendas y la moneda de ese
-/// mercado, así que pedir precios sin decir dónde vives da el precio de otro
-/// sitio.
+/// The country is not decoration: ITAD gives back the stores and the currency of
+/// that market, thus a price request that does not say where you live gives the
+/// price of a different place.
 #[tauri::command]
 pub async fn set_itad_credentials(
     state: State<'_, AppState>,
@@ -284,7 +287,7 @@ pub async fn set_itad_credentials(
     let country = country.trim().to_uppercase();
     if country.len() != 2 || !country.chars().all(|c| c.is_ascii_alphabetic()) {
         return Err(AppError::Message(
-            "el país tiene que ser un código de dos letras, como ES o DE".to_owned(),
+            "the country must be a code of two letters, such as ES or DE".to_owned(),
         ));
     }
 
@@ -294,7 +297,7 @@ pub async fn set_itad_credentials(
     };
     state
         .itad
-        .lookup_by_steam_app_id(&credentials, ITAD_SONDA)
+        .lookup_by_steam_app_id(&credentials, ITAD_PROBE)
         .await?;
 
     state
@@ -309,10 +312,11 @@ pub async fn has_itad_credentials(state: State<'_, AppState>) -> Result<bool, Ap
     Ok(state.secrets().await?.get(ITAD_CREDENTIALS)?.is_some())
 }
 
-/// Pone precio a la lista de deseados.
+/// Gives a price to the wishlist.
 ///
-/// Botón propio y no un paso de la sincronización: preguntar a un tercero
-/// cuánto cuesta algo no puede dejar sin sincronizar las tiendas del usuario.
+/// It has a button of its own and it is not a step of the synchronisation: a
+/// question to a third party about what something costs cannot prevent the
+/// synchronisation of the stores of the user.
 #[tauri::command]
 pub async fn refresh_prices(
     app: AppHandle,
@@ -330,7 +334,7 @@ pub async fn refresh_prices(
     report
 }
 
-/// El mejor precio de cada deseado, en una consulta.
+/// The best price of each wished-for game, in one query.
 #[tauri::command]
 pub async fn prices(state: State<'_, AppState>) -> Result<Vec<PriceRow>, AppError> {
     Ok(PriceRepository(&state.db).all().await?)
@@ -345,12 +349,12 @@ async fn itad_credentials(state: &AppState) -> Result<ItadCredentials, AppError>
     Ok(serde_json::from_str(&raw)?)
 }
 
-/// Empareja lo que haya llegado de las tiendas con las fichas de IGDB.
+/// Matches what came from the stores with the IGDB records.
 ///
-/// Sin credenciales de IGDB no se para: se agrupan las copias por título y se
-/// les crea una ficha con lo que dice la tienda. La biblioteca se puede usar
-/// desde el primer arranque, y el día que el usuario configure IGDB estas fichas
-/// se enriquecen en su sitio sin perder lo que haya escrito encima.
+/// With no IGDB credentials it does not stop: it groups the copies by title and
+/// makes a record for them with what the store says. The library is usable from
+/// the first start, and on the day that the user configures IGDB these records
+/// get their metadata in place and lose nothing that the user wrote on them.
 #[tauri::command]
 pub async fn resolve_identities(
     app: AppHandle,
@@ -362,9 +366,9 @@ pub async fn resolve_identities(
         state: &state,
     };
 
-    // El emparejamiento es lento por el límite de 4 peticiones por segundo de
-    // IGDB, así que va informando juego a juego en vez de dejar la ventana
-    // callada varios minutos.
+    // The matching is slow because of the limit of 4 requests each second of
+    // IGDB, thus it reports each game and does not leave the window quiet for
+    // several minutes.
     let report = match igdb_session(&state).await {
         Ok((credentials, token)) => {
             identity::resolve(&state.db, &state.igdb, &credentials, &token, &progress).await
@@ -379,8 +383,8 @@ pub async fn resolve_identities(
     report
 }
 
-/// El token de Twitch dura unos sesenta días: se guarda y solo se renueva
-/// cuando caduca de verdad.
+/// The Twitch token lasts approximately sixty days: it is kept and renewed only
+/// when it really expires.
 async fn igdb_session(state: &AppState) -> Result<(IgdbCredentials, IgdbToken), AppError> {
     let secrets = state.secrets().await?;
     let raw = secrets
@@ -408,25 +412,25 @@ pub struct ReviewItem {
     pub store_entry_id: String,
     pub store: &'static str,
     pub title: String,
-    /// Lo que enseña la tienda de esta copia. Es la otra mitad de la
-    /// comparación: sin ella el usuario decide entre candidatos de IGDB a
-    /// ciegas, sin ver contra qué los está comparando.
+    /// What the store shows about this copy. It is the second half of the
+    /// comparison: without it the user selects between IGDB candidates blindly
+    /// and does not see what they compare them against.
     pub cover_url: Option<String>,
     pub store_url: Option<String>,
     pub candidates: Vec<ScoredCandidate>,
-    /// Los dos mejores candidatos puntúan igual.
+    /// The two best candidates have the same score.
     ///
-    /// Es con diferencia el motivo más común de acabar en esta cola, y no
-    /// significa que el emparejamiento dude entre dos juegos distintos: IGDB
-    /// tiene fichas duplicadas y las ediciones de un mismo juego se normalizan
-    /// al mismo título. Se marca para poder agruparlas y resolverlas de una
-    /// tacada en vez de una por una.
+    /// This is clearly the most common reason to come to this queue, and it does
+    /// not mean that the matching has doubt between two different games: IGDB
+    /// has duplicate records, and the editions of one game normalise to the same
+    /// title. The flag exists so that the interface can group them and resolve
+    /// them together and not one at a time.
     pub tie: bool,
 }
 
-/// Cuándo se consideran empatados dos candidatos. El mismo margen que usa el
-/// dominio para negarse a decidir, para que la cola agrupe exactamente lo que
-/// el emparejamiento rechazó por ambiguo.
+/// When two candidates count as equal. It is the same margin with which the
+/// domain refuses to decide, so that the queue groups exactly what the matching
+/// refused because it was ambiguous.
 fn is_tie(candidates: &[ScoredCandidate]) -> bool {
     match (candidates.first(), candidates.get(1)) {
         (Some(best), Some(second)) => {
@@ -436,8 +440,8 @@ fn is_tie(candidates: &[ScoredCandidate]) -> bool {
     }
 }
 
-/// La cola de revisión: lo que el emparejamiento automático no se atrevió a
-/// decidir, con lo que encontró, para que el usuario elija sin buscar él.
+/// The review queue: what the automatic matching did not decide, with the
+/// candidates that it found, so that the user can select without they search.
 #[tauri::command]
 pub async fn review_queue(state: State<'_, AppState>) -> Result<Vec<ReviewItem>, AppError> {
     let entries = StoreEntryRepository(&state.db).unlinked().await?;
@@ -459,30 +463,31 @@ pub async fn review_queue(state: State<'_, AppState>) -> Result<Vec<ReviewItem>,
     Ok(queue)
 }
 
-/// Confirma varios emparejamientos de una vez.
+/// Confirms more than one match together.
 ///
-/// No es el emparejamiento automático por la puerta de atrás. La interfaz trae
-/// ya elegido el mejor candidato de lo que **no** empata, porque repetir con un
-/// clic lo que la pantalla ya dice es trabajo inventado; pero eso se enseña en
-/// una columna y no se escribe hasta que el usuario confirma. Lo que empata
-/// sigue llegando sin elegir, que es exactamente lo que el umbral se negó a
-/// decidir. Cada par queda como enlace `manual`, que ningún algoritmo volverá a
-/// tocar. Lo único que ahorra es repetir el mismo gesto ciento cincuenta veces.
+/// It is not the automatic matching through the back door. The interface comes
+/// with the best candidate already selected for the entries that are **not**
+/// equal, because to repeat with a click what the screen already says is work
+/// that nobody needs; but the interface shows that in a column and writes
+/// nothing until the user confirms. The entries that are equal still come with
+/// no selection, which is exactly what the threshold refused to decide. Each
+/// pair becomes a `manual` link, which no algorithm will touch again. The only
+/// work that this removes is the same action one hundred and fifty times.
 #[tauri::command]
 pub async fn review_confirm_many(
     state: State<'_, AppState>,
     decisions: Vec<(String, i64)>,
 ) -> Result<usize, AppError> {
-    let mut hechos = 0;
+    let mut done = 0;
     for (store_entry_id, igdb_id) in decisions {
         confirm_one(&state, &store_entry_id, igdb_id).await?;
-        hechos += 1;
+        done += 1;
     }
-    Ok(hechos)
+    Ok(done)
 }
 
-/// El usuario elige una ficha. Queda como enlace manual, y ningún
-/// re-emparejamiento automático volverá a tocarlo.
+/// The user selects a record. It becomes a manual link, and no later automatic
+/// matching will touch it.
 #[tauri::command]
 pub async fn review_confirm(
     state: State<'_, AppState>,
@@ -492,15 +497,15 @@ pub async fn review_confirm(
     confirm_one(&state, &store_entry_id, igdb_id).await
 }
 
-/// El cuerpo que comparten confirmar uno y confirmar muchos. Que sea el mismo
-/// es lo que garantiza que el lote no tome ningún atajo respecto al de uno en
-/// uno: crea la misma ficha y escribe el mismo enlace `manual`.
+/// The body that "confirm one" and "confirm many" share. Because it is the same
+/// body, the batch takes no short cut against the one-at-a-time path: it creates
+/// the same record and writes the same `manual` link.
 async fn confirm_one(state: &AppState, store_entry_id: &str, igdb_id: i64) -> Result<(), AppError> {
     let entry_id = parse_entry_id(store_entry_id)?;
     let entry = StoreEntryRepository(&state.db)
         .find(entry_id)
         .await?
-        .ok_or_else(|| AppError::Message("esa entrada ya no existe".to_owned()))?;
+        .ok_or_else(|| AppError::Message("that entry no longer exists".to_owned()))?;
 
     let games = GameRepository(&state.db);
     let game_id = match games.find_by_igdb(igdb_id).await? {
@@ -529,9 +534,9 @@ async fn confirm_one(state: &AppState, store_entry_id: &str, igdb_id: i64) -> Re
     link_manually(state, entry_id, game_id).await
 }
 
-/// «Este juego no está en IGDB»: se le crea una ficha con el título de la
-/// tienda para que deje de aparecer en la cola y pueda tener estado como
-/// cualquier otro.
+/// "This game is not in IGDB": the code makes a record for it with the title of
+/// the store, so that it goes out of the queue and can have a status as any
+/// other game.
 #[tauri::command]
 pub async fn review_without_metadata(
     state: State<'_, AppState>,
@@ -541,7 +546,7 @@ pub async fn review_without_metadata(
     let entry = StoreEntryRepository(&state.db)
         .find(entry_id)
         .await?
-        .ok_or_else(|| AppError::Message("esa entrada ya no existe".to_owned()))?;
+        .ok_or_else(|| AppError::Message("that entry no longer exists".to_owned()))?;
 
     let game = identity::local_game(&entry);
     GameRepository(&state.db).upsert(&game).await?;
@@ -568,5 +573,5 @@ async fn link_manually(
 fn parse_entry_id(raw: &str) -> Result<StoreEntryId, AppError> {
     Uuid::parse_str(raw)
         .map(StoreEntryId::from_uuid)
-        .map_err(|_| AppError::Message("identificador de entrada inválido".to_owned()))
+        .map_err(|_| AppError::Message("invalid entry identifier".to_owned()))
 }

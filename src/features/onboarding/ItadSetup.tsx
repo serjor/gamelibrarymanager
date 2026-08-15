@@ -5,28 +5,29 @@ import { api, errorMessage } from "../../lib/api";
 const APPS_URL = "https://isthereanydeal.com/apps/";
 
 /**
- * El país con el que se piden los precios, sacado del idioma del sistema.
+ * The country with which the prices are requested, taken from the language of
+ * the system.
  *
- * Se propone, no se impone: el campo queda editable porque quien tiene el
- * sistema en inglés no compra necesariamente en Estados Unidos, y quien lo
- * tiene en español no compra necesariamente en España.
+ * It is a proposal, not a rule: the field stays editable because a user whose
+ * system is in English does not necessarily buy in the United States, and a user
+ * whose system is in Spanish does not necessarily buy in Spain.
  */
-function paisDelSistema(): string {
+function systemCountry(): string {
   const region = navigator.language.split("-")[1];
   return region === undefined ? "" : region.toUpperCase();
 }
 
 /**
- * Precios: ITAD.
+ * Prices: ITAD.
  *
- * Una clave más, y por el mismo motivo que las demás: la aplicación no lleva
- * ningún secreto dentro. Aquí la clave es gratis y se saca en un minuto, así
- * que el asistente es corto; lo que no es evidente es el país, y por eso tiene
- * su propio campo en vez de darlo por supuesto.
+ * One more key, and for the same reason as the others: the application carries
+ * no secret inside. Here the key is free and you get it in one minute, thus the
+ * screen is short; what is not clear is the country, and thus it has a field of
+ * its own and the application does not assume it.
  */
 export function ItadSetup({ onConnected }: { onConnected: () => void }) {
   const [key, setKey] = useState("");
-  const [country, setCountry] = useState(paisDelSistema);
+  const [country, setCountry] = useState(systemCountry);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,18 +47,18 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Precios: IsThereAnyDeal</h2>
+      <h2>Prices: IsThereAnyDeal</h2>
       <p className="hint">
-        Pone precio a tu lista de deseados: cuánto cuesta hoy en cada tienda y
-        cuánto ha llegado a costar. Sin esto la lista funciona igual, solo que
-        sin precios.
+        It gives a price to your wishlist: what each store asks today and the
+        lowest price that the game has had. Without this the list operates in the
+        same way, only with no prices.
       </p>
       <p className="hint">
-        Regístrate en ITAD, entra en tus aplicaciones y crea una: la clave sale
-        ahí mismo y es gratis.
+        Register in ITAD, go to your applications and make one: the key appears
+        there and it is free.
       </p>
 
-      <label htmlFor="itad-key">Clave de API de ITAD</label>
+      <label htmlFor="itad-key">ITAD API key</label>
       <input
         id="itad-key"
         type="password"
@@ -68,7 +69,7 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
         required
       />
 
-      <label htmlFor="itad-country">País</label>
+      <label htmlFor="itad-country">Country</label>
       <input
         id="itad-country"
         value={country}
@@ -78,11 +79,12 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
         maxLength={2}
         required
       />
-      {/* Sin país, ITAD contesta con las tiendas y la moneda de otro mercado, y
-          el error no se ve: se ven precios, solo que no son los tuyos. */}
+      {/* With no country, ITAD answers with the stores and the currency of a
+          different market, and you do not see the error: you see prices, only
+          they are not your prices. */}
       <p className="hint">
-        Código de dos letras. Decide en qué tiendas se busca y en qué moneda
-        llega el precio.
+        A code of two letters. It decides which stores the search uses and the
+        currency of the price.
       </p>
 
       <button
@@ -90,17 +92,17 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
         className="link"
         onClick={() => {
           openUrl(APPS_URL).catch((cause: unknown) =>
-            setError(`No he podido abrir ${APPS_URL}: ${errorMessage(cause)}`),
+            setError(`Could not open ${APPS_URL}: ${errorMessage(cause)}`),
           );
         }}
       >
-        Sacar mi clave en isthereanydeal.com
+        Get my key at isthereanydeal.com
       </button>
 
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || !key || !country}>
-        {busy ? "Comprobando…" : "Guardar"}
+        {busy ? "Examining…" : "Save"}
       </button>
     </form>
   );

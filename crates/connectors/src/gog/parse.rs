@@ -1,5 +1,5 @@
-//! Lectura de las respuestas de GOG. Sin IO: todo lo que hay aquí se prueba
-//! con las respuestas grabadas en `tests/fixtures/`.
+//! The reading of the GOG answers. With no IO: all of the code here is tested
+//! with the answers recorded in `tests/fixtures/`.
 
 use std::collections::HashMap;
 
@@ -7,8 +7,8 @@ use domain::{ConnectorError, EntryKind, StoreAccountId, StoreEntry, StoreEntryId
 use serde::Deserialize;
 use time::OffsetDateTime;
 
-/// Respuesta de `auth.gog.com/token`, tanto al canjear el código como al
-/// refrescar.
+/// The answer of `auth.gog.com/token`, both when it exchanges the code and when
+/// it refreshes.
 #[derive(Debug, Deserialize)]
 pub struct TokenResponse {
     pub access_token: String,
@@ -17,11 +17,11 @@ pub struct TokenResponse {
     pub user_id: String,
 }
 
-/// Una entrada de `galaxy-library.gog.com/users/{id}/releases`.
+/// An entry of `galaxy-library.gog.com/users/{id}/releases`.
 ///
-/// `platform_id` importa más de lo que parece: Galaxy también lista lo que el
-/// usuario tiene en otras tiendas conectadas, así que sin filtrar aquí el
-/// conector de GOG acabaría inventándose copias de Steam.
+/// `platform_id` is more important than it looks: Galaxy also lists what the
+/// user has in other connected stores, thus without a filter here the GOG
+/// connector would create Steam copies that do not exist.
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub platform_id: String,
@@ -40,8 +40,8 @@ struct ReleasesPage {
     next_page_token: Option<String>,
 }
 
-/// Los identificadores propios de GOG de una página, y el testigo de la
-/// siguiente si la hay.
+/// The GOG identifiers of one page, and the token of the next page if there is
+/// one.
 pub fn parse_releases_page(body: &str) -> Result<(Vec<Release>, Option<String>), ConnectorError> {
     let page: ReleasesPage =
         serde_json::from_str(body).map_err(|e| ConnectorError::Unexpected(e.to_string()))?;
@@ -52,13 +52,13 @@ pub fn parse_releases_page(body: &str) -> Result<(Vec<Release>, Option<String>),
         .filter(|item| item.owned && item.platform_id == PLATFORM_GOG)
         .collect();
 
-    // Una página sin testigo es la última. GOG devuelve el campo a null en vez
-    // de omitirlo, así que hay que tratar ambos casos igual.
+    // A page with no token is the last page. GOG gives the field as null and
+    // does not remove it, thus the two conditions must give the same result.
     let next = page.next_page_token.filter(|token| !token.is_empty());
     Ok((owned, next))
 }
 
-/// El identificador de plataforma que usa Galaxy para la propia GOG.
+/// The platform identifier that Galaxy uses for GOG itself.
 const PLATFORM_GOG: &str = "gog";
 
 #[derive(Debug, Deserialize)]
@@ -83,9 +83,9 @@ struct ProductLinks {
     product_card: Option<String>,
 }
 
-/// Lo que GOG sabe de un producto y aquí se aprovecha: su nombre, su carátula y
-/// su página. Los dos últimos no los usa el emparejamiento; son para que el
-/// usuario compare cuando tenga que decidir a mano.
+/// What GOG knows about a product and this code uses: its name, its cover and
+/// its page. The matching does not use the last two; they exist so that the user
+/// can compare when they must decide manually.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct ProductInfo {
     pub title: Option<String>,
@@ -93,10 +93,10 @@ pub struct ProductInfo {
     pub store_url: Option<String>,
 }
 
-/// Datos de `api.gog.com/products?ids=…`, indexados por identificador.
+/// The data of `api.gog.com/products?ids=…`, indexed by identifier.
 ///
-/// `id` llega como número, pero el resto del sistema trata `store_app_id` como
-/// texto: se normaliza aquí y no en cada sitio que lo consulte.
+/// `id` comes as a number, but the remainder of the system holds `store_app_id`
+/// as text: it is normalised here and not at each place that reads it.
 pub fn parse_products(body: &str) -> HashMap<String, ProductInfo> {
     let products: Vec<Product> = serde_json::from_str(body).unwrap_or_default();
     products
@@ -111,7 +111,7 @@ pub fn parse_products(body: &str) -> HashMap<String, ProductInfo> {
                 id,
                 ProductInfo {
                     title: product.title,
-                    cover_url: product.images.logo.map(|url| con_esquema(&url)),
+                    cover_url: product.images.logo.map(|url| with_scheme(&url)),
                     store_url: product.links.product_card,
                 },
             ))
@@ -119,16 +119,17 @@ pub fn parse_products(body: &str) -> HashMap<String, ProductInfo> {
         .collect()
 }
 
-/// GOG sirve las imágenes sin esquema (`//images-4.gog-statics.com/…`). Así
-/// tal cual, el webview las resolvería contra `tauri://` y no cargaría ninguna.
-fn con_esquema(url: &str) -> String {
+/// GOG gives the images with no scheme (`//images-4.gog-statics.com/…`). If you
+/// keep them unchanged, the webview would resolve them against `tauri://` and
+/// would load none of them.
+fn with_scheme(url: &str) -> String {
     match url.strip_prefix("//") {
-        Some(resto) => format!("https://{resto}"),
+        Some(rest) => format!("https://{rest}"),
         None => url.to_owned(),
     }
 }
 
-/// Nombre de la cuenta, de `users.gog.com/users/{id}`.
+/// The name of the account, from `users.gog.com/users/{id}`.
 pub fn parse_username(body: &str) -> Option<String> {
     #[derive(Deserialize)]
     struct UserData {
@@ -139,34 +140,34 @@ pub fn parse_username(body: &str) -> Option<String> {
         .and_then(|user| user.username)
 }
 
-/// Convierte lo que dice GOG en entradas de biblioteca.
+/// Turns what GOG says into library entries.
 ///
-/// El título puede faltar: `api.gog.com/products` no conoce todos los
-/// identificadores que devuelve Galaxy —los regalos y algunos paquetes no
-/// están—, y quedarse sin la copia entera por no saber su nombre sería peor que
-/// enseñarla con un nombre provisional que IGDB corregirá después.
+/// The title can be absent: `api.gog.com/products` does not know all of the
+/// identifiers that Galaxy gives back — the gifts and some packages are not
+/// there — and to lose all of the copy because its name is unknown would be
+/// worse than to show it with a temporary name that IGDB will correct later.
 pub fn to_entries(
     releases: &[Release],
-    productos: &HashMap<String, ProductInfo>,
+    products: &HashMap<String, ProductInfo>,
     account_id: StoreAccountId,
 ) -> Vec<StoreEntry> {
     releases
         .iter()
         .map(|release| {
-            let producto = productos.get(&release.external_id);
+            let product = products.get(&release.external_id);
             StoreEntry {
                 id: StoreEntryId::new(),
                 account_id,
                 store: StoreId::Gog,
                 store_app_id: release.external_id.clone(),
                 kind: EntryKind::Owned,
-                title: producto
+                title: product
                     .and_then(|p| p.title.clone())
                     .unwrap_or_else(|| format!("GOG {}", release.external_id)),
-                cover_url: producto.and_then(|p| p.cover_url.clone()),
-                store_url: producto.and_then(|p| p.store_url.clone()),
-                // GOG no publica tiempo de juego en la biblioteca: lo lleva un
-                // servicio aparte que solo responde por sesiones de Galaxy.
+                cover_url: product.and_then(|p| p.cover_url.clone()),
+                store_url: product.and_then(|p| p.store_url.clone()),
+                // GOG does not publish playtime in the library: a separate
+                // service holds it and answers only for Galaxy sessions.
                 playtime_minutes: None,
                 acquired_at: release
                     .owned_since

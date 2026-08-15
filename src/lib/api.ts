@@ -26,14 +26,14 @@ export interface SyncReport {
   wishlist: number;
   removed: number;
   failures: SyncFailure[];
-  /** Tiendas que se han saltado por tener el conector desactivado. */
+  /** The stores left out because their connector is switched off. */
   skipped: string[];
   cancelled: boolean;
 }
 
 /**
- * Estado de un conector. Solo llegan los que tienen algo que decir: una tienda
- * sin fila está encendida y sin errores.
+ * The state of a connector. Only the connectors that have something to say come
+ * here: a store with no row is on and has no error.
  */
 export interface ConnectorState {
   store: string;
@@ -54,7 +54,7 @@ export interface ScoredCandidate {
   score: number;
   release_year: number | null;
   cover_url: string | null;
-  /** Identificador de la ficha en IGDB, para poder ir a mirarla. */
+  /** The identifier of the record in IGDB, so that you can go and look at it. */
   slug: string | null;
 }
 
@@ -62,11 +62,11 @@ export interface ReviewItem {
   store_entry_id: string;
   store: string;
   title: string;
-  /** Lo que enseña la tienda de esta copia, para comparar contra IGDB. */
+  /** What the store shows about this copy, to compare against IGDB. */
   cover_url: string | null;
   store_url: string | null;
   candidates: ScoredCandidate[];
-  /** Los dos mejores puntúan igual: casi siempre son la misma ficha repetida. */
+  /** The two best have the same score: almost always the same record repeated. */
   tie: boolean;
 }
 
@@ -77,24 +77,24 @@ export interface LibraryRow {
   title: string;
   sort_title: string;
   cover_url: string | null;
-  /** El resumen de IGDB. Falta en las fichas nacidas del título de la tienda. */
+  /** The summary from IGDB. Absent in the records made from the store title. */
   summary: string | null;
   release_year: number | null;
   genres: string[];
   owned_stores: string[];
   wishlist_stores: string[];
   /**
-   * La imagen apaisada de la tienda, que no es lo mismo que `cover_url`: IGDB
-   * sirve carátulas 3:4 y la tienda sirve cabeceras panorámicas. Las dos van
-   * juntas con `store_url`, y las dos salen de la misma copia.
+   * The horizontal image of the store, which is not the same as `cover_url`:
+   * IGDB gives 3:4 covers and the store gives wide headers. The two go together
+   * with `store_url`, and the two come from the same copy.
    */
   store_cover_url: string | null;
   store_url: string | null;
   playtime_minutes: number;
   /**
-   * Última partida, en segundos desde la época. Solo lo publica Steam: un
-   * juego que solo esté en GOG lo tiene a `null` aunque se haya jugado, así
-   * que no se puede leer como «nunca jugado».
+   * The last time played, in seconds from the epoch. Only Steam publishes it: a
+   * game that is only in GOG keeps `null` even if the user has played it, thus
+   * you cannot read it as "never played".
    */
   last_played_at: number | null;
   status: PlayStatus | null;
@@ -103,27 +103,27 @@ export interface LibraryRow {
 }
 
 /**
- * El precio de un deseado: la oferta más barata de ahora mismo, y hasta dónde
- * ha llegado a bajar.
+ * The price of a wished-for game: the least expensive offer at this moment, and
+ * the lowest price that it has had.
  *
- * Los importes son céntimos. Se formatean al pintarlos y no antes: un precio es
- * un recuento, y en coma flotante 19,99 deja de valer 19,99 en cuanto se opera
- * con él.
+ * The quantities are cents. They are formatted when they are shown and not
+ * before: a price is a count, and in floating point 19.99 stops being 19.99 as
+ * soon as you calculate with it.
  */
 export interface PriceRow {
   game_id: string;
-  /** La tienda que lo vende más barato, con el nombre que le da ITAD. */
+  /** The store that sells it at the lowest price, with the name that ITAD gives. */
   shop: string;
   amount: number;
   regular: number;
-  /** Descuento en porcentaje, tal y como lo calcula ITAD. */
+  /** The discount as a percentage, as ITAD calculates it. */
   cut: number;
   currency: string;
-  /** Cuántas tiendas lo venden ahora mismo. */
+  /** How many stores sell it at this moment. */
   shops: number;
   low_all_time: number | null;
   low_year: number | null;
-  /** Con qué nombre publica ITAD la página del juego. */
+  /** The name with which ITAD publishes the page of the game. */
   itad_slug: string | null;
   captured_at: number;
 }
@@ -147,27 +147,28 @@ export interface IdentityReport {
   unknown: number;
   cancelled: boolean;
   /**
-   * El proveedor cortó y la pasada se detuvo ahí, con el motivo. Lo emparejado
-   * hasta ese punto está guardado: volver a pulsar sigue por donde iba.
+   * The provider stopped the requests and the pass stopped there, with the
+   * reason. The matches made to that point are kept: a second click continues
+   * from there.
    */
   stopped: string | null;
 }
 
-/** Única puerta hacia Rust. Nadie más llama a `invoke` directamente. */
+/** The only door to Rust. Nobody else calls `invoke` directly. */
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
   unlockSecrets: (passphrase: string) => invoke<void>("unlock_secrets", { passphrase }),
   connectSteam: (apiKey: string, steamId: string) =>
     invoke<string>("connect_steam", { apiKey, steamId }),
-  /** Abre el login de GOG y no resuelve hasta que el usuario termina o cierra. */
+  /** Opens the GOG login and resolves when the user finishes or closes it. */
   connectGog: (clientId: string, clientSecret: string) =>
     invoke<string>("connect_gog", { clientId, clientSecret }),
-  /** Igual que el de GOG, salvo que el código llega en el cuerpo de la página. */
+  /** As the GOG login, but the code comes in the body of the page. */
   connectEpic: (clientId: string, clientSecret: string) =>
     invoke<string>("connect_epic", { clientId, clientSecret }),
   listAccounts: () => invoke<Account[]>("list_accounts"),
   connectorStates: () => invoke<ConnectorState[]>("connector_states"),
-  /** Apaga o vuelve a encender una tienda sin tocar las demás. */
+  /** Switches a store off, or on again, and does not touch the other stores. */
   setConnectorEnabled: (store: string, enabled: boolean) =>
     invoke<void>("set_connector_enabled", { store, enabled }),
   syncNow: () => invoke<SyncReport>("sync_now"),
@@ -176,7 +177,8 @@ export const api = {
   setIgdbCredentials: (clientId: string, clientSecret: string) =>
     invoke<void>("set_igdb_credentials", { clientId, clientSecret }),
   hasItadCredentials: () => invoke<boolean>("has_itad_credentials"),
-  /** La clave de ITAD y el país: sin país, los precios son los de otro sitio. */
+  /** The ITAD key and the country: with no country, the prices are those of a
+   *  different place. */
   setItadCredentials: (key: string, country: string) =>
     invoke<void>("set_itad_credentials", { key, country }),
   refreshPrices: () => invoke<PriceReport>("refresh_prices"),
@@ -185,13 +187,13 @@ export const api = {
   reviewQueue: () => invoke<ReviewItem[]>("review_queue"),
   reviewConfirm: (storeEntryId: string, igdbId: number) =>
     invoke<void>("review_confirm", { storeEntryId, igdbId }),
-  /** Confirma varios a la vez. Cada par lo ha elegido el usuario. */
+  /** Confirms more than one together. The user selected each pair. */
   reviewConfirmMany: (decisions: [string, number][]) =>
     invoke<number>("review_confirm_many", { decisions }),
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
   library: () => invoke<LibraryRow[]>("library"),
-  /** Para lo que esté corriendo: sincronizar o emparejar. */
+  /** Stops the operation in progress: a synchronisation or a match. */
   cancelOperation: () => invoke<void>("cancel_operation"),
   setUserState: (
     gameId: string,
@@ -201,9 +203,9 @@ export const api = {
   ) => invoke<void>("set_user_state", { gameId, status, rating, notes }),
 };
 
-/** Los errores cruzan el puente como texto plano; aquí se normalizan. */
+/** The errors cross the bridge as plain text; they are normalised here. */
 export function errorMessage(cause: unknown): string {
   if (typeof cause === "string") return cause;
   if (cause instanceof Error) return cause.message;
-  return "Ha fallado algo y no ha dicho qué.";
+  return "Something failed and did not say what.";
 }

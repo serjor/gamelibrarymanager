@@ -1,97 +1,98 @@
 import { useMemo, useState } from "react";
 import type { LibraryRow } from "../../lib/api";
-import { ETIQUETA_ESTADO } from "../../lib/estado";
+import { STATUS_LABEL } from "../../lib/status";
 import { GameDetail } from "../game/GameDetail";
-import { ANCHO, ALTO_PORTADA } from "../library/LibraryWall";
-import { destacado, estanterias } from "./shelves";
+import { WIDTH, COVER_HEIGHT } from "../library/LibraryWall";
+import { featured, shelves } from "./shelves";
 
 /**
- * A qué jugar hoy.
+ * What to play today.
  *
- * No es un tercer modo de vista de la biblioteca, y por eso no lee sus filtros:
- * la tabla y la pared comparten contrato —filtras y las dos enseñan lo
- * filtrado—, mientras que esta pantalla hace sus propios cortes. Sobre
- * estanterías curadas, «género = RPG» no significaría nada.
+ * It is not a third view mode of the library, thus it does not read the library
+ * filters: the table and the wall share a contract — you filter and the two show
+ * the filtered games — while this screen makes its own divisions. Over shelves
+ * that a rule selected, "genre = RPG" would mean nothing.
  *
- * La ficha se abre siempre como hoja: aquí no hay una lista al lado que
- * mantener a la vista, y lo que se está mirando es el arte.
+ * The game record always opens as a sheet: there is no list beside it to keep in
+ * view here, and what you look at is the art.
  */
 export function Today({ rows, onSaved }: { rows: LibraryRow[]; onSaved: () => void }) {
-  const [abierto, setAbierto] = useState<string | null>(null);
-  // Congelado al montar: las estanterías cortan por «hace seis meses», y un
-  // reloj que avanza a mitad de render haría que dos cálculos de la misma
-  // pantalla no coincidieran.
-  const [ahora] = useState(() => Math.floor(Date.now() / 1000));
+  const [opened, setOpened] = useState<string | null>(null);
+  // Held at the mount: the shelves divide at "six months ago", and a clock that
+  // moves in the middle of a render would make two calculations of the same
+  // screen disagree.
+  const [now] = useState(() => Math.floor(Date.now() / 1000));
 
-  const propuesta = useMemo(() => destacado(rows, ahora), [rows, ahora]);
-  // El destacado no se repite abajo: verlo dos veces en la misma pantalla hace
-  // pensar que son dos juegos. Si por eso una estantería se queda vacía, no se
-  // pinta, que es lo que ya hace con cualquier otra vacía.
-  const estantes = useMemo(
-    () => estanterias(rows.filter((row) => row.game_id !== propuesta?.juego.game_id), ahora),
-    [rows, propuesta, ahora],
+  const proposal = useMemo(() => featured(rows, now), [rows, now]);
+  // The featured game does not appear again below: to see it two times on the
+  // same screen makes you think that they are two games. If a shelf becomes
+  // empty because of that, it is not shown, which is what already occurs with
+  // any other empty shelf.
+  const shelfList = useMemo(
+    () => shelves(rows.filter((row) => row.game_id !== proposal?.game.game_id), now),
+    [rows, proposal, now],
   );
-  const abiertoRow = useMemo(
-    () => rows.find((row) => row.game_id === abierto) ?? null,
-    [rows, abierto],
+  const openedRow = useMemo(
+    () => rows.find((row) => row.game_id === opened) ?? null,
+    [rows, opened],
   );
 
-  if (propuesta === null) {
+  if (proposal === null) {
     return (
       <p className="hint">
-        Todavía no hay ningún juego en propiedad que proponer. Sincroniza una
-        tienda y aquí aparecerá a qué jugar.
+        There is not yet an owned game to propose. Synchronise a store and this
+        screen will show what to play.
       </p>
     );
   }
 
-  const juego = propuesta.juego;
+  const game = proposal.game;
 
   return (
-    <section className="hoy">
-      <article className="destacado">
-        <div className="destacado-arte">
-          {juego.cover_url ? (
-            <img src={juego.cover_url} alt="" />
+    <section className="today">
+      <article className="featured">
+        <div className="featured-art">
+          {game.cover_url ? (
+            <img src={game.cover_url} alt="" />
           ) : (
-            // Decorativa: el título está justo al lado, y repetirlo obliga a un
-            // lector de pantalla a decirlo dos veces.
+            // Decoration: the title is immediately beside it, and to repeat it
+            // would make a screen reader say it two times.
             <span className="cover-placeholder" aria-hidden="true">
-              {juego.title}
+              {game.title}
             </span>
           )}
         </div>
 
-        <div className="destacado-texto">
-          <p className="hint">{propuesta.motivo}</p>
-          <h2>{juego.title}</h2>
+        <div className="featured-text">
+          <p className="hint">{proposal.reason}</p>
+          <h2>{game.title}</h2>
           <p className="hint">
-            {juego.release_year ?? "año desconocido"}
-            {juego.genres.length > 0 && ` · ${juego.genres.join(", ")}`}
-            {` · ${juego.owned_stores.join(", ")}`}
-            {juego.status && ` · ${ETIQUETA_ESTADO[juego.status]}`}
+            {game.release_year ?? "year unknown"}
+            {game.genres.length > 0 && ` · ${game.genres.join(", ")}`}
+            {` · ${game.owned_stores.join(", ")}`}
+            {game.status && ` · ${STATUS_LABEL[game.status]}`}
           </p>
-          {juego.summary && <p className="resumen">{juego.summary}</p>}
+          {game.summary && <p className="synopsis">{game.summary}</p>}
           <div className="actions">
-            <button onClick={() => setAbierto(juego.game_id)}>Abrir la ficha</button>
+            <button onClick={() => setOpened(game.game_id)}>Open the record</button>
           </div>
         </div>
       </article>
 
-      {estantes.map((estante) => (
-        <section key={estante.id} className="estante-caja">
-          <h3>{estante.titulo}</h3>
-          <p className="hint">{estante.motivo}</p>
+      {shelfList.map((shelf) => (
+        <section key={shelf.id} className="shelf-box">
+          <h3>{shelf.title}</h3>
+          <p className="hint">{shelf.reason}</p>
           <ul
-            className="estante"
+            className="shelf"
             style={{
-              gridAutoColumns: `${ANCHO}px`,
-              ["--alto-portada" as string]: `${ALTO_PORTADA}px`,
+              gridAutoColumns: `${WIDTH}px`,
+              ["--cover-height" as string]: `${COVER_HEIGHT}px`,
             }}
           >
-            {estante.juegos.map((row) => (
+            {shelf.games.map((row) => (
               <li key={row.game_id}>
-                <button className="baldosa" onClick={() => setAbierto(row.game_id)}>
+                <button className="tile" onClick={() => setOpened(row.game_id)}>
                   {row.cover_url ? (
                     <img src={row.cover_url} alt="" loading="lazy" />
                   ) : (
@@ -99,7 +100,7 @@ export function Today({ rows, onSaved }: { rows: LibraryRow[]; onSaved: () => vo
                       {row.title}
                     </span>
                   )}
-                  <span className="baldosa-titulo">{row.title}</span>
+                  <span className="tile-title">{row.title}</span>
                   <span className="hint">{row.owned_stores.join(" · ")}</span>
                 </button>
               </li>
@@ -108,12 +109,12 @@ export function Today({ rows, onSaved }: { rows: LibraryRow[]; onSaved: () => vo
         </section>
       ))}
 
-      {abiertoRow && (
+      {openedRow && (
         <GameDetail
-          key={abiertoRow.game_id}
-          row={abiertoRow}
+          key={openedRow.game_id}
+          row={openedRow}
           variant="sheet"
-          onClose={() => setAbierto(null)}
+          onClose={() => setOpened(null)}
           onSaved={onSaved}
         />
       )}

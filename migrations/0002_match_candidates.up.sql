@@ -1,8 +1,9 @@
--- La cola de revisión necesita recordar qué encontró el emparejamiento, o cada
--- vez que el usuario abriera la pantalla habría que volver a preguntar a IGDB
--- y gastar cuota en algo que ya se sabía.
+-- The review queue must remember what the matching found. Without this table,
+-- each time that the user opened the screen the application would ask IGDB again
+-- and use quota for data that it already had.
 --
--- Es caché, no verdad: se puede borrar entera y reconstruir sin perder nada.
+-- This is a cache, not the truth: you can delete all of it and build it again
+-- and lose nothing.
 CREATE TABLE match_candidate (
     store_entry_id  TEXT NOT NULL REFERENCES store_entry (id) ON DELETE CASCADE,
     igdb_id         INTEGER NOT NULL,

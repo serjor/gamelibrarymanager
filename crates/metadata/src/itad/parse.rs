@@ -1,5 +1,5 @@
-//! Lectura de las respuestas de ITAD, separada del transporte para poder
-//! probarla con respuestas grabadas y sin red.
+//! The reading of the ITAD answers, kept apart from the transport so that you
+//! can test it with recorded answers and with no network.
 
 use domain::{Deal, GamePrices, Money};
 use serde::Deserialize;
@@ -51,10 +51,11 @@ struct RawShop {
     name: String,
 }
 
-/// El precio tal y como llega: con el importe repetido en dos formas.
+/// The price as it comes: with the quantity given in two forms.
 ///
-/// Se lee `amountInt`, que son céntimos enteros, y se ignora `amount`, que es el
-/// mismo número en coma flotante. La forma que no pierde nada es la entera.
+/// This code reads `amountInt`, which is whole cents, and ignores `amount`,
+/// which is the same number in floating point. The whole form is the form that
+/// loses nothing.
 #[derive(Deserialize)]
 struct RawPrice {
     #[serde(rename = "amountInt")]
@@ -73,10 +74,10 @@ impl From<RawPrice> for Money {
 
 pub fn parse_lookup(body: &str) -> Result<Option<ItadGame>> {
     let parsed: LookupResponse = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
 
-    // `found` y el juego son dos cosas distintas en la respuesta, así que se
-    // exigen las dos: un `found: true` sin juego no es un juego encontrado.
+    // `found` and the game are two different things in the answer, thus the two
+    // are necessary: a `found: true` with no game is not a game found.
     if !parsed.found {
         return Ok(None);
     }
@@ -90,7 +91,7 @@ pub fn parse_lookup(body: &str) -> Result<Option<ItadGame>> {
 
 pub fn parse_prices(body: &str) -> Result<Vec<GamePrices>> {
     let parsed: Vec<RawPrices> = serde_json::from_str(body)
-        .map_err(|e| MetadataError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
 
     Ok(parsed
         .into_iter()

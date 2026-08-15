@@ -6,10 +6,10 @@ const KEY_URL = "https://steamcommunity.com/dev/apikey";
 const ID_URL = "https://steamid.io";
 
 /**
- * Pedir dos claves antes de ver un solo juego es el mayor riesgo de abandono
- * del producto, así que el asistente lleva los enlaces directos, explica para
- * qué sirve cada dato y valida contra la API en el momento: un error de copiar
- * y pegar se ve aquí y no como una biblioteca vacía.
+ * To ask for two keys before the user sees one game is the largest risk that
+ * they leave the product, thus this screen carries the direct links, says what
+ * each value is for and examines the values against the API immediately: you see
+ * a copy-and-paste error here and not as an empty library.
  */
 export function SteamSetup({ onConnected }: { onConnected: () => void }) {
   const [apiKey, setApiKey] = useState("");
@@ -18,11 +18,11 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const openLink = (url: string) => {
-    // Si el navegador no se abre, el usuario se queda mirando un enlace muerto
-    // sin saber por qué: mejor decirlo y dejar la URL a la vista. Con el motivo,
-    // además: tragárselo convirtió un permiso mal puesto en un misterio.
+    // If the browser does not open, the user looks at a dead link and does not
+    // know why: it is better to say it and show the URL. And with the reason: to
+    // hide the reason turned an incorrect permission into a mystery.
     openUrl(url).catch((cause: unknown) =>
-      setError(`No he podido abrir ${url}: ${errorMessage(cause)}`),
+      setError(`Could not open ${url}: ${errorMessage(cause)}`),
     );
   };
 
@@ -42,27 +42,27 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Conectar Steam</h2>
+      <h2>Connect Steam</h2>
       <p className="hint">
-        La clave es tuya y no sale de este ordenador. Al ser tuya, además, Steam
-        te deja leer tu biblioteca aunque tengas el perfil en privado.
+        The key is yours and it does not leave this computer. And because it is
+        yours, Steam lets you read your library even if your profile is private.
       </p>
 
-      <label htmlFor="api-key">Clave de API de Steam</label>
+      <label htmlFor="api-key">Steam API key</label>
       <input
         id="api-key"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
-        placeholder="32 caracteres"
+        placeholder="32 characters"
         autoComplete="off"
         spellCheck={false}
         required
       />
       <button type="button" className="link" onClick={() => openLink(KEY_URL)}>
-        Sacar mi clave en steamcommunity.com
+        Get my key at steamcommunity.com
       </button>
 
-      <label htmlFor="steam-id">Tu SteamID de 64 bits</label>
+      <label htmlFor="steam-id">Your 64-bit SteamID</label>
       <input
         id="steam-id"
         value={steamId}
@@ -73,13 +73,13 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
         required
       />
       <button type="button" className="link" onClick={() => openLink(ID_URL)}>
-        Averiguar mi SteamID
+        Find my SteamID
       </button>
 
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || !apiKey || !steamId}>
-        {busy ? "Comprobando la clave…" : "Conectar"}
+        {busy ? "Examining the key…" : "Connect"}
       </button>
     </form>
   );

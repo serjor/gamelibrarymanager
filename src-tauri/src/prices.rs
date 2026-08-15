@@ -1,17 +1,18 @@
-//! Caso de uso de precios: poner un precio a cada juego de la lista de deseados.
+//! The price use case: to give a price to each game of the wishlist.
 //!
-//! Va aparte de la sincronización y no dentro de ella a propósito. Son cosas
-//! distintas: sincronizar lee las tiendas del usuario y esto pregunta a un
-//! tercero cuánto cuesta algo. Juntarlas haría que ITAD caído dejara sin
-//! sincronizar Steam, que es justo lo que la fase 7 se dedicó a evitar.
+//! It is apart from the synchronisation and not inside it, and that is
+//! deliberate. They are different things: a synchronisation reads the stores of
+//! the user, and this asks a third party what something costs. To put them
+//! together would let an ITAD that is down prevent the synchronisation of Steam,
+//! which is exactly what phase 7 prevented.
 //!
-//! Escribe en `price_snapshot`, en `price_low` y en las dos columnas de `game`
-//! que guardan el identificador de ITAD. Nunca en `store_entry` —eso es de la
-//! tienda— ni en `user_state` —eso es del usuario—.
+//! It writes in `price_snapshot`, in `price_low` and in the two columns of
+//! `game` that keep the ITAD identifier. Never in `store_entry` — that belongs
+//! to the store — and never in `user_state` — that belongs to the user.
 //!
-//! Recibe sus colaboradores en lugar de sacarlos del estado global, como la
-//! sincronización: así se prueba de extremo a extremo contra un servidor de
-//! mentira y una base de datos de verdad, sin arrancar Tauri.
+//! It takes its collaborators and does not get them from the global state, as
+//! the synchronisation does: thus you can test it from end to end against a
+//! pretend server and a real database, with no start of Tauri.
 
 use std::collections::HashMap;
 
@@ -25,18 +26,21 @@ use storage::repositories::{GameRepository, PriceRepository, PriceTarget};
 use crate::error::AppError;
 use crate::sync::{ProgressSink, SyncProgress};
 
-/// De dónde salen los precios. Es el nombre que se enseña, y también el que
-/// viaja en el progreso.
-const PROVEEDOR: &str = "itad";
+/// Where the prices come from. It is the name that the interface shows, and also
+/// the name that goes in the progress.
+const PROVIDER: &str = "itad";
 
 #[derive(Debug, Default, Serialize)]
 pub struct PriceReport {
-    /// Deseados con al menos una tienda que los venda ahora mismo.
+    /// The wished-for games with one or more stores that sell them at this
+    /// moment.
     pub priced: usize,
-    /// Deseados que ITAD no sabe identificar. No es un error: hay juegos que no
-    /// tiene, y la siguiente pasada vuelve a preguntar por ellos.
+    /// The wished-for games that ITAD cannot identify. This is not an error:
+    /// there are games that it does not have, and the next pass asks for them
+    /// again.
     pub unknown: usize,
-    /// El usuario paró a mitad. Lo consultado se queda: es idempotente.
+    /// The user stopped in the middle. The data received stays: the operation is
+    /// idempotent.
     pub cancelled: bool,
 }
 
@@ -50,52 +54,53 @@ pub async fn refresh(
     let targets = prices.targets().await?;
     let mut report = PriceReport::default();
 
-    // Lo que ya no está en ninguna lista de deseados deja de tener precio. Se
-    // hace lo primero y con la lista completa —no con lo que se llegue a
-    // consultar—, así que cancelar a mitad no borra nada que siga valiendo.
-    let vivos: Vec<GameId> = targets.iter().map(|target| target.game_id).collect();
-    prices.forget_missing(&vivos).await?;
+    // A game that is no longer in a wishlist stops having a price. This is the
+    // first operation and it uses the complete list — not only the games that
+    // the pass asks about — thus a cancel in the middle deletes nothing that is
+    // still applicable.
+    let live: Vec<GameId> = targets.iter().map(|target| target.game_id).collect();
+    prices.forget_missing(&live).await?;
 
-    // Un identificador puede tocar a más de una ficha: dos fichas locales del
-    // mismo juego, todavía sin unificar, resuelven al mismo juego de ITAD y las
-    // dos tienen que acabar con su precio.
-    let mut por_id: HashMap<String, Vec<GameId>> = HashMap::new();
+    // One identifier can apply to more than one record: two local records of the
+    // same game, not yet unified, resolve to the same ITAD game, and the two
+    // must get their price.
+    let mut by_id: HashMap<String, Vec<GameId>> = HashMap::new();
     let total = targets.len();
 
-    for (indice, target) in targets.into_iter().enumerate() {
-        // Se para entre juegos, nunca a mitad de uno.
+    for (index, target) in targets.into_iter().enumerate() {
+        // It stops between games, never in the middle of one.
         if progress.cancelled() {
             report.cancelled = true;
             break;
         }
         progress.report(SyncProgress {
-            store: PROVEEDOR.to_owned(),
-            stage: "buscando en ITAD",
-            done: indice,
+            store: PROVIDER.to_owned(),
+            stage: "searching in ITAD",
+            done: index,
             total,
         });
 
         match resolve(db, itad, credentials, &target).await? {
-            Some(itad_id) => por_id.entry(itad_id).or_default().push(target.game_id),
+            Some(itad_id) => by_id.entry(itad_id).or_default().push(target.game_id),
             None => report.unknown += 1,
         }
     }
 
-    if por_id.is_empty() {
+    if by_id.is_empty() {
         return Ok(report);
     }
 
     progress.report(SyncProgress {
-        store: PROVEEDOR.to_owned(),
-        stage: "precios",
+        store: PROVIDER.to_owned(),
+        stage: "prices",
         done: 0,
-        total: por_id.len(),
+        total: by_id.len(),
     });
 
-    // Una sola consulta por cada doscientos juegos: el cliente parte la lista.
-    let ids: Vec<String> = por_id.keys().cloned().collect();
+    // One query for each two hundred games: the client divides the list.
+    let ids: Vec<String> = by_id.keys().cloned().collect();
     for game_prices in itad.prices(credentials, &ids).await? {
-        let Some(games) = por_id.get(&game_prices.provider_id) else {
+        let Some(games) = by_id.get(&game_prices.provider_id) else {
             continue;
         };
         for game_id in games {
@@ -109,12 +114,12 @@ pub async fn refresh(
     Ok(report)
 }
 
-/// Con qué identificador conoce ITAD este juego.
+/// The identifier with which ITAD knows this game.
 ///
-/// El que ya se sabía, si lo hay. Si no, el appid de Steam, que es exacto, y en
-/// último lugar el título, que es una apuesta. El resultado se anota en la
-/// ficha: una lista de deseados es corta, pero preguntar lo mismo en cada
-/// pasada gasta cuota para nada.
+/// The identifier already known, if there is one. If there is not, the Steam
+/// appid, which is exact, and last the title, which is a guess. The result is
+/// written in the record: a wishlist is short, but to ask the same question at
+/// each pass uses quota for nothing.
 async fn resolve(
     db: &Database,
     itad: &ItadClient,

@@ -1,5 +1,5 @@
-//! Lectura de las respuestas de Steam, separada del transporte para poder
-//! probarla con respuestas grabadas y sin red.
+//! The reading of the Steam answers, kept apart from the transport so that you
+//! can test it with recorded answers and with no network.
 
 use std::collections::HashMap;
 
@@ -42,22 +42,22 @@ struct WishlistItem {
     date_added: Option<i64>,
 }
 
-/// Biblioteca. Un perfil con los detalles de juego en privado devuelve un
-/// objeto vacío en vez de un error, así que hay que distinguirlo a mano: el
-/// usuario merece saber que el problema es la privacidad y no su clave.
+/// The library. A profile that keeps its game details private gives back an
+/// empty object and not an error, thus you must find that condition here: the
+/// user must know that the problem is the privacy and not their key.
 pub fn parse_owned(
     body: &str,
     account_id: StoreAccountId,
 ) -> Result<Vec<StoreEntry>, ConnectorError> {
     let envelope: Envelope<serde_json::Value> = serde_json::from_str(body)
-        .map_err(|e| ConnectorError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| ConnectorError::Unexpected(format!("unreadable answer: {e}")))?;
 
     if envelope.response.as_object().is_none_or(|o| o.is_empty()) {
         return Err(ConnectorError::Private);
     }
 
     let parsed: Envelope<OwnedGames> = serde_json::from_str(body)
-        .map_err(|e| ConnectorError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| ConnectorError::Unexpected(format!("unreadable answer: {e}")))?;
 
     Ok(parsed
         .response
@@ -86,15 +86,15 @@ pub fn parse_owned(
         .collect())
 }
 
-/// Deseados. Este endpoint solo devuelve appids y fechas: los títulos se piden
-/// aparte, y si no llegan la ficha se resuelve igualmente por appid en la
-/// fase 4.
+/// The wished-for games. This endpoint gives back only appids and dates: the
+/// titles are requested separately, and if they do not come, phase 4 still
+/// resolves the record by appid.
 pub fn parse_wishlist(
     body: &str,
     account_id: StoreAccountId,
 ) -> Result<Vec<StoreEntry>, ConnectorError> {
     let parsed: Envelope<Wishlist> = serde_json::from_str(body)
-        .map_err(|e| ConnectorError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| ConnectorError::Unexpected(format!("unreadable answer: {e}")))?;
 
     Ok(parsed
         .response
@@ -118,33 +118,34 @@ pub fn parse_wishlist(
         .collect())
 }
 
-/// La cápsula del juego. Se deduce del appid y no cuesta ni una petición: Steam
-/// la sirve siempre en esa dirección, y es la imagen por la que cualquiera
-/// reconoce un juego de su biblioteca.
+/// The capsule image of the game. It comes from the appid and costs no request:
+/// Steam always gives it at that address, and it is the image by which a person
+/// recognises a game of their library.
 fn cover_url(app_id: i64) -> String {
     format!("https://cdn.cloudflare.steamstatic.com/steam/apps/{app_id}/header.jpg")
 }
 
-/// Su página en la tienda, para poder ir a comprobar de qué juego se trata.
+/// Its page in the store, so that you can go and see which game it is.
 fn store_url(app_id: i64) -> String {
     format!("https://store.steampowered.com/app/{app_id}")
 }
 
-/// Nombre de la cuenta, para poder enseñar algo más humano que un steamid.
+/// The name of the account, so that the interface can show something more
+/// readable than a steamid.
 pub fn parse_player_name(body: &str, steam_id: &str) -> Result<Option<String>, ConnectorError> {
     let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|e| ConnectorError::Unexpected(format!("respuesta ilegible: {e}")))?;
+        .map_err(|e| ConnectorError::Unexpected(format!("unreadable answer: {e}")))?;
 
     let players = value
         .get("response")
         .and_then(|r| r.get("players"))
         .and_then(|p| p.as_array())
-        .ok_or_else(|| ConnectorError::Unexpected("falta response.players".to_owned()))?;
+        .ok_or_else(|| ConnectorError::Unexpected("response.players is absent".to_owned()))?;
 
-    // Una clave válida con un steamid inexistente devuelve la lista vacía.
+    // A valid key with a steamid that does not exist gives back an empty list.
     if players.is_empty() {
         return Err(ConnectorError::Unexpected(format!(
-            "Steam no conoce el steamid {steam_id}"
+            "Steam does not know the steamid {steam_id}"
         )));
     }
 
@@ -155,8 +156,8 @@ pub fn parse_player_name(body: &str, steam_id: &str) -> Result<Option<String>, C
         .map(str::to_owned))
 }
 
-/// Títulos desde la API de la tienda. Es best-effort por definición: lo que no
-/// venga se queda con el marcador de posición.
+/// The titles from the API of the store. It gives the best result that it can:
+/// the titles that do not come keep their placeholder.
 pub fn parse_app_details(body: &str) -> HashMap<String, String> {
     let Ok(value) = serde_json::from_str::<serde_json::Value>(body) else {
         return HashMap::new();

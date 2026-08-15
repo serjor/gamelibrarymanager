@@ -1,34 +1,37 @@
-//! Cliente de IGDB.
+//! The IGDB client.
 //!
-//! Dos vías de búsqueda, y el orden importa:
+//! Two search methods, and the order is important:
 //!
-//! 1. `external_games`, que cruza el identificador de la tienda con la ficha de
-//!    IGDB. Es exacto y no admite discusión. Vale para las tres tiendas.
-//! 2. Búsqueda por nombre, para lo que no cruza. Aquí ya no hay certeza y decide
-//!    `domain::matching`.
+//! 1. `external_games`, which joins the identifier of the store to the IGDB
+//!    record. It is exact and there is no doubt. It operates for the three
+//!    stores.
+//! 2. A search by name, for the entries that do not join. Here there is no
+//!    certainty, and `domain::matching` decides.
 //!
-//! ## Cobertura de `external_games` (medida el 2026-08-15)
+//! ## The coverage of `external_games` (measured on 2026-08-15)
 //!
-//! Contra una biblioteca real de 602 copias de Steam, 288 de GOG y 318 de Epic:
+//! Against a real library of 602 Steam copies, 288 GOG copies and 318 Epic
+//! copies:
 //!
-//! - **Steam**, con el appid: 486 de 500 cruzan, el 97%.
-//! - **GOG**, con el `external_id` de Galaxy: 211 de 288, el 73%. De los 77 que
-//!   fallan, 69 no son juegos del catálogo de GOG —53 claves de Amazon Luna y
-//!   Amazon Prime, 10 bandas sonoras y extras, 6 prólogos y demos—. Sobre los
-//!   219 juegos de verdad cruzan 211, **el 96%**, la misma cifra que Steam.
-//! - **Epic**, con el identificador de la oferta: 78 de 80 namespaces, el 97%.
-//!   El conector lo consigue; aquí solo se consulta. Por qué es la oferta y no
-//!   el item está en `connectors::epic`.
+//! - **Steam**, with the appid: 486 of 500 join, which is 97%.
+//! - **GOG**, with the `external_id` of Galaxy: 211 of 288, which is 73%. Of the
+//!   77 that fail, 69 are not games of the GOG catalogue — 53 keys of Amazon
+//!   Luna and Amazon Prime, 10 sound tracks and extras, 6 prologues and demos.
+//!   Of the 219 true games, 211 join, which is **96%**, the same figure as
+//!   Steam.
+//! - **Epic**, with the identifier of the offer: 78 of 80 namespaces, which is
+//!   97%. The connector gets that identifier; this module only asks. Why it is
+//!   the offer and not the item is in `connectors::epic`.
 //!
-//! Es decir, la nota que vivía aquí —«Steam es el único cruce fiable»— era
-//! falsa. Se escribió en la fase 4, cuando Steam era la única tienda del
-//! proyecto, y nadie la volvió a medir al llegar GOG y Epic.
+//! Thus the note that was here — "Steam is the only reliable join" — was false.
+//! It was written in phase 4, when Steam was the only store of the project, and
+//! nobody measured it again when GOG and Epic came in.
 //!
-//! ## `category` está obsoleto
+//! ## `category` is obsolete
 //!
-//! La documentación marca `category` como obsoleto y manda usar
-//! `external_game_source`. Los identificadores son los mismos, así que el cambio
-//! es de nombre de campo y nada más.
+//! The documentation marks `category` as obsolete and tells you to use
+//! `external_game_source`. The identifiers are the same, thus the change is only
+//! the name of the field.
 
 mod parse;
 
@@ -45,15 +48,16 @@ use crate::{MetadataError, Result};
 const API: &str = "https://api.igdb.com/v4";
 const TWITCH_TOKEN: &str = "https://id.twitch.tv/oauth2/token";
 
-/// Cuántos identificadores caben en una consulta de `external_games`.
+/// How many identifiers go in one `external_games` query.
 ///
-/// El tope de `limit` que documenta IGDB es 500, y el filtro `uid = (…)` admite
-/// ese mismo lote. Con 602 copias de Steam la diferencia es 2 peticiones en vez
-/// de 602, que a 4 por segundo son dos segundos en vez de dos minutos y medio.
+/// The maximum `limit` in the IGDB documentation is 500, and the `uid = (…)`
+/// filter accepts a batch of that size. With 602 Steam copies the difference is
+/// 2 requests and not 602, which at 4 requests each second is two seconds and
+/// not two minutes and one half.
 const BATCH: usize = 500;
 
-/// Tienda de la que viene un identificador, tal y como la numera
-/// `external_game_sources`.
+/// The store from which an identifier comes, with the number that
+/// `external_game_sources` gives it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExternalSource {
     Steam = 1,
@@ -61,7 +65,7 @@ pub enum ExternalSource {
     Epic = 26,
 }
 
-/// Credenciales del propio usuario, sacadas de su aplicación de Twitch.
+/// The credentials of the user, from their own Twitch application.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IgdbCredentials {
     pub client_id: String,
@@ -76,7 +80,8 @@ pub struct IgdbToken {
 
 impl IgdbToken {
     pub fn is_valid(&self, now: OffsetDateTime) -> bool {
-        // Margen de un minuto: un token que caduca en vuelo es un 401 gratuito.
+        // A margin of one minute: a token that expires during a request is a
+        // 401 that you get for nothing.
         self.expires_at - 60 > now.unix_timestamp()
     }
 }
@@ -98,15 +103,15 @@ impl IgdbClient {
         }
     }
 
-    /// Redirige las llamadas a otro host. Existe para los tests.
+    /// Sends the calls to a different host. It exists for the tests.
     pub fn with_bases(mut self, api_base: impl Into<String>, token_url: impl Into<String>) -> Self {
         self.api_base = api_base.into();
         self.token_url = token_url.into();
         self
     }
 
-    /// Token de aplicación de Twitch. Caduca en unos 60 días, así que se guarda
-    /// y se renueva, no se pide en cada arranque.
+    /// The application token of Twitch. It expires in approximately 60 days,
+    /// thus it is kept and renewed and not requested at each start.
     pub async fn token(&self, credentials: &IgdbCredentials) -> Result<IgdbToken> {
         let response = self
             .http
@@ -131,16 +136,16 @@ impl IgdbClient {
         parse::parse_token(&body, OffsetDateTime::now_utc())
     }
 
-    /// Fichas exactas a partir de los identificadores de una tienda.
+    /// The exact records, from the identifiers of a store.
     ///
-    /// Se pregunta por lotes y no copia a copia. No es solo velocidad: a 4
-    /// peticiones por segundo, una biblioteca grande tardaba tanto en cruzarse
-    /// que el usuario cancelaba antes de llegar al final, y lo que se quedaba
-    /// sin cruzar caía en la búsqueda por título, que es la vía dudosa.
+    /// The query goes in batches and not one copy at a time. This is not only
+    /// speed: at 4 requests each second, a large library took so long to join
+    /// that the user cancelled before the end, and the copies that did not join
+    /// fell to the search by title, which is the method with doubt.
     ///
-    /// Los identificadores que IGDB no conozca sencillamente no aparecen en el
-    /// mapa. No es un error: es lo normal en las claves de terceros y en los
-    /// extras que las tiendas venden como si fueran juegos.
+    /// The identifiers that IGDB does not know simply do not appear in the map.
+    /// That is not an error: it is usual with third-party keys and with the
+    /// extras that the stores sell as if they were games.
     pub async fn by_external_ids(
         &self,
         credentials: &IgdbCredentials,
@@ -149,19 +154,19 @@ impl IgdbClient {
         uids: &[String],
     ) -> Result<HashMap<String, i64>> {
         let source = source as u8;
-        let mut cruces = HashMap::with_capacity(uids.len());
+        let mut joins = HashMap::with_capacity(uids.len());
 
-        for lote in uids.chunks(BATCH) {
-            // Las comillas de un identificador romperían la consulta. Ninguna
-            // tienda las usa, pero el identificador llega de la red.
-            let valores = lote
+        for batch in uids.chunks(BATCH) {
+            // Quotation marks in an identifier would break the query. No store
+            // uses them, but the identifier comes from the network.
+            let values = batch
                 .iter()
                 .map(|uid| format!("\"{}\"", uid.replace('"', "")))
                 .collect::<Vec<_>>()
                 .join(",");
             let query = format!(
                 "fields uid, game; \
-                 where external_game_source = {source} & uid = ({valores}); \
+                 where external_game_source = {source} & uid = ({values}); \
                  limit {BATCH};"
             );
             let body = self
@@ -169,26 +174,26 @@ impl IgdbClient {
                 .await?;
 
             for (uid, igdb_id) in parse::parse_external_games(&body)? {
-                cruces.entry(uid).or_insert(igdb_id);
+                joins.entry(uid).or_insert(igdb_id);
             }
         }
 
-        Ok(cruces)
+        Ok(joins)
     }
 
-    /// Candidatos por nombre, para las tiendas sin identificador cruzado.
+    /// The candidates by name, for the stores with no identifier in common.
     pub async fn search(
         &self,
         credentials: &IgdbCredentials,
         token: &IgdbToken,
         title: &str,
     ) -> Result<Vec<Candidate>> {
-        // Las comillas del título romperían la consulta de IGDB.
+        // Quotation marks in the title would break the IGDB query.
         let sanitized = title.replace('"', " ");
-        // La portada se pide aquí, en la misma petición que ya se gastaba: la
-        // cola de revisión la necesita para que el usuario distinga entre
-        // candidatos que empatan, y volver a preguntar por ella juego a juego
-        // se comería la cuota de 4 peticiones por segundo.
+        // The cover is requested here, in the request that was already made:
+        // the review queue needs it so that the user can tell equal candidates
+        // apart, and a second request for each game would use all of the quota
+        // of 4 requests each second.
         let query = format!(
             "search \"{sanitized}\"; \
              fields id, name, slug, alternative_names.name, first_release_date, cover.image_id; \
@@ -198,7 +203,7 @@ impl IgdbClient {
         parse::parse_candidates(&body)
     }
 
-    /// Ficha completa para pintar la biblioteca.
+    /// The complete record, to show the library.
     pub async fn game(
         &self,
         credentials: &IgdbCredentials,

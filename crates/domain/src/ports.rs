@@ -1,6 +1,6 @@
-//! Los contratos que el dominio exige y los adaptadores cumplen. Aquí no hay
-//! ninguna implementación: es lo que permite que GOG y Epic entren en las fases
-//! 6 y 7 sin tocar una línea de esta carpeta.
+//! The contracts that the domain demands and the adapters obey. There is no
+//! implementation here: this is what lets GOG and Epic come in at phases 6 and
+//! 7 without a change to one line of this directory.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -14,54 +14,55 @@ pub enum ConnectorError {
     // Every message says what to do and not only what failed. A store that
     // stops answering is the most common failure of the whole application, and
     // "invalid credentials" leaves the user with nowhere to go.
-    #[error("credenciales inválidas o caducadas: vuelve a conectar la cuenta")]
+    #[error("invalid or expired credentials: connect the account again")]
     Unauthorized,
-    #[error("la tienda limitó las peticiones")]
+    #[error("the store limited the requests")]
     RateLimited,
-    #[error("la biblioteca es privada y las credenciales no dan acceso")]
+    #[error("the library is private and the credentials do not give access")]
     Private,
-    #[error("no se pudo contactar con la tienda: {0}")]
+    #[error("could not contact the store: {0}")]
     Transport(String),
-    #[error("la tienda respondió de forma inesperada: {0}")]
+    #[error("the store gave an unexpected answer: {0}")]
     Unexpected(String),
 }
 
-/// Credenciales de *cliente* de una tienda: identifican a la aplicación, no al
-/// usuario.
+/// The *client* credentials of a store: they identify the application, not the
+/// user.
 ///
-/// Las aporta el usuario al conectar la cuenta, igual que la clave de Steam.
-/// No es una elección estética: GOG no permite registrar un cliente propio, así
-/// que la única forma de no llevar un secreto dentro del binario es que el par
-/// entre por la misma puerta que las demás claves y viva en el almacén.
+/// The user supplies them when they connect the account, as with the Steam key.
+/// This is not a decision about style: GOG does not let you register a client
+/// of your own, thus the only way to keep a secret out of the binary is to let
+/// the pair come in through the same door as the other keys and live in the
+/// store of secrets.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClientCredentials {
     pub client_id: String,
     pub client_secret: String,
 }
 
-/// Lo que el usuario aporta para conectar una cuenta. Steam usa clave propia;
-/// GOG y Epic usarán el código que devuelve su propio formulario de login.
+/// What the user supplies to connect an account. Steam uses a key of its own;
+/// GOG and Epic will use the code that their own login form gives back.
 #[derive(Debug, Clone)]
 pub enum AuthContext {
-    /// Clave de API del propio usuario. En Steam es además lo que da acceso a
-    /// su biblioteca privada sin abrir el perfil.
+    /// The API key of the user. In Steam it is also what gives access to their
+    /// private library without they make the profile public.
     ApiKey { key: String, account_ref: String },
-    /// Código de autorización devuelto por la página de login de la tienda,
-    /// junto con el cliente ante el que se pidió. Los dos hacen falta para
-    /// canjearlo: el código solo vale para el cliente que lo originó.
+    /// The authorisation code that the login page of the store gave back,
+    /// together with the client that asked for it. You need the two to exchange
+    /// it: the code is applicable only to the client that caused it.
     AuthCode {
         code: String,
         client: ClientCredentials,
     },
-    /// Material guardado en una sesión anterior.
+    /// Material kept from an earlier session.
     Stored { credential: String },
 }
 
-/// Sesión abierta contra una tienda.
+/// An open session with a store.
 ///
-/// `credential` es opaco: solo el conector que lo emitió sabe interpretarlo. El
-/// resto del sistema lo trata como un bloque que va al almacén de secretos y
-/// vuelve tal cual. Nunca se escribe en la base de datos.
+/// `credential` is opaque: only the connector that issued it can read it. The
+/// remainder of the system holds it as a block that goes to the store of
+/// secrets and comes back unchanged. It is never written to the database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StoreSession {
     pub store: StoreId,
@@ -71,7 +72,8 @@ pub struct StoreSession {
     pub expires_at: Option<OffsetDateTime>,
 }
 
-/// Un conector lee. No instala, no descarga y no lanza nada.
+/// A connector reads. It does not install, it does not download and it does not
+/// start anything.
 #[async_trait]
 pub trait StoreConnector: Send + Sync {
     fn id(&self) -> StoreId;

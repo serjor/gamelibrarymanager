@@ -42,21 +42,22 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Conectar Epic</h2>
+      <h2>Connect Epic</h2>
       <p className="hint">
-        Tu contraseña de Epic no pasa por aquí: se abrirá la página de Epic para
-        que inicies sesión en ella, y esta aplicación solo recibe el permiso que
-        te devuelva.
+        Your Epic password does not come through here: the Epic page will open
+        for you to sign in on it, and this application receives only the
+        permission that Epic gives back.
       </p>
       <p className="hint">
-        Epic tampoco permite registrar aplicaciones, así que hace falta el par de
-        cliente de su propio lanzador. No es una clave tuya y es la misma para
-        todo el mundo; se te pide para que no vaya escrita dentro del programa.
+        Epic also does not let you register applications, thus the client pair of
+        its own launcher is necessary. It is not a key of yours and it is the
+        same for all users; the application asks you for it so that it is not
+        written inside the program.
       </p>
       <p className="hint">
-        Epic no publica ninguna API de biblioteca: esto se apoya en la de su
-        lanzador. Si algún día deja de funcionar, podrás desactivar Epic y el
-        resto de tu biblioteca seguirá igual.
+        Epic publishes no library API: this uses the API of its launcher. If it
+        stops operating one day, you can switch Epic off and the remainder of
+        your library will stay unchanged.
       </p>
 
       <label htmlFor="epic-client-id">Client ID</label>
@@ -64,7 +65,7 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
         id="epic-client-id"
         value={clientId}
         onChange={(e) => setClientId(e.target.value)}
-        placeholder="32 caracteres"
+        placeholder="32 characters"
         autoComplete="off"
         spellCheck={false}
         required
@@ -75,7 +76,7 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
         id="epic-client-secret"
         value={clientSecret}
         onChange={(e) => setClientSecret(e.target.value)}
-        placeholder="32 caracteres"
+        placeholder="32 characters"
         autoComplete="off"
         spellCheck={false}
         required
@@ -85,17 +86,17 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
         className="link"
         onClick={() => {
           openUrl(LEGENDARY_EGS_URL).catch((cause: unknown) =>
-            setError(`No he podido abrir ${LEGENDARY_EGS_URL}: ${errorMessage(cause)}`),
+            setError(`Could not open ${LEGENDARY_EGS_URL}: ${errorMessage(cause)}`),
           );
         }}
       >
-        Dónde encontrar el par del lanzador de Epic
+        Where to find the client pair of the Epic launcher
       </button>
 
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
-        {busy ? "Esperando a que inicies sesión…" : "Iniciar sesión en Epic"}
+        {busy ? "Waiting for you to sign in…" : "Sign in to Epic"}
       </button>
     </form>
   );

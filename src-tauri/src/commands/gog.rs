@@ -1,12 +1,12 @@
-//! Conexión de una cuenta de GOG.
+//! Connection of a GOG account.
 //!
-//! Todo el flujo está aquí porque es el único que gobierna una ventana: se abre
-//! la página de login **de GOG**, se espera a que su servidor redirija, y de esa
-//! redirección se saca el `code`. La contraseña del usuario se escribe en el
-//! dominio de GOG y no pasa por este proceso en ningún momento.
+//! All of the flow is here because it is the first one that drives a window of
+//! its own: the sign in page **of GOG** is opened, the GOG server is left to
+//! redirect, and the `code` is taken from that redirect. The password of the
+//! user is typed on the GOG domain and never passes through this process.
 //!
-//! La ventana de login no aparece en `capabilities/default.json`, y eso es
-//! deliberado: una página remota no puede invocar ni un solo comando nuestro.
+//! The login window is not in `capabilities/default.json`, and that is
+//! deliberate: a remote page cannot invoke one command of ours.
 
 use std::sync::{Arc, Mutex};
 
@@ -21,11 +21,11 @@ use crate::state::{AppState, credential_key};
 
 const LOGIN_WINDOW: &str = "gog-login";
 
-/// Conecta una cuenta de GOG de principio a fin.
+/// Connects a GOG account from end to end.
 ///
-/// `client_id` y `client_secret` los aporta el usuario: GOG no permite registrar
-/// un cliente propio y este programa no lleva ninguno dentro. Acaban en el
-/// almacén de secretos junto a los tokens, porque el refresco los necesita.
+/// The user supplies `client_id` and `client_secret`: GOG does not let you
+/// register a client of your own and this program carries none inside. They go
+/// to the store of secrets with the tokens, because the refresh needs them.
 #[tauri::command]
 pub async fn connect_gog(
     app: AppHandle,
@@ -38,12 +38,12 @@ pub async fn connect_gog(
         client_secret: client_secret.trim().to_owned(),
     };
 
-    let code = pedir_codigo(&app, &client.client_id).await?;
+    let code = request_code(&app, &client.client_id).await?;
 
     let connector = state
         .connectors
         .get(&StoreId::Gog)
-        .ok_or_else(|| AppError::Message("sin conector de GOG".to_owned()))?;
+        .ok_or_else(|| AppError::Message("there is no GOG connector".to_owned()))?;
 
     let session = connector
         .authenticate(&AuthContext::AuthCode { code, client })
@@ -67,67 +67,67 @@ pub async fn connect_gog(
     Ok(id)
 }
 
-/// Abre el login de GOG y espera al `code`.
+/// Opens the GOG login and waits for the `code`.
 ///
-/// El canal se resuelve por dos vías —la redirección buena o el cierre de la
-/// ventana— porque si solo se esperase la primera, cerrar el login dejaría el
-/// comando colgado para siempre.
-async fn pedir_codigo(app: &AppHandle, client_id: &str) -> Result<String, AppError> {
-    // Una sesión anterior a medias dejaría dos ventanas y dos escuchas.
-    if let Some(previa) = app.get_webview_window(LOGIN_WINDOW) {
-        let _ = previa.close();
+/// The channel resolves through two ways — the correct redirect or the close of
+/// the window — because if it waited only for the first one, a close of the
+/// login would leave the command waiting for ever.
+async fn request_code(app: &AppHandle, client_id: &str) -> Result<String, AppError> {
+    // A half finished earlier attempt would leave two windows and two listeners.
+    if let Some(previous) = app.get_webview_window(LOGIN_WINDOW) {
+        let _ = previous.close();
     }
 
     let url = GogConnector::authorize_url("https://auth.gog.com", client_id);
     let url = url
         .parse()
-        .map_err(|_| AppError::Message("la dirección de login de GOG no es válida".to_owned()))?;
+        .map_err(|_| AppError::Message("the GOG login address is not valid".to_owned()))?;
 
     let (tx, rx) = tokio::sync::oneshot::channel::<Option<String>>();
-    let emisor = Arc::new(Mutex::new(Some(tx)));
+    let sender = Arc::new(Mutex::new(Some(tx)));
 
-    let al_navegar = emisor.clone();
-    let ventana = WebviewWindowBuilder::new(app, LOGIN_WINDOW, WebviewUrl::External(url))
-        .title("Iniciar sesión en GOG")
+    let on_navigation = sender.clone();
+    let window = WebviewWindowBuilder::new(app, LOGIN_WINDOW, WebviewUrl::External(url))
+        .title("Sign in to GOG")
         .inner_size(520.0, 720.0)
         .on_navigation(
             move |url| match GogConnector::code_from_redirect(url.as_str()) {
                 Some(code) => {
-                    resolver(&al_navegar, Some(code));
-                    // No hace falta cargar la página de destino: lo único que
-                    // interesaba de ella era el código que trae en la dirección.
+                    resolve(&on_navigation, Some(code));
+                    // The destination page does not need to load: the only data
+                    // that it had was the code in its address.
                     false
                 }
                 None => true,
             },
         )
         .build()
-        .map_err(|e| AppError::Message(format!("no se pudo abrir el login de GOG: {e}")))?;
+        .map_err(|e| AppError::Message(format!("could not open the GOG login: {e}")))?;
 
-    let al_cerrar = emisor.clone();
-    ventana.on_window_event(move |event| {
+    let on_close = sender.clone();
+    window.on_window_event(move |event| {
         if matches!(event, WindowEvent::Destroyed) {
-            resolver(&al_cerrar, None);
+            resolve(&on_close, None);
         }
     });
 
-    let recibido = rx.await.unwrap_or(None);
-    let _ = ventana.close();
+    let received = rx.await.unwrap_or(None);
+    let _ = window.close();
 
-    recibido.ok_or_else(|| AppError::Message("login de GOG cancelado".to_owned()))
+    received.ok_or_else(|| AppError::Message("the GOG login was cancelled".to_owned()))
 }
 
-/// Resuelve el canal una sola vez. Las dos vías pueden dispararse casi a la vez
-/// —cerrar la ventana justo después de acertar el login— y la segunda no puede
-/// pisar a la primera ni entrar en pánico.
-fn resolver(
-    emisor: &Arc<Mutex<Option<tokio::sync::oneshot::Sender<Option<String>>>>>,
-    valor: Option<String>,
+/// Resolves the channel one time only. The two ways can occur almost together —
+/// a close of the window immediately after a correct login — and the second one
+/// can neither overwrite the first one nor panic.
+fn resolve(
+    sender: &Arc<Mutex<Option<tokio::sync::oneshot::Sender<Option<String>>>>>,
+    value: Option<String>,
 ) {
-    let Ok(mut guard) = emisor.lock() else {
+    let Ok(mut guard) = sender.lock() else {
         return;
     };
     if let Some(tx) = guard.take() {
-        let _ = tx.send(valor);
+        let _ = tx.send(value);
     }
 }

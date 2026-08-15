@@ -2,8 +2,8 @@ use keyring::Entry;
 
 use crate::{Result, SecretStore, SecretsError};
 
-/// Keyring nativo: Secret Service en Linux, Keychain en macOS, Credential
-/// Manager en Windows.
+/// The native keyring: Secret Service on Linux, Keychain on macOS, Credential
+/// Manager on Windows.
 pub struct KeyringStore {
     service: String,
 }

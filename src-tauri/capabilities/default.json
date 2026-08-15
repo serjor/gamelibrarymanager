@@ -1,13 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Lo mínimo que necesita la ventana principal. Cada permiso nuevo se añade a mano y con motivo.",
+  "description": "The minimum that the main window needs. Each new permission is added by hand and with a reason.",
   "windows": ["main"],
   "permissions": [
     "core:default",
     {
       "identifier": "opener:allow-open-url",
-      "comment": "`allow-open-url` habilita el comando pero no da alcance a ninguna dirección: sin esta lista, abrir cualquier enlace falla. Se enumeran las cuatro páginas del asistente en vez de usar `allow-default-urls`, que abriría de par en par todo http y https. Los patrones se comparan con la cadena tal cual la pasa la interfaz, sin normalizar, así que tienen que coincidir carácter a carácter con las constantes de src/features/onboarding/ (un `https://steamid.io/*` no vale para `https://steamid.io`). El test `capacidades` lo comprueba.",
+      "comment": "`allow-open-url` enables the command but gives scope to no address: without this list, each link fails to open. The pages of the setup screens are listed one by one and `allow-default-urls` is not used, because that would open all of http and https. The patterns are compared with the string exactly as the interface gives it, with no normalisation, thus they must agree character by character with the constants of src/features/onboarding/ (a `https://steamid.io/*` does not apply to `https://steamid.io`). The `capabilities` test makes sure of it.",
       "allow": [
         { "url": "https://steamcommunity.com/dev/apikey" },
         { "url": "https://steamid.io" },

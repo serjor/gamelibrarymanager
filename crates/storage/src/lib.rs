@@ -1,5 +1,5 @@
-//! Persistencia en SQLite. Todo el SQL del proyecto vive en este crate: si
-//! aparece una consulta en cualquier otro sitio, la frontera se ha roto.
+//! Persistence in SQLite. All of the SQL of the project lives in this crate: if
+//! a query appears in a different place, the boundary has broken.
 
 mod mapping;
 pub mod repositories;
@@ -14,11 +14,11 @@ static MIGRATOR: Migrator = sqlx::migrate!("../../migrations");
 
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
-    #[error("error de base de datos: {0}")]
+    #[error("database error: {0}")]
     Database(#[from] sqlx::Error),
-    #[error("la migración falló: {0}")]
+    #[error("the migration failed: {0}")]
     Migration(#[from] sqlx::migrate::MigrateError),
-    #[error("valor inesperado en la columna {column}: {value}")]
+    #[error("unexpected value in the column {column}: {value}")]
     Corrupt { column: &'static str, value: String },
 }
 
@@ -30,7 +30,7 @@ pub struct Database {
 }
 
 impl Database {
-    /// Abre —o crea— la base de datos del usuario y la deja migrada.
+    /// Opens — or creates — the database of the user and migrates it.
     pub async fn open(path: &Path) -> Result<Self> {
         let options = SqliteConnectOptions::new()
             .filename(path)
@@ -39,17 +39,19 @@ impl Database {
         Self::connect(options).await
     }
 
-    /// Base efímera para los tests. Misma ruta de migración que la real.
+    /// A temporary database for the tests. The same migration path as the real
+    /// database.
     pub async fn in_memory() -> Result<Self> {
         let options = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("la URL en memoria es constante")
+            .expect("the in-memory URL is a constant")
             .foreign_keys(true);
         Self::connect(options).await
     }
 
     async fn connect(options: SqliteConnectOptions) -> Result<Self> {
-        // Una sola conexión: es una app de escritorio mono-usuario y así la base
-        // en memoria de los tests no se evapora entre consultas.
+        // Only one connection: this is a desktop application for one user, and
+        // thus the in-memory database of the tests does not disappear between
+        // queries.
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect_with(options)
@@ -64,8 +66,9 @@ impl Database {
         Ok(())
     }
 
-    /// Revierte todas las migraciones. Existe para que el esquema tenga vuelta
-    /// atrás demostrable, no porque la app lo use en funcionamiento normal.
+    /// Reverts all of the migrations. It exists so that the schema has a
+    /// reverse path that you can show, not because the application uses it in
+    /// usual operation.
     pub async fn undo_all(&self) -> Result<()> {
         MIGRATOR.undo(&self.pool, 0).await?;
         Ok(())

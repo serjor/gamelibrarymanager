@@ -1,53 +1,55 @@
-/* Sistema de diseño.
+/* The design system.
  *
- * Ningún selector de este fichero declara un color literal: todos salen de los
- * tokens de aquí arriba. La regla existe porque la alternativa —un `#b3261e`
- * suelto a mitad de la hoja— obliga a buscarlo a mano el día que haya que
- * tocar el tema oscuro, y garantiza que alguno se quede sin tocar. */
+ * No selector of this file declares a literal colour: all of them come from the
+ * tokens above. The rule exists because the other option — a `#b3261e` alone in
+ * the middle of the sheet — makes you find it by hand on the day that you must
+ * change the dark theme, and makes sure that you do not find one of them. */
 
 :root {
-  /* Sigue mandando en los controles nativos: `select`, los campos de texto y
-     las barras de desplazamiento se pintan solos según esto. Los tokens de
-     abajo cubren lo que dibujamos nosotros; esto cubre lo que dibuja el
-     sistema. */
+  /* This still controls the native controls: `select`, the text fields and
+     the scroll bars use it alone. The tokens below cover what this code
+     draws; this covers what the system draws. */
   color-scheme: light dark;
 
-  /* Color. Los neutros van con un sesgo mínimo hacia el azul en vez de ser
-     grises puros: es una aplicación que se mira en una pantalla durante un
-     rato largo, y un gris exacto se lee como una decisión no tomada. */
-  --fondo: #fbfbfc;
-  --superficie: #ffffff;
-  /* El relleno de una portada que no existe, y de las cajas que hacen su
-     hueco. Antes era `color-mix` sobre `currentColor`, que cambiaba de tono
-     según quién fuera el padre. */
-  --hueco: #eceef2;
-  --borde: #d7d9e0;
-  --texto: #16181d;
-  --texto-atenuado: #5a5f6e;
-  --acento: #2f5fd0;
+  /* Colour. The neutral colours go a minimum quantity towards blue and are
+     not pure greys: this is an application that you look at on a screen for a
+     long time, and an exact grey reads as a decision not made. */
+  --background: #fbfbfc;
+  --surface: #ffffff;
+  /* The fill of a cover that does not exist, and of the boxes that keep its
+     space. Before, it was a `color-mix` on `currentColor`, which changed its
+     tone with the parent. */
+  --placeholder: #eceef2;
+  --border: #d7d9e0;
+  --text: #16181d;
+  --text-muted: #5a5f6e;
+  --accent: #2f5fd0;
   --error: #b3261e;
-  /* El velo de la hoja. Sale de la tinta en claro y del fondo en oscuro porque
-     lo que hace falta en los dos temas es oscurecer, y el token que es oscuro
-     no es el mismo en cada uno. */
-  --velo: color-mix(in srgb, var(--texto) 45%, transparent);
+  /* The scrim of the sheet. It comes from the ink in the light theme and from
+     the background in the dark theme, because in the two themes it must make
+     the page darker, and the dark token is not the same in each theme. */
+  --scrim: color-mix(in srgb, var(--text) 45%, transparent);
 
-  /* Estado de la partida. Semánticos y aparte del acento a propósito: el
-     acento marca dónde estás, estos dicen qué es cada juego. Confundirlos
-     hace que la interfaz grite en cuatro sitios a la vez. */
-  --estado-pendiente: #8a6a12;
-  --estado-jugando: #1f6b86;
-  --estado-terminado: #1c6b4f;
-  --estado-abandonado: #98413a;
+  /* The status of the game. They have a meaning and they are apart from the
+     accent, and that is deliberate: the accent shows where you are, and these
+     say what each game is. To mix them makes the interface shout in four
+     places at the same time. */
+  --status-backlog: #8a6a12;
+  --status-playing: #1f6b86;
+  --status-finished: #1c6b4f;
+  --status-abandoned: #98413a;
 
-  /* Un precio en su mínimo histórico. Token propio y no `--estado-terminado`
-     aunque los dos sean verdes: los de arriba dicen qué es un juego para ti, y
-     este dice algo de lo que cuesta hoy. Compartir el color haría que la misma
-     tinta significase dos cosas en la misma pantalla. */
-  --rebaja: #157a52;
+  /* A price at its all-time low. A token of its own and not
+     `--status-finished`, although the two are green: the tokens above say what
+     a game is for you, and this one says something about what it costs today.
+     To share the colour would make the same ink mean two things on the same
+     screen. */
+  --price-low: #157a52;
 
-  /* Tipografía. Pila del sistema: la CSP no declara `font-src`, así que una
-     fuente enlazada no cargaría y una empaquetada obligaría a tocarla. */
-  --fuente: system-ui, sans-serif;
+  /* Typography. The system stack: the CSP does not declare `font-src`, thus a
+     linked font would not load and a font in the package would make you change
+     the CSP. */
+  --font: system-ui, sans-serif;
   --t-xs: 0.75rem;
   --t-s: 0.8125rem;
   --t-m: 0.875rem;
@@ -55,8 +57,8 @@
   --t-l: 1.25rem;
   --t-xl: 1.75rem;
 
-  /* Espaciado, en pasos de 4 px. Antes había once valores distintos entre
-     0,3rem y 3rem, que es lo mismo que no tener ninguno. */
+  /* Spacing, in steps of 4 px. Before, there were eleven different values
+     between 0.3rem and 3rem, which is the same as no values. */
   --e-1: 0.25rem;
   --e-2: 0.375rem;
   --e-3: 0.5rem;
@@ -66,49 +68,49 @@
   --e-7: 2rem;
   --e-8: 3rem;
 
-  --radio-s: 3px;
-  --radio-m: 6px;
-  --radio-l: 8px;
+  --radius-s: 3px;
+  --radius-m: 6px;
+  --radius-l: 8px;
 
-  font-family: var(--fuente);
+  font-family: var(--font);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fondo: #131519;
-    --superficie: #1a1d23;
-    --hueco: #23262e;
-    --borde: #333741;
-    --texto: #e6e8ee;
-    --texto-atenuado: #9aa0ae;
-    --acento: #8ab4f8;
+    --background: #131519;
+    --surface: #1a1d23;
+    --placeholder: #23262e;
+    --border: #333741;
+    --text: #e6e8ee;
+    --text-muted: #9aa0ae;
+    --accent: #8ab4f8;
     --error: #f2857b;
-    --velo: color-mix(in srgb, var(--fondo) 80%, transparent);
+    --scrim: color-mix(in srgb, var(--background) 80%, transparent);
 
-    --estado-pendiente: #d4b263;
-    --estado-jugando: #79c0dd;
-    --estado-terminado: #6fc3a0;
-    --estado-abandonado: #e0928a;
+    --status-backlog: #d4b263;
+    --status-playing: #79c0dd;
+    --status-finished: #6fc3a0;
+    --status-abandoned: #e0928a;
 
-    --rebaja: #5fd3a5;
+    --price-low: #5fd3a5;
   }
 }
 
-/* El `padding` y el borde caben dentro del ancho declarado. Sin esto, decirle
-   a una portada que mida 168 px de alto y darle relleno da 184, y una rejilla
-   virtualizada —que cuenta las filas con aritmética— empieza a pisarse. */
+/* The `padding` and the border go inside the width declared. Without this, a
+   cover with a height of 168 px plus padding is 184, and a virtual grid — which
+   counts the rows with arithmetic — starts to overlap. */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-/* La ventana es el marco, y dentro se desplaza **una** sola cosa: la lista.
-   Antes se desplazaban dos —la página y la lista, que medía `70vh`—, y eso
-   pone dos barras en pantalla a la vez y deja a la de fuera cuarenta píxeles de
-   recorrido: la rueda sobre los lados no movía nada y había que llevar el ratón
-   al centro. Con la altura repartida desde aquí, la lista se queda con lo que
-   sobra y es la única que se desplaza. */
+/* The window is the frame, and inside it **one** thing scrolls: the list.
+   Before, two things scrolled — the page and the list, which was `70vh` — and
+   that puts two bars on the screen at the same time and leaves the external bar
+   forty pixels of movement: the wheel on the sides moved nothing and you had to
+   put the pointer in the centre. With the height divided from here, the list
+   keeps the space that stays and it is the only element that scrolls. */
 html,
 body,
 #root {
@@ -117,29 +119,29 @@ body,
 
 body {
   margin: 0;
-  /* Explícito y no heredado del `color-scheme`: en cuanto un token define el
-     fondo de una superficie, el de la página tiene que salir del mismo sitio
-     o los dos temas dejan de cuadrar entre sí. */
-  background: var(--fondo);
-  color: var(--texto);
+  /* Explicit and not from the `color-scheme`: as soon as a token defines the
+     background of a surface, the background of the page must come from the
+     same place, or the two themes stop agreeing. */
+  background: var(--background);
+  color: var(--text);
 }
 
-/* El teclado tiene que poder ver dónde está. Antes esto lo ponía el navegador
-   y cada uno lo pinta a su manera. */
+/* The keyboard must show where it is. Before, the browser did this and each
+   browser draws it differently. */
 :focus-visible {
-  outline: 2px solid var(--acento);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Sin tope de ancho: lo que se desplaza tiene que llegar a los dos bordes de la
-   ventana, o la rueda sobre el hueco de los lados no encuentra nada que mover.
-   Lo que no debe estirarse hasta 1920 px se pone su propio tope —los
-   formularios, la tabla, el destacado de «Hoy»—, y entonces el hueco que dejan
-   sigue siendo parte de la caja que se desplaza.
+/* No maximum width: the element that scrolls must reach the two edges of the
+   window, or the wheel on the space at the sides finds nothing to move. Each
+   piece that must not go to 1920 px sets its own maximum — the forms, the table,
+   the featured game of "Today" — and then the space that they leave is still
+   part of the box that scrolls.
 
-   `overflow: auto` es una red: las pantallas de la biblioteca reparten la
-   altura y nunca desbordan, pero un asistente en una ventana baja sí, y sin
-   esto sus últimas líneas quedarían fuera de alcance. */
+   `overflow: auto` is a safety net: the library screens divide the height and
+   never go outside it, but a setup screen in a low window does, and without this
+   its last lines would be out of reach. */
 main {
   height: 100%;
   padding: var(--e-6);
@@ -161,10 +163,10 @@ h2 {
   margin: 0;
 }
 
-/* Los asistentes son una columna de campos, y `main` ha crecido para que quepa
-   la ficha acoplada al lado de la tabla. Sin tope, ese ancho se lo lleva
-   también un campo de texto, y escribir ahí una clave de API es seguir una
-   línea de metro y medio de larga. */
+/* The setup screens are one column of fields, and `main` has grown so that the
+   record fits beside the table. With no maximum, a text field would take that
+   width too, and to write an API key there is to follow a line one and one half
+   metres long. */
 form {
   display: flex;
   flex-direction: column;
@@ -180,8 +182,8 @@ label {
 input {
   font: inherit;
   padding: var(--e-3);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   background: transparent;
   color: inherit;
 }
@@ -189,8 +191,8 @@ input {
 button {
   font: inherit;
   padding: var(--e-3) var(--e-4);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -206,14 +208,13 @@ button.link {
   padding: 0;
   text-align: left;
   text-decoration: underline;
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-/* Color y no `opacity`: la transparencia se lleva por delante también los
-   bordes y los fondos de lo que haya dentro, y aquí solo se quería bajar el
-   texto un escalón. */
+/* Colour and not `opacity`: transparency also changes the borders and the
+   backgrounds of the content, and here only the text must go one step down. */
 .hint {
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
   font-size: var(--t-m);
 }
 
@@ -224,10 +225,11 @@ button.link {
   padding-left: var(--e-5);
 }
 
-/* Una tienda apagada o rota se lee como aviso, no como error: la aplicación
-   sigue funcionando y lo que esa tienda trajo sigue en la biblioteca. */
+/* A store that is switched off or broken reads as a warning, not as an error:
+   the application continues to operate and the data that the store gave stays in
+   the library. */
 .connectors {
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
 [role="alert"] {
@@ -244,8 +246,9 @@ button.link {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  /* `stretch` iguala la altura de toda la fila: si no, cada tarjeta mide lo que
-     mida su contenido y compararlas cuesta más de lo que debería. */
+  /* `stretch` makes all of the row the same height: without it, each card is
+     the size of its content and to compare them is more difficult than it must
+     be. */
   align-items: stretch;
   gap: var(--e-2);
   margin: var(--e-2) 0;
@@ -255,15 +258,15 @@ button.link {
   display: flex;
 }
 
-/* El hueco de una portada que no existe. IGDB tiene fichas sin carátula, y
-   varias de ellas son justo las duplicadas que hay que distinguir. */
+/* The space of a cover that does not exist. IGDB has records with no cover, and
+   several of them are exactly the duplicates that you must tell apart. */
 .cover-missing {
   width: 45px;
   height: 60px;
   flex: none;
-  border-radius: var(--radio-s);
-  background: var(--hueco);
-  border: 1px dashed var(--borde);
+  border-radius: var(--radius-s);
+  background: var(--placeholder);
+  border: 1px dashed var(--border);
 }
 
 .cover-missing.wide {
@@ -271,8 +274,8 @@ button.link {
   height: 45px;
 }
 
-/* La portada y el año son lo único que separa dos candidatos que empatan, así
-   que el candidato es una tarjeta y no una línea de texto. */
+/* The cover and the year are the only difference between two candidates with
+   the same score, thus a candidate is a card and not a line of text. */
 .candidate {
   display: flex;
   align-items: center;
@@ -283,13 +286,13 @@ button.link {
 }
 
 .candidate img {
-  border-radius: var(--radio-s);
+  border-radius: var(--radius-s);
   object-fit: cover;
   flex: none;
 }
 
 .candidate.chosen {
-  outline: 2px solid var(--acento);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -303,36 +306,36 @@ button.link {
   white-space: nowrap;
 }
 
-/* Lo que dice la tienda, con su carátula: es contra lo que se compara cada
-   candidato de IGDB, así que tiene que verse a la vez que ellos. */
-.origen {
+/* What the store says, with its cover: it is what each IGDB candidate is
+   compared against, thus you must see it at the same time as them. */
+.source {
   display: flex;
   align-items: center;
   gap: var(--e-3);
 }
 
-/* Steam sirve una cápsula apaisada y GOG un logo también apaisado, pero con
-   proporciones distintas: se recortan a la misma caja para que el título de
-   cada fila empiece siempre a la misma altura. */
-.origen img {
-  border-radius: var(--radio-s);
+/* Steam gives a wide capsule and GOG gives a logo that is also wide, but with
+   different ratios: they are cut to the same box so that the title of each row
+   always starts at the same height. */
+.source img {
+  border-radius: var(--radius-s);
   object-fit: cover;
   flex: none;
 }
 
-.origen p {
+.source p {
   margin: 0;
 }
 
-/* La barra de confirmación sigue a la vista mientras se recorre una cola de
-   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa. El
-   fondo sale del mismo token que el de la página, así que tapa lo que pasa por
-   debajo en claro y en oscuro sin declarar dos paletas. */
+/* The confirm bar follows the view while you go through a queue of more than
+   one hundred: if you must go to the top to confirm, nobody uses it. The
+   background comes from the same token as the page, thus it covers what goes
+   below it in the light theme and in the dark theme with no second palette. */
 .sticky {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--fondo);
+  background: var(--background);
   padding: var(--e-3) 0;
 }
 
@@ -347,8 +350,8 @@ button.link {
 .filters select {
   font: inherit;
   padding: var(--e-2) var(--e-3);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   background: transparent;
   color: inherit;
 }
@@ -356,25 +359,25 @@ button.link {
 .tabs {
   display: flex;
   gap: var(--e-3);
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid var(--border);
 }
 
 .tab {
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
 .tab.active {
   border-bottom-color: currentColor;
-  color: var(--texto);
+  color: var(--text);
 }
 
-/* De aquí para abajo la altura se reparte, no se inventa. Cada eslabón declara
-   `min-height: 0` porque un hijo de flex no se encoge por debajo de su
-   contenido salvo que se le diga, y con la cadena rota la lista crece hasta
-   sacar la página de la ventana: que es como se acaba con dos barras. */
+/* From here down the height is divided, not invented. Each link declares
+   `min-height: 0` because a flex child does not become smaller than its content
+   unless you tell it to, and with the chain broken the list grows until the page
+   goes out of the window: which is how you get two bars. */
 .library {
   flex: 1;
   min-height: 0;
@@ -383,11 +386,12 @@ button.link {
   gap: var(--e-3);
 }
 
-/* `stretch` y no `flex-start`: con `flex-start` la columna de la lista mide lo
-   que mida la lista, no lo que queda de ventana, y entonces `flex: 1` sobre el
-   visor no reparte nada. Con ocho juegos no se nota; con cuatrocientos la tabla
-   crece hasta sacar el marco de la ventana. Quien no quiere estirarse lo dice
-   por su cuenta, que es lo que hace el inspector aquí abajo. */
+/* `stretch` and not `flex-start`: with `flex-start` the column of the list is
+   the size of the list and not the size that stays in the window, and then
+   `flex: 1` on the viewport divides nothing. With eight games you do not see it;
+   with four hundred the table grows until the frame goes out of the window. A
+   piece that must not stretch says so alone, which is what the inspector does
+   below. */
 .library-body {
   flex: 1;
   min-height: 0;
@@ -404,9 +408,9 @@ button.link {
   flex-direction: column;
 }
 
-/* Sale de la caja sin dejar de existir: `opacity` y no `display`, para que el
-   teclado y los lectores de pantalla lleguen igual a lo que está tapado. */
-.visualmente-oculta {
+/* It goes out of the box and continues to exist: `opacity` and not `display`,
+   so that the keyboard and the screen readers still reach what is covered. */
+.visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -415,7 +419,7 @@ button.link {
   white-space: nowrap;
 }
 
-.barra {
+.bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -423,40 +427,41 @@ button.link {
   flex-wrap: wrap;
 }
 
-.barra .filters {
+.bar .filters {
   flex: 1;
 }
 
-.vistas {
+.views {
   display: flex;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   overflow: hidden;
 }
 
-.vista {
+.view {
   border: none;
   border-radius: 0;
   padding: var(--e-2) var(--e-4);
   font-size: var(--t-s);
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-.vista.activa {
-  background: var(--acento);
-  color: var(--superficie);
+.view.activa {
+  background: var(--accent);
+  color: var(--surface);
   font-weight: 600;
 }
 
-.pared-viewport {
+.wall-viewport {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-/* Las medidas las pone el componente: son las mismas con las que calcula qué
-   filas tocan, y separarlas en dos sitios es pedir que dejen de cuadrar. */
-.pared {
+/* The component sets the measurements: they are the same measurements with
+   which it calculates which rows apply, and to put them in two places is to ask
+   them to stop agreeing. */
+.wall {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -467,14 +472,15 @@ button.link {
   top: 0;
 }
 
-.pared > li {
+.wall > li {
   position: relative;
-  /* La rejilla virtualizada cuenta las filas con aritmética: una baldosa que
-     se pase de su alto no descuadra su fila, descuadra todas las de abajo. */
+  /* The virtual grid counts the rows with arithmetic: a tile that is higher
+     than its height does not move only its row, it moves all of the rows
+     below. */
   overflow: hidden;
 }
 
-.baldosa {
+.tile {
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -485,48 +491,49 @@ button.link {
   padding: 0;
 }
 
-/* El hueco de una portada que no existe. La forma se declara aquí y **el tamaño
-   lo pone quien la usa**: la baldosa y el destacado de «Hoy» miden distinto, y
-   una portada que no está tiene que ocupar exactamente lo que ocuparía si
-   estuviera. */
+/* The space of a cover that does not exist. The shape is declared here and
+   **the caller sets the size**: the tile and the featured game of "Today" have
+   different sizes, and a cover that is absent must use exactly the space that it
+   would use if it were there. */
 .cover-placeholder {
   display: grid;
   place-items: center;
   padding: var(--e-3);
   font-size: var(--t-s);
   text-align: center;
-  border-radius: var(--radio-m);
-  background: var(--hueco);
+  border-radius: var(--radius-m);
+  background: var(--placeholder);
 }
 
-.baldosa img,
-.baldosa .cover-placeholder {
+.tile img,
+.tile .cover-placeholder {
   width: 100%;
-  height: var(--alto-portada);
+  height: var(--cover-height);
   object-fit: cover;
-  border-radius: var(--radio-m);
-  background: var(--hueco);
+  border-radius: var(--radius-m);
+  background: var(--placeholder);
 }
 
-.baldosa-titulo {
+.tile-title {
   font-weight: 600;
   font-size: var(--t-s);
   line-height: 1.2;
-  /* Dos líneas y ni una más: la fila mide lo que mide y un título largo no
-     puede empujar la de abajo. */
+  /* Two lines and no more: the row has its size and a long title cannot push
+     the row below. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.baldosa .hint {
+.tile .hint {
   font-size: var(--t-xs);
 }
 
-/* La casilla solo estorba cuando no se está usando: aparece al pasar por
-   encima, al enfocar, si está marcada, o mientras haya algo seleccionado. */
-.pared-marca {
+/* The check box is a nuisance only when nobody uses it: it appears when the
+   pointer goes over it, when it has the focus, when it is checked, or while
+   there is a selection. */
+.wall-badge {
   position: absolute;
   top: var(--e-2);
   left: var(--e-2);
@@ -535,28 +542,28 @@ button.link {
   transition: opacity 0.12s;
 }
 
-.pared > li:hover .pared-marca,
-.pared > li:focus-within .pared-marca,
-.pared-marca:checked,
-.pared[data-seleccionando] .pared-marca {
+.wall > li:hover .wall-badge,
+.wall > li:focus-within .wall-badge,
+.wall-badge:checked,
+.wall[data-selecting] .wall-badge {
   opacity: 1;
 }
 
-.pared > li.marcada img,
-.pared > li.marcada .cover-placeholder {
-  outline: 3px solid var(--acento);
+.wall > li.checked img,
+.wall > li.checked .cover-placeholder {
+  outline: 3px solid var(--accent);
   outline-offset: -3px;
 }
 
-.pared > li.abierta img,
-.pared > li.abierta .cover-placeholder {
-  outline: 2px solid var(--texto);
+.wall > li.open img,
+.wall > li.open .cover-placeholder {
+  outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
-/* El estado, en una esquina y del color que le toca. Va con `aria-hidden`: el
-   nombre accesible de la baldosa ya lo lleva escrito. */
-.punto {
+/* The status, in a corner and in its own colour. It has `aria-hidden`: the
+   accessible name of the tile already contains it. */
+.dot {
   position: absolute;
   top: var(--e-2);
   right: var(--e-2);
@@ -564,59 +571,59 @@ button.link {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px var(--fondo);
+  box-shadow: 0 0 0 2px var(--background);
 }
 
-.punto.backlog { background: var(--estado-pendiente); }
-.punto.playing { background: var(--estado-jugando); }
-.punto.finished { background: var(--estado-terminado); }
-.punto.abandoned { background: var(--estado-abandonado); }
+.dot.backlog { background: var(--status-backlog); }
+.dot.playing { background: var(--status-playing); }
+.dot.finished { background: var(--status-finished); }
+.dot.abandoned { background: var(--status-abandoned); }
 
-/* El rango en el que esta vista funciona: de 56rem para arriba. Por debajo se
-   desplaza en horizontal dentro de su propia caja, sin arrastrar consigo el
-   resto de la página.
-   El número no es arbitrario: las ocho columnas de ancho fijo suman 40,7rem y
-   el título se queda con lo que sobra, así que con menos de 56rem el título
-   empieza a recortarse a «Ba…» y la tabla deja de servir para nada. Encoger
-   hasta ahí no es más legible que empujar. */
-.tabla-viewport {
+/* The range in which this view operates: from 56rem up. Below that it scrolls
+   horizontally in its own box and does not move the remainder of the page.
+   The number is not arbitrary: the eight columns with a fixed width are 40.7rem
+   and the title keeps the space that stays, thus below 56rem the title starts to
+   be cut to "Ba…" and the table becomes useless. To make it smaller than that is
+   no more readable than to push it. */
+.table-viewport {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
 
-/* El tope no es estético: 96rem + 1rem de hueco + 20rem de inspector + 3rem de
-   relleno son exactamente 120rem, que es una pantalla de 1920 maximizada. La
-   tabla nunca ocupa el sitio del inspector, así que abrir una ficha ahí no
-   mueve ni una columna. Y una fila de 1900 px tampoco se lee: el título se
-   queda en un extremo y el año en el otro. */
-.tabla {
+/* The maximum is not decoration: 96rem + 1rem of space + 20rem of inspector +
+   3rem of padding are exactly 120rem, which is a 1920 screen at its full size.
+   The table never uses the space of the inspector, thus to open a record there
+   does not move one column. And a row of 1900 px is also not readable: the title
+   stays at one end and the year at the other. */
+.table {
   width: 100%;
   max-width: 96rem;
   min-width: 56rem;
   border-collapse: collapse;
   font-size: var(--t-m);
-  /* Fijo y con `colgroup`: sin esto cada columna mide lo que mida su contenido
-     y la cabecera deja de cuadrar con las celdas al desplazar. */
+  /* Fixed and with `colgroup`: without this each column is the size of its
+     content and the header stops agreeing with the cells when the table
+     scrolls. */
   table-layout: fixed;
 }
 
-.tabla thead th {
+.table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--fondo);
-  border-bottom: 1px solid var(--borde);
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
   text-align: left;
   padding: 0;
   font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-.tabla th .th {
+.table th .th {
   width: 100%;
   border: none;
   border-radius: 0;
@@ -626,74 +633,74 @@ button.link {
   text-align: inherit;
 }
 
-.tabla th.num .th {
+.table th.num .th {
   text-align: right;
 }
 
-.tabla td {
+.table td {
   height: 33px;
   padding: 0 var(--e-3);
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* La casilla no es texto y no cabía: con el relleno de las demás celdas, los
-   20 px que ocupa se salían de los 19 que quedaban, y `text-overflow` pintaba
-   unos puntos suspensivos al lado de cada casilla de la tabla. */
-.tabla td:first-child {
+/* The check box is not text and did not fit: with the padding of the other
+   cells, the 20 px that it uses were more than the 19 px that stayed, and
+   `text-overflow` drew an ellipsis beside each check box of the table. */
+.table td:first-child {
   padding: 0;
   text-align: center;
 }
 
-/* Las filas espaciadoras de la virtualización no llevan celdas, y sin esto
-   heredarían el borde inferior y pintarían una raya suelta. */
-.tabla tbody tr:not([class]) td,
-.tabla tbody tr:empty {
+/* The spacer rows of the virtual list have no cells, and without this they
+   would take the bottom border and would draw a line alone. */
+.table tbody tr:not([class]) td,
+.table tbody tr:empty {
   border: none;
 }
 
-/* Las cifras se comparan en vertical, así que a la derecha y con las cifras
-   del mismo ancho. Vale para las dos tablas: la biblioteca y la revisión. */
+/* You compare numbers vertically, thus they go to the right and with digits of
+   the same width. This applies to the two tables: the library and the review. */
 .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.tabla tbody tr:hover td {
-  background: var(--hueco);
+.table tbody tr:hover td {
+  background: var(--placeholder);
 }
 
-.tabla tr.marcada td {
-  background: color-mix(in srgb, var(--acento) 12%, transparent);
+.table tr.checked td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-/* La fila que está enseñando el inspector, recuadrada como una fila y no como
-   nueve celdas: con `border-collapse` un `box-shadow` sobre el `<tr>` no se
-   pinta, así que cada celda pone su parte del recuadro y solo las de los
-   extremos ponen los lados. */
-.tabla tr.abierta td {
+/* The row that the inspector shows, with a border as one row and not as nine
+   cells: with `border-collapse` a `box-shadow` on the `<tr>` does not appear,
+   thus each cell draws its part of the border and only the cells at the ends
+   draw the sides. */
+.table tr.open td {
   box-shadow:
-    inset 0 1px 0 var(--acento),
-    inset 0 -1px 0 var(--acento);
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
 }
 
-.tabla tr.abierta td:first-child {
+.table tr.open td:first-child {
   box-shadow:
-    inset 0 1px 0 var(--acento),
-    inset 0 -1px 0 var(--acento),
-    inset 1px 0 0 var(--acento);
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent),
+    inset 1px 0 0 var(--accent);
 }
 
-.tabla tr.abierta td:last-child {
+.table tr.open td:last-child {
   box-shadow:
-    inset 0 1px 0 var(--acento),
-    inset 0 -1px 0 var(--acento),
-    inset -1px 0 0 var(--acento);
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent),
+    inset -1px 0 0 var(--accent);
 }
 
-.tabla .celda {
+.table .cell {
   border: none;
   border-radius: 0;
   padding: 0;
@@ -706,16 +713,16 @@ button.link {
   text-overflow: ellipsis;
 }
 
-/* La cola de revisión, en columnas por lo mismo que la biblioteca: lo que se
-   repasa de ciento cincuenta entradas es una sola columna.
-   Su rango empieza en 65rem, que es lo que suman las cinco columnas fijas más
-   lo mínimo que necesita la entrada de tienda para enseñar carátula y título.
-   Por debajo se desplaza dentro de su caja, sin arrastrar la página. */
-.revision-viewport {
+/* The review queue, in columns for the same reason as the library: of one
+   hundred and fifty entries you examine one column.
+   Its range starts at 65rem, which is the sum of the five fixed columns plus the
+   minimum that the store entry needs to show a cover and a title. Below that it
+   scrolls in its box and does not move the page. */
+.review-viewport {
   overflow-x: auto;
 }
 
-.revision {
+.review {
   width: 100%;
   max-width: 96rem;
   min-width: 65rem;
@@ -724,87 +731,89 @@ button.link {
   table-layout: fixed;
 }
 
-.revision th {
-  border-bottom: 1px solid var(--borde);
+.review th {
+  border-bottom: 1px solid var(--border);
   text-align: left;
   padding: var(--e-2) var(--e-3);
   font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-/* Arriba y no centradas: una fila mide lo que mida su columna más alta —la de
-   los otros candidatos, que envuelve— y con las celdas centradas la entrada de
-   tienda se iría a flotar a media altura, lejos de lo que se compara con ella. */
-.revision td {
+/* At the top and not in the centre: a row is the height of its highest column —
+   the column of the other candidates, which wraps — and with the cells in the
+   centre the store entry would go to the middle height, far from what it is
+   compared against. */
+.review td {
   vertical-align: top;
   padding: var(--e-3);
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid var(--border);
 }
 
-/* Lo que queda por decidir, marcado. Son los empates y lo que se ha quitado a
-   mano: las únicas filas que el botón del lote no se va a llevar. */
-.revision tr.sin-elegir td {
-  background: color-mix(in srgb, var(--estado-pendiente) 10%, transparent);
+/* What stays to decide, marked. These are the equal scores and the entries
+   removed by hand: the only rows that the batch button will not take. */
+.review tr.not-chosen td {
+  background: color-mix(in srgb, var(--status-backlog) 10%, transparent);
 }
 
-.revision .origen strong {
-  /* Un título de tienda largo parte donde le toque en vez de estirar su
-     columna y llevarse por delante el ancho de las demás. */
+.review .source strong {
+  /* A long store title breaks where it must and does not stretch its column
+     and take the width of the others. */
   overflow-wrap: anywhere;
 }
 
-/* En la tabla los candidatos van uno debajo de otro y no en fila: en 20rem no
-   caben dos al lado, y en columna las carátulas quedan alineadas, que es lo
-   que hace comparables dos fichas que se llaman igual. */
-.revision .candidates {
+/* In the table the candidates go one below the other and not in a row: two do
+   not fit beside each other in 20rem, and in a column the covers align, which is
+   what makes two records with the same name comparable. */
+.review .candidates {
   flex-direction: column;
   margin: 0 0 var(--e-2);
 }
 
-/* La tarjeta y su enlace, también uno debajo del otro: al lado no caben en la
-   columna de la elegida, y forzarlo parte el «IGDB ↗» en dos líneas de dos
-   palabras. */
-.revision .candidate-wrap {
+/* The card and its link, also one below the other: beside each other they do
+   not fit in the column of the chosen candidate, and to force it breaks the
+   "IGDB ↗" into two lines of two words. */
+.review .candidate-wrap {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
 }
 
-/* Sin `height: 100%`: con el enlace debajo, estirar la tarjeta a toda la altura
-   de su fila la echa fuera y encima de lo que venga después. */
-.revision .candidate {
+/* No `height: 100%`: with the link below, to stretch the card to all of the
+   height of its row puts it outside and on top of what comes after. */
+.review .candidate {
   height: auto;
   width: 100%;
 }
 
-.tienda {
+.store {
   font-size: var(--t-xs);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-s);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
   padding: 0 var(--e-1);
   margin-right: var(--e-1);
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-.estado {
+.status {
   font-size: var(--t-xs);
   font-weight: 600;
-  border-radius: var(--radio-s);
+  border-radius: var(--radius-s);
   padding: 0 var(--e-1);
   border: 1px solid currentColor;
 }
 
-.estado.backlog { color: var(--estado-pendiente); }
-.estado.playing { color: var(--estado-jugando); }
-.estado.finished { color: var(--estado-terminado); }
-.estado.abandoned { color: var(--estado-abandonado); }
+.status.backlog { color: var(--status-backlog); }
+.status.playing { color: var(--status-playing); }
+.status.finished { color: var(--status-finished); }
+.status.abandoned { color: var(--status-abandoned); }
 
-/* Pegada abajo mientras dure la selección: si hay que buscarla, no se usa. */
-.lote {
+/* At the bottom while the selection stays: if you must search for it, nobody
+   uses it. */
+.bulk {
   position: sticky;
   bottom: 0;
   display: flex;
@@ -812,45 +821,45 @@ button.link {
   gap: var(--e-3);
   flex-wrap: wrap;
   padding: var(--e-3);
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   margin-top: var(--e-3);
 }
 
-.lote-campo {
+.bulk-field {
   margin: 0;
   font-size: var(--t-s);
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
   font-weight: 400;
 }
 
-.lote select {
+.bulk select {
   font: inherit;
   font-size: var(--t-s);
   padding: var(--e-1) var(--e-2);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-s);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
   background: transparent;
   color: inherit;
 }
 
-.lote [role="alert"] {
+.bulk [role="alert"] {
   flex-basis: 100%;
   padding: 0;
 }
 
-/* Los deseados, ordenados por descuento.
-   En columnas por lo mismo que la biblioteca: lo que se compara de cuarenta
-   juegos son las cifras, y en vertical no se comparan.
-   Su rango empieza en 58rem, que es lo que suman las cinco columnas fijas más
-   lo mínimo que necesita el título. Por debajo se desplaza dentro de su caja,
-   sin arrastrar la página. */
-.deseados-viewport {
+/* The wished-for games, sorted by discount.
+   In columns for the same reason as the library: of forty games you compare the
+   numbers, and vertically you cannot compare them.
+   Its range starts at 58rem, which is the sum of the five fixed columns plus the
+   minimum that the title needs. Below that it scrolls in its box and does not
+   move the page. */
+.wishlist-viewport {
   overflow-x: auto;
 }
 
-.deseados-tabla {
+.wishlist-table {
   width: 100%;
   max-width: 96rem;
   min-width: 58rem;
@@ -859,41 +868,42 @@ button.link {
   table-layout: fixed;
 }
 
-.deseados-tabla th {
-  border-bottom: 1px solid var(--borde);
+.wishlist-table th {
+  border-bottom: 1px solid var(--border);
   text-align: left;
   padding: var(--e-2) var(--e-3);
   font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--texto-atenuado);
+  color: var(--text-muted);
 }
 
-/* Arriba, como en la revisión: la celda del juego lleva dos líneas y las de
-   cifras una, y centradas quedarían flotando a media altura de la fila. */
-.deseados-tabla td {
+/* At the top, as in the review: the cell of the game has two lines and the
+   cells of numbers have one, and in the centre they would float at the middle
+   height of the row. */
+.wishlist-table td {
   vertical-align: top;
   padding: var(--e-3);
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid var(--border);
 }
 
-/* Cada dato con su matiz debajo: la tienda bajo el precio, el precio sin
-   rebaja bajo el descuento. En la misma línea no caben en 7rem y el bloque
-   deja de leerse como una cifra. */
-.deseados-tabla .hint {
+/* Each value with its detail below: the store below the price, the price with
+   no discount below the discount. On the same line they do not fit in 7rem and
+   the block stops reading as a number. */
+.wishlist-table .hint {
   display: block;
   font-size: var(--t-xs);
 }
 
-.deseado-titulo {
+.wish-title {
   display: block;
-  /* Un título largo parte donde le toque en vez de estirar su columna y
-     llevarse por delante el ancho de las demás. */
+  /* A long title breaks where it must and does not stretch its column and
+     take the width of the others. */
   overflow-wrap: anywhere;
 }
 
-.deseados-barra {
+.wishlist-bar {
   display: flex;
   align-items: center;
   gap: var(--e-4);
@@ -901,71 +911,71 @@ button.link {
   margin-bottom: var(--e-3);
 }
 
-.deseados-barra p {
+.wishlist-bar p {
   margin: 0;
 }
 
-.descuento {
+.discount {
   font-weight: 600;
 }
 
-/* Que el precio de hoy iguale al mínimo histórico es la única pregunta que de
-   verdad se hace quien mira esta pantalla, así que es lo único que se pinta de
-   color aquí. */
-.minimo {
+/* Whether the price today is equal to the all-time low is the only question
+   that a person who looks at this screen really asks, thus it is the only value
+   in colour here. */
+.low {
   display: block;
-  color: var(--rebaja);
+  color: var(--price-low);
   font-size: var(--t-xs);
   font-weight: 600;
 }
 
-/* «Hoy»: una propuesta y estanterías con su motivo. */
-.hoy,
-.deseados,
-.revision-pantalla {
+/* "Today": one proposal and shelves with their reason. */
+.today,
+.wishlist,
+.review-screen {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
-.hoy {
+.today {
   display: flex;
   flex-direction: column;
   gap: var(--e-6);
 }
 
-/* Ni el destacado ni la tabla de la cola ganan nada estirándose a 1920 px: uno
-   acaba con el texto a un palmo de su portada y la otra con la entrada de
-   tienda a un extremo y el candidato al otro. */
-.destacado {
+/* Neither the featured game nor the table of the queue gains anything at
+   1920 px: the first ends with the text far from its cover and the second with
+   the store entry at one end and the candidate at the other. */
+.featured {
   max-width: 64rem;
 }
 
-.destacado {
+.featured {
   display: flex;
   gap: var(--e-5);
   align-items: flex-start;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-l);
-  background: var(--superficie);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface);
   padding: var(--e-5);
-  /* Envuelve en cuanto el texto se queda sin sitio: es la única pieza de esta
-     pantalla que no escala sola, porque tiene dos columnas. */
+  /* It wraps as soon as the text has no space: it is the only piece of this
+     screen that does not change size alone, because it has two columns. */
   flex-wrap: wrap;
 }
 
-/* La portada del destacado, más grande que una baldosa y con la misma
-   proporción 3:4. Aquí el tamaño sí vive en el CSS: no hay ninguna aritmética
-   que dependa de él, que es lo que obliga a la pared a llevarlo en su código. */
-.destacado-arte img,
-.destacado-arte .cover-placeholder {
+/* The cover of the featured game, larger than a tile and with the same 3:4
+   ratio. Here the size does live in the CSS: no arithmetic depends on it, and
+   that is what makes the wall keep it in its code. */
+.featured-art img,
+.featured-art .cover-placeholder {
   display: block;
   width: 10.5rem;
   height: 14rem;
   object-fit: cover;
 }
 
-.destacado-texto {
+.featured-text {
   flex: 1;
   min-width: 15rem;
   display: flex;
@@ -973,22 +983,22 @@ button.link {
   gap: var(--e-2);
 }
 
-.destacado-texto p {
+.featured-text p {
   margin: 0;
 }
 
-.estante-caja h3 {
+.shelf-box h3 {
   margin: 0;
 }
 
-.estante-caja .hint {
+.shelf-box .hint {
   margin: var(--e-1) 0 var(--e-3);
 }
 
-/* Una fila que se desplaza en horizontal dentro de su caja: las columnas miden
-   lo que mide una baldosa, así que caben las que quepan y las demás esperan a
-   un lado en vez de partir la fila y desordenar la estantería. */
-.estante {
+/* A row that scrolls horizontally in its box: the columns are the size of a
+   tile, thus the tiles that fit are there and the others wait at one side and do
+   not break the row and disorder the shelf. */
+.shelf {
   list-style: none;
   margin: 0;
   padding: 0 0 var(--e-2);
@@ -998,68 +1008,68 @@ button.link {
   overflow-x: auto;
 }
 
-/* La ficha, sin envoltorio: lo que se ve igual esté acoplada o superpuesta.
-   Que el formulario esté aquí y no repetido en cada presentación es lo mismo
-   que en el componente hay una sola llamada a `setUserState`: no existe el
-   sitio donde una de las dos podría empezar a verse distinta. */
-.ficha {
+/* The record, with no container: what you see whether it is beside the table or
+   on top of the covers. That the form is here and not repeated in each
+   presentation is the same as the one call to `setUserState` in the component:
+   there is no place where one of the two could start to look different. */
+.card {
   display: flex;
   flex-direction: column;
   gap: var(--e-2);
 }
 
-.ficha p {
+.card p {
   margin: 0;
 }
 
-.ficha textarea,
-.ficha select,
-.ficha input {
+.card textarea,
+.card select,
+.card input {
   font: inherit;
   padding: var(--e-2) var(--e-3);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-m);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
   background: transparent;
   color: inherit;
   width: 100%;
 }
 
-.resumen {
+.synopsis {
   font-size: var(--t-m);
   line-height: 1.5;
 }
 
-/* Acoplada. La columna sigue a la tabla mientras se desplaza, y no se lleva
-   por delante el sitio del formulario cuando el resumen es largo: el texto se
-   queda con su alto y se desplaza dentro. */
-/* Sin `sticky`: ya no hay página que se desplace por debajo, así que la ficha
-   se queda donde está y es ella la que se desplaza por dentro cuando la ventana
-   es más baja que el formulario. */
+/* Beside the table. The column follows the table while it scrolls, and it does
+   not take the space of the form when the synopsis is long: the text keeps its
+   height and scrolls inside. */
+/* No `sticky`: there is no page that scrolls below it now, thus the record
+   stays where it is and it is the record that scrolls inside when the window is
+   lower than the form. */
 .detail {
   width: 20rem;
   flex-shrink: 0;
   align-self: flex-start;
   max-height: 100%;
   overflow-y: auto;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-l);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
   padding: var(--e-5);
 }
 
-/* Siete líneas justas, en `em` sobre la interlínea: un alto en `rem` corta la
-   séptima por la mitad y un renglón partido se lee como texto roto, no como
-   texto que sigue más abajo. */
-.detail .resumen {
+/* Exactly seven lines, in `em` on the line height: a height in `rem` cuts the
+   seventh line in half, and a line cut in half reads as broken text and not as
+   text that continues below. */
+.detail .synopsis {
   max-height: 10.5em;
   overflow-y: auto;
 }
 
-/* Superpuesta.
-   El velo lo pinta el propio `<dialog>`, estirado a la ventana entera, y no
-   `::backdrop`: el pseudo-elemento no hereda las variables del elemento en
-   todos los motores, y un token que no llega deja el velo transparente. Así el
-   fondo sale del mismo sitio que todo lo demás. */
-.hoja {
+/* On top of the covers.
+   The `<dialog>` itself draws the scrim, stretched to all of the window, and not
+   `::backdrop`: the pseudo-element does not take the variables of the element in
+   every engine, and a token that does not arrive leaves the scrim transparent.
+   Thus the background comes from the same place as everything else. */
+.sheet {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -1069,51 +1079,51 @@ button.link {
   margin: 0;
   padding: var(--e-5);
   border: none;
-  background: var(--velo);
+  background: var(--scrim);
   overflow: auto;
 }
 
-/* Con `[open]`: sin esto el `display` de aquí le ganaría al `display: none` que
-   el navegador le pone a un diálogo cerrado, y la hoja se vería antes de
-   abrirse. */
-.hoja[open] {
+/* With `[open]`: without this the `display` here would win against the
+   `display: none` that the browser puts on a closed dialog, and you would see
+   the sheet before it opened. */
+.sheet[open] {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.hoja::backdrop {
+.sheet::backdrop {
   background: none;
 }
 
-.hoja-caja {
+.sheet-box {
   width: min(34rem, 100%);
   max-height: 100%;
   overflow-y: auto;
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-l);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
 }
 
-/* Alto explícito y recorte, no `aspect-ratio`: Steam sirve una cabecera 2,14:1
-   y GOG un logo con otra proporción, y la ficha tiene que empezar siempre a la
-   misma altura mida lo que mida la imagen. */
-.hoja-arte {
+/* An explicit height and a cut, not `aspect-ratio`: Steam gives a 2.14:1 header
+   and GOG gives a logo with a different ratio, and the record must always start
+   at the same height whatever the size of the image. */
+.sheet-art {
   display: block;
   width: 100%;
   height: 15rem;
   object-fit: cover;
-  border-radius: var(--radio-l) var(--radio-l) 0 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
 }
 
-/* Sin arte, una banda y no un agujero de 15rem: se nota que ahí iba una imagen
-   sin que la ficha se abra enseñando nada. */
-.hoja-arte-vacia {
+/* With no art, a band and not a hole of 15rem: you see that an image was there
+   and the record does not open showing nothing. */
+.sheet-art-empty {
   height: 4rem;
-  background: var(--hueco);
-  border-bottom: 1px dashed var(--borde);
+  background: var(--placeholder);
+  border-bottom: 1px dashed var(--border);
 }
 
-.hoja-cuerpo {
+.sheet-body {
   padding: var(--e-5);
 }

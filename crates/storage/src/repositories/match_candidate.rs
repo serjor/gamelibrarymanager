@@ -5,8 +5,9 @@ use time::OffsetDateTime;
 use crate::mapping::{entry_id_to_text, game_id_to_text};
 use crate::{Database, Result};
 
-/// Caché de la cola de revisión. Se puede vaciar entera sin perder nada: lo
-/// único irrecuperable son los enlaces manuales, y esos viven en `game_link`.
+/// The cache of the review queue. You can empty all of it and lose nothing: the
+/// only data that you cannot recover is the manual links, and those live in
+/// `game_link`.
 pub struct MatchCandidateRepository<'a>(pub &'a Database);
 
 impl MatchCandidateRepository<'_> {
@@ -65,7 +66,8 @@ impl MatchCandidateRepository<'_> {
         .collect())
     }
 
-    /// Al resolver una entrada sus candidatos sobran: sale de la cola.
+    /// When an entry is resolved, its candidates are unnecessary: it leaves the
+    /// queue.
     pub async fn clear(&self, entry_id: StoreEntryId) -> Result<()> {
         sqlx::query("DELETE FROM match_candidate WHERE store_entry_id = ?")
             .bind(entry_id_to_text(entry_id))
@@ -74,8 +76,8 @@ impl MatchCandidateRepository<'_> {
         Ok(())
     }
 
-    /// Fichas que ya no tiene ninguna entrada enlazada: quedan huérfanas cuando
-    /// el usuario corrige un emparejamiento.
+    /// The records that have no linked entry: they become orphans when the user
+    /// corrects a match.
     pub async fn orphan_games(&self) -> Result<Vec<String>> {
         Ok(sqlx::query(
             "SELECT id FROM game g
@@ -89,8 +91,8 @@ impl MatchCandidateRepository<'_> {
         .collect())
     }
 
-    /// Baja lógica de una ficha huérfana. Nunca borra: si la ficha vuelve a
-    /// hacer falta, el estado del usuario sigue colgando de ella.
+    /// A logical delete of an orphan record. It never deletes: if the record
+    /// becomes necessary again, the user status is still attached to it.
     pub async fn soft_delete_game(&self, game_id: domain::GameId) -> Result<()> {
         sqlx::query("UPDATE game SET deleted_at = ?, updated_at = ? WHERE id = ?")
             .bind(OffsetDateTime::now_utc())

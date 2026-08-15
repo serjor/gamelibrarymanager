@@ -3,18 +3,18 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
 
 /**
- * De dónde salen las credenciales de cliente. GOG no tiene registro de
- * aplicaciones: el único cliente que su servidor reconoce es el de GOG Galaxy,
- * y su par está publicado desde hace años en gogdl, que es software libre.
+ * Where the client credentials come from. GOG has no application registry: the
+ * only client that its server knows is the client of GOG Galaxy, and its pair
+ * has been published for years in gogdl, which is free software.
  */
 const GOGDL_AUTH_URL =
   "https://github.com/Heroic-Games-Launcher/heroic-gogdl/blob/main/gogdl/auth.py";
 
 /**
- * A diferencia de Steam, aquí no se pide ninguna clave *personal*: el par
- * identifica a la aplicación, no al usuario. Se le pide de todos modos para que
- * el programa no tenga que llevarlo dentro, que es la única razón de que esta
- * pantalla exista y conviene decirla sin rodeos.
+ * Different from Steam, this screen asks for no *personal* key: the pair
+ * identifies the application, not the user. The application asks for it so that
+ * the program does not have to carry it inside, which is the only reason that
+ * this screen exists and it is correct to say it clearly.
  */
 export function GogSetup({ onConnected }: { onConnected: () => void }) {
   const [clientId, setClientId] = useState("");
@@ -38,16 +38,17 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
 
   return (
     <form onSubmit={submit}>
-      <h2>Conectar GOG</h2>
+      <h2>Connect GOG</h2>
       <p className="hint">
-        Tu contraseña de GOG no pasa por aquí: se abrirá la página de GOG para
-        que inicies sesión en ella, y esta aplicación solo recibe el permiso que
-        te devuelva.
+        Your GOG password does not come through here: the GOG page will open for
+        you to sign in on it, and this application receives only the permission
+        that GOG gives back.
       </p>
       <p className="hint">
-        GOG no permite registrar aplicaciones, así que hace falta el par de
-        cliente de GOG Galaxy. No es una clave tuya y es la misma para todo el
-        mundo; se te pide para que no vaya escrita dentro del programa.
+        GOG does not let you register applications, thus the client pair of GOG
+        Galaxy is necessary. It is not a key of yours and it is the same for all
+        users; the application asks you for it so that it is not written inside
+        the program.
       </p>
 
       <label htmlFor="gog-client-id">Client ID</label>
@@ -66,7 +67,7 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
         id="gog-client-secret"
         value={clientSecret}
         onChange={(e) => setClientSecret(e.target.value)}
-        placeholder="64 caracteres"
+        placeholder="64 characters"
         autoComplete="off"
         spellCheck={false}
         required
@@ -76,17 +77,17 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
         className="link"
         onClick={() => {
           openUrl(GOGDL_AUTH_URL).catch((cause: unknown) =>
-            setError(`No he podido abrir ${GOGDL_AUTH_URL}: ${errorMessage(cause)}`),
+            setError(`Could not open ${GOGDL_AUTH_URL}: ${errorMessage(cause)}`),
           );
         }}
       >
-        Dónde encontrar el par de GOG Galaxy
+        Where to find the GOG Galaxy client pair
       </button>
 
       {error && <p role="alert">{error}</p>}
 
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
-        {busy ? "Esperando a que inicies sesión…" : "Iniciar sesión en GOG"}
+        {busy ? "Waiting for you to sign in…" : "Sign in to GOG"}
       </button>
     </form>
   );

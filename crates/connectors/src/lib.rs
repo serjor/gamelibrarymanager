@@ -1,7 +1,7 @@
-//! Conectores de tienda: solo autenticación y listado. Nunca descargas.
+//! Store connectors: only authentication and lists. Never downloads.
 //!
-//! Cada tienda implementa `domain::StoreConnector`. El dominio no sabe que
-//! existe HTTP y los conectores no saben que existe una base de datos.
+//! Each store obeys `domain::StoreConnector`. The domain does not know that HTTP
+//! exists, and the connectors do not know that a database exists.
 
 pub mod epic;
 pub mod gog;

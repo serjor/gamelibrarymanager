@@ -1,9 +1,10 @@
-//! Respaldo para cuando no hay keyring: un fichero cifrado con una clave
-//! derivada de la contraseña del usuario.
+//! The alternative for when there is no keyring: a file encrypted with a key
+//! derived from the passphrase of the user.
 //!
-//! Argon2id para derivar y XChaCha20-Poly1305 para cifrar. La contraseña no se
-//! guarda en ninguna parte: si se pierde, se vuelven a pedir las claves de API,
-//! que es un incordio asumible y mejor que un almacén que se puede abrir.
+//! Argon2id derives the key and XChaCha20-Poly1305 encrypts. The passphrase is
+//! kept in no place: if the user loses it, the application asks for the API keys
+//! again. That is an acceptable nuisance and it is better than a store that a
+//! different person can open.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -25,8 +26,9 @@ pub struct EncryptedFileStore {
 }
 
 impl EncryptedFileStore {
-    /// Abre el almacén, o lo crea si aún no existe. Una contraseña equivocada
-    /// se detecta aquí, no al leer el primer secreto: el cifrado es autenticado.
+    /// Opens the store, or creates it if it does not yet exist. An incorrect
+    /// passphrase is found here and not when the first secret is read: the
+    /// encryption is authenticated.
     pub fn open(path: &Path, passphrase: &str) -> Result<Self> {
         let (salt, existing) = match fs::read(path) {
             Ok(bytes) if bytes.len() >= SALT_LEN => {
@@ -34,7 +36,7 @@ impl EncryptedFileStore {
                 salt.copy_from_slice(&bytes[..SALT_LEN]);
                 (salt, Some(bytes[SALT_LEN..].to_vec()))
             }
-            Ok(_) => return Err(SecretsError::Corrupt("cabecera truncada".to_owned())),
+            Ok(_) => return Err(SecretsError::Corrupt("truncated header".to_owned())),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 let mut salt = [0u8; SALT_LEN];
                 OsRng.fill_bytes(&mut salt);
@@ -51,7 +53,8 @@ impl EncryptedFileStore {
         };
 
         match existing {
-            // Descifrar lo que ya había es la comprobación de la contraseña.
+            // To decrypt the data that was there is the test of the
+            // passphrase.
             Some(payload) if !payload.is_empty() => {
                 store.decrypt(&payload)?;
             }
@@ -80,7 +83,7 @@ impl EncryptedFileStore {
 
         let ciphertext = XChaCha20Poly1305::new(&self.key)
             .encrypt(nonce, plaintext.as_ref())
-            .map_err(|_| SecretsError::Corrupt("no se pudo cifrar".to_owned()))?;
+            .map_err(|_| SecretsError::Corrupt("could not encrypt".to_owned()))?;
 
         let mut bytes = Vec::with_capacity(SALT_LEN + NONCE_LEN + ciphertext.len());
         bytes.extend_from_slice(&self.salt);
@@ -96,7 +99,7 @@ impl EncryptedFileStore {
 
     fn decrypt(&self, payload: &[u8]) -> Result<BTreeMap<String, String>> {
         if payload.len() <= NONCE_LEN {
-            return Err(SecretsError::Corrupt("payload truncado".to_owned()));
+            return Err(SecretsError::Corrupt("truncated payload".to_owned()));
         }
         let (nonce_bytes, ciphertext) = payload.split_at(NONCE_LEN);
         let plaintext = XChaCha20Poly1305::new(&self.key)
@@ -106,13 +109,14 @@ impl EncryptedFileStore {
     }
 }
 
-/// `Debug` a mano y redactado: derivarlo volcaría la clave de cifrado en el
-/// primer `dbg!` o en el primer error que arrastre el almacén.
+/// `Debug` written by hand and with the key removed: a derived `Debug` would
+/// show the encryption key at the first `dbg!` or at the first error that
+/// carries the store.
 impl std::fmt::Debug for EncryptedFileStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EncryptedFileStore")
             .field("path", &self.path)
-            .field("key", &"<redactada>")
+            .field("key", &"<removed>")
             .finish()
     }
 }

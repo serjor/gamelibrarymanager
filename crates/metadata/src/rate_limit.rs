@@ -19,7 +19,7 @@ pub struct RateLimiter {
 }
 
 impl RateLimiter {
-    /// `capacity` peticiones por `window`.
+    /// `capacity` requests for each `window`.
     pub fn new(capacity: usize, window: Duration) -> Self {
         Self {
             window,
@@ -28,7 +28,8 @@ impl RateLimiter {
         }
     }
 
-    /// Espera lo justo para no pasarse. Se llama antes de cada petición.
+    /// Waits only the necessary time to stay in the limit. You call it before
+    /// each request.
     pub async fn acquire(&self) {
         loop {
             let wait_until = {
@@ -45,7 +46,7 @@ impl RateLimiter {
                     recent.push_back(now);
                     return;
                 }
-                // La más antigua marca cuándo se libera un hueco.
+                // The oldest one shows when a slot becomes free.
                 recent.front().map(|t| *t + self.window)
             };
 

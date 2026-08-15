@@ -1,31 +1,33 @@
-//! Cliente de IsThereAnyDeal.
+//! The IsThereAnyDeal client.
 //!
-//! Dos preguntas, y en este orden:
+//! Two questions, and in this order:
 //!
-//! 1. Qué juego de ITAD es este, que se resuelve con el appid de Steam cuando lo
-//!    hay y por título cuando no. Igual que en IGDB, el identificador cruzado es
-//!    exacto y el título es una apuesta.
-//! 2. Cuánto cuesta hoy y cuánto ha llegado a costar. Va por lotes: una petición
-//!    por juego convertiría una lista de deseados en cien peticiones.
+//! 1. Which ITAD game this is. The Steam appid resolves it when there is one,
+//!    and the title resolves it when there is not. As with IGDB, the identifier
+//!    in common is exact and the title is a guess.
+//! 2. What it costs today and the lowest price that it has had. This goes in
+//!    batches: one request for each game would turn a wishlist into one hundred
+//!    requests.
 //!
-//! ## Vigencia de los endpoints (comprobado el 2026-08-15)
+//! ## The endpoints (examined on 2026-08-15)
 //!
-//! ITAD sí tiene API pública y documentada, así que aquí no hay la incertidumbre
-//! de GOG o Epic. Aun así se comprobó, porque la v2 movió endpoints de sitio:
+//! ITAD has a public API with documentation, thus there is not the uncertainty
+//! of GOG or Epic here. The endpoints were still examined, because v2 moved some
+//! of them:
 //!
-//! - `GET /games/lookup/v1` **vive**: sin clave responde
-//!   `403 {"reason_phrase":"Missing api key"}`, es decir, acepta la ruta y solo
-//!   rechaza la credencial.
-//! - `POST /games/prices/v3` **vive**: con `GET` responde 405, con `POST` y sin
-//!   clave responde 403. Devuelve en la misma respuesta las ofertas de cada
-//!   tienda **y** `historyLow`, así que no hace falta llamar además a
-//!   `/games/historylow/v1`.
-//! - El límite publicado es de 1000 peticiones cada cinco minutos para una
-//!   cuenta con correo verificado, y un 429 llega con `Retry-After`.
+//! - `GET /games/lookup/v1` is **alive**: with no key it answers
+//!   `403 {"reason_phrase":"Missing api key"}`, which shows that it accepts the
+//!   path and refuses only the credential.
+//! - `POST /games/prices/v3` is **alive**: with `GET` it answers 405, and with
+//!   `POST` and no key it answers 403. In the same answer it gives the offers of
+//!   each store **and** `historyLow`, thus a second call to
+//!   `/games/historylow/v1` is unnecessary.
+//! - The published limit is 1000 requests each five minutes for an account with
+//!   a verified mail address, and a 429 comes with `Retry-After`.
 //!
-//! La clave puede ir como parámetro `key` o como cabecera `ITAD-API-Key`. Se usa
-//! la cabecera: una clave en la URL acaba en cualquier registro por el que pase
-//! la petición.
+//! The key can go as the `key` parameter or as the `ITAD-API-Key` header. This
+//! code uses the header: a key in the URL goes into each log through which the
+//! request passes.
 
 mod parse;
 
@@ -39,26 +41,27 @@ use crate::{MetadataError, Result};
 
 const API: &str = "https://api.isthereanydeal.com";
 
-/// Cuántos juegos caben en una petición de precios. Lo fija ITAD.
+/// How many games go in one price request. ITAD sets this limit.
 const MAX_BATCH: usize = 200;
 
-/// Lo que el usuario aporta para consultar precios.
+/// What the user supplies to ask for prices.
 ///
-/// El país no es un adorno: ITAD devuelve las tiendas y la moneda de ese
-/// mercado, y pedir precios sin decir dónde vives da el precio de otro sitio.
+/// The country is not decoration: ITAD gives back the stores and the currency of
+/// that market, and a price request that does not say where you live gives the
+/// price of a different place.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ItadCredentials {
     pub key: String,
-    /// Código ISO de dos letras.
+    /// The ISO code of two letters.
     pub country: String,
 }
 
-/// Un juego tal y como lo identifica ITAD.
+/// A game as ITAD identifies it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ItadGame {
-    /// El UUID que aceptan las consultas por lotes.
+    /// The UUID that the batch queries accept.
     pub id: String,
-    /// El nombre con el que se construye la dirección de su página.
+    /// The name with which you build the address of its page.
     pub slug: String,
     pub title: String,
 }
@@ -78,13 +81,13 @@ impl ItadClient {
         }
     }
 
-    /// Redirige las llamadas a otro host. Existe para los tests.
+    /// Sends the calls to a different host. It exists for the tests.
     pub fn with_base(mut self, api_base: impl Into<String>) -> Self {
         self.api_base = api_base.into();
         self
     }
 
-    /// El juego exacto a partir del appid de Steam.
+    /// The exact game, from the Steam appid.
     pub async fn lookup_by_steam_app_id(
         &self,
         credentials: &ItadCredentials,
@@ -93,11 +96,11 @@ impl ItadClient {
         self.lookup(credentials, &[("appid", app_id)]).await
     }
 
-    /// El juego que ITAD cree que es este título.
+    /// The game that ITAD thinks this title is.
     ///
-    /// Para las copias que no vienen de Steam, que no traen ningún
-    /// identificador cruzado. ITAD resuelve el título por su cuenta y devuelve
-    /// uno o ninguno: aquí no hay una lista de candidatos que puntuar.
+    /// This is for the copies that do not come from Steam, which carry no
+    /// identifier in common. ITAD resolves the title alone and gives back one
+    /// game or none: there is no list of candidates to score here.
     pub async fn lookup_by_title(
         &self,
         credentials: &ItadCredentials,
@@ -125,18 +128,19 @@ impl ItadClient {
         parse::parse_lookup(&self.body(response).await?)
     }
 
-    /// Los precios de varios juegos, en tandas del tamaño que admite ITAD.
+    /// The prices of more than one game, in batches of the size that ITAD
+    /// accepts.
     ///
-    /// Devuelve solo los juegos de los que sabe algo: uno que no vende nadie no
-    /// aparece en la respuesta, y eso no es un error.
+    /// It gives back only the games that it knows: a game that nobody sells does
+    /// not appear in the answer, and that is not an error.
     pub async fn prices(
         &self,
         credentials: &ItadCredentials,
         itad_ids: &[String],
     ) -> Result<Vec<GamePrices>> {
-        let mut todos = Vec::with_capacity(itad_ids.len());
+        let mut all = Vec::with_capacity(itad_ids.len());
 
-        for lote in itad_ids.chunks(MAX_BATCH) {
+        for batch in itad_ids.chunks(MAX_BATCH) {
             self.limiter.acquire().await;
 
             let response = self
@@ -144,20 +148,20 @@ impl ItadClient {
                 .post(format!("{}/games/prices/v3", self.api_base))
                 .header("ITAD-API-Key", &credentials.key)
                 .query(&[("country", credentials.country.as_str())])
-                .json(&lote)
+                .json(&batch)
                 .send()
                 .await
                 .map_err(|e| MetadataError::Transport(e.to_string()))?;
 
-            todos.extend(parse::parse_prices(&self.body(response).await?)?);
+            all.extend(parse::parse_prices(&self.body(response).await?)?);
         }
 
-        Ok(todos)
+        Ok(all)
     }
 
-    /// El cuerpo de una respuesta, o el error que le corresponde.
+    /// The body of an answer, or the applicable error.
     ///
-    /// ITAD contesta 403 —no 401— cuando falta la clave o no vale.
+    /// ITAD answers 403 — not 401 — when the key is absent or is not valid.
     async fn body(&self, response: reqwest::Response) -> Result<String> {
         match response.status().as_u16() {
             200 => response

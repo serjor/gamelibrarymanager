@@ -1,22 +1,23 @@
-//! Conector de Steam.
+//! The Steam connector.
 //!
-//! Steam es la única de las tres tiendas con una vía oficial, y funciona con la
-//! clave de API del propio usuario. Eso importa más de lo que parece: según la
-//! documentación de Valve, los perfiles privados no son accesibles «salvo que
-//! la clave usada pertenezca al mismo steamid consultado». Es decir, con clave
-//! propia el usuario lee su biblioteca privada sin tener que abrir su perfil al
-//! mundo, cosa que ninguna aplicación web puede ofrecer.
+//! Steam is the only one of the three stores with an official method, and it
+//! operates with the API key of the user. That is more important than it looks:
+//! the documentation of Valve says that private profiles are not accessible
+//! "unless the key used belongs to the same steamid being requested". Thus, with
+//! a key of their own, the user reads their private library and does not make
+//! their profile public. No web application can give that.
 //!
-//! Nunca se pide la contraseña de Steam: los términos de uso de la Web API lo
-//! prohíben expresamente.
+//! The Steam password is never requested: the terms of use of the Web API
+//! prohibit it clearly.
 //!
-//! ## Vigencia de los endpoints (comprobado el 2026-08-15)
+//! ## The endpoints (examined on 2026-08-15)
 //!
-//! Los tres de la Web API —`GetPlayerSummaries`, `GetOwnedGames` y
-//! `GetWishlist`— siguen bien. El cuarto no es de la Web API sino de la tienda,
-//! y no está documentado: `store.steampowered.com/api/appdetails` **solo
-//! contesta a un appid por petición**, y devuelve `null` a la petición entera en
-//! cuanto se le mandan dos. Está detallado en `titles`.
+//! The three endpoints of the Web API — `GetPlayerSummaries`, `GetOwnedGames`
+//! and `GetWishlist` — continue to operate. The fourth one is not from the Web
+//! API but from the store, and it has no documentation:
+//! `store.steampowered.com/api/appdetails` **answers only one appid for each
+//! request**, and gives `null` for all of the request as soon as you send two.
+//! `titles` gives the details.
 
 mod parse;
 
@@ -31,8 +32,9 @@ pub use parse::{parse_owned, parse_wishlist};
 const DEFAULT_API: &str = "https://api.steampowered.com";
 const DEFAULT_STORE: &str = "https://store.steampowered.com";
 
-/// Lo que el conector guarda en el almacén de secretos. Opaco para el resto del
-/// sistema, que solo lo mueve entre el keyring y este conector.
+/// What the connector keeps in the store of secrets. It is opaque to the
+/// remainder of the system, which only moves it between the keyring and this
+/// connector.
 #[derive(Debug, Serialize, Deserialize)]
 struct SteamCredential {
     api_key: String,
@@ -53,8 +55,8 @@ impl SteamConnector {
         }
     }
 
-    /// Redirige las llamadas a otro host. Existe para los tests: nunca se llama
-    /// a la API real desde la suite.
+    /// Sends the calls to a different host. It exists for the tests: the suite
+    /// never calls the real API.
     pub fn with_bases(
         mut self,
         api_base: impl Into<String>,
@@ -89,26 +91,28 @@ impl SteamConnector {
         serde_json::from_str(&session.credential).map_err(|_| ConnectorError::Unauthorized)
     }
 
-    /// Títulos de los deseados. `GetWishlist` solo devuelve appids, así que hay
-    /// que preguntar por los nombres aparte. Un fallo aquí no invalida la
-    /// sincronización: el título definitivo lo pone IGDB en la fase 4.
+    /// The titles of the wished-for games. `GetWishlist` gives back only
+    /// appids, thus you must ask for the names separately. A failure here does
+    /// not make the synchronisation invalid: IGDB sets the final title in phase
+    /// 4.
     ///
-    /// Un appid por petición, y esto no es una elección: `appdetails` acepta
-    /// varios en la URL y contesta `null` a la petición **entera** en cuanto son
-    /// dos. Comprobado el 2026-08-15:
+    /// One appid for each request, and this is not a decision: `appdetails`
+    /// accepts more than one in the URL and answers `null` for **all** of the
+    /// request as soon as there are two. Examined on 2026-08-15:
     ///
     /// ```sh
     /// curl "…/api/appdetails?appids=115800&filters=basic"          # {"115800":{…"name":"Owlboy"…}}
     /// curl "…/api/appdetails?appids=115800,235460&filters=basic"   # null
     /// ```
     ///
-    /// Por lotes de veinte, ninguna lista de deseados llegaba a tener un solo
-    /// título: todas se quedaban en «Steam 115800» y sin nombre no hay ni ficha
-    /// ni búsqueda de precio que valga.
+    /// In batches of twenty, no wishlist got even one title: all of them stayed
+    /// at "Steam 115800", and with no name there is no usable record and no
+    /// usable price search.
     ///
-    /// Sale una petición por juego deseado. La tienda corta sobre las doscientas
-    /// cada cinco minutos: una lista muy larga perderá los títulos del final, y
-    /// los recuperará en la siguiente sincronización.
+    /// This makes one request for each wished-for game. The store stops at
+    /// approximately two hundred requests each five minutes: a very long list
+    /// will lose the titles at the end, and will get them at the next
+    /// synchronisation.
     async fn titles(&self, app_ids: &[String]) -> std::collections::HashMap<String, String> {
         let url = format!("{}/api/appdetails", self.store_base);
         let mut titles = std::collections::HashMap::new();
@@ -132,9 +136,9 @@ impl StoreConnector for SteamConnector {
         StoreId::Steam
     }
 
-    /// Valida la clave contra la API antes de darla por buena: es lo que
-    /// convierte un error de copiar y pegar en un mensaje inmediato en vez de
-    /// en una sincronización vacía y desconcertante.
+    /// Examines the key against the API before it accepts the key: this is what
+    /// turns a copy-and-paste error into an immediate message and not into an
+    /// empty synchronisation that confuses the user.
     async fn authenticate(&self, ctx: &AuthContext) -> Result<StoreSession, ConnectorError> {
         let (key, steam_id) = match ctx {
             AuthContext::ApiKey { key, account_ref } => (key.clone(), account_ref.clone()),
@@ -151,7 +155,7 @@ impl StoreConnector for SteamConnector {
             }
             AuthContext::AuthCode { .. } => {
                 return Err(ConnectorError::Unexpected(
-                    "Steam no usa código de autorización".to_owned(),
+                    "Steam does not use an authorisation code".to_owned(),
                 ));
             }
         };
