@@ -26,12 +26,28 @@
  *     CHROMIUM_PATH=/usr/bin/chromium bun run visual
  */
 import { chromium, type Browser, type Page } from "playwright-core";
-import type { Account, AppInfo, LibraryRow, LibrarySummary, ReviewItem } from "../../src/lib/api";
+import type {
+  Account,
+  AppInfo,
+  ConnectorState,
+  LibraryRow,
+  LibrarySummary,
+  ReviewItem,
+} from "../../src/lib/api";
 
-/** Lo que contestaría Rust. Cada clave es el nombre de un comando de Tauri. */
+/**
+ * Lo que contestaría Rust. Cada clave es el nombre de un comando de Tauri.
+ *
+ * Aquí tienen que estar **todos** los que la aplicación pide al arrancar. Lo
+ * que falte se contesta con `null`, y un `null` donde el código espera una
+ * lista revienta el primer pintado: lo que se ve entonces no es un error
+ * legible sino que ninguna comprobación encuentra la pantalla y todas agotan
+ * su espera de treinta segundos.
+ */
 export interface Respuestas {
   app_info: AppInfo;
   list_accounts: Account[];
+  connector_states: ConnectorState[];
   has_igdb_credentials: boolean;
   library_summary: LibrarySummary;
   review_queue: ReviewItem[];
@@ -145,6 +161,10 @@ function respuestasPorDefecto(library: LibraryRow[]): Respuestas {
     list_accounts: [
       { store: "steam", account_ref: "7656119", display_name: "serjor", last_sync_at: 1_755_000_000 },
     ],
+    // Sin filas: ninguna tienda apagada y ninguna con error, que es la
+    // situación normal y la que hay que medir. La lista de conectores con
+    // problema solo aparece cuando pasa algo.
+    connector_states: [],
     has_igdb_credentials: true,
     library_summary: { owned: library.length, wishlist: 0, games: library.length, pending_review: 0 },
     review_queue: [],
@@ -237,7 +257,8 @@ export async function conLaApp<T>(
     }, respuestas);
 
     await pagina.goto(`http://localhost:${servidor.port}/`);
-    // La aplicación pinta después de resolver cuatro comandos.
+    // La aplicación no pinta hasta resolver todos los comandos de carga, así
+    // que esperar a la navegación es esperar a que estén los siete.
     await pagina.getByRole("navigation").waitFor();
 
     const resultado = await usar(pagina);

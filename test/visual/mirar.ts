@@ -74,6 +74,50 @@ for (const ancho of [1920, 1400, 1000]) {
   }
 }
 
+/**
+ * Una tienda rota no puede comerse la biblioteca.
+ *
+ * El aviso de un conector con problema se apila en la cabecera, encima de la
+ * región que se desplaza, y el mensaje lo escribe la tienda: puede ser largo y
+ * en una ventana estrecha ocupa varias líneas. Todo lo que crece ahí se lo
+ * quita a la lista, así que se mide con el mensaje más largo que el conector
+ * llega a producir.
+ */
+console.log("\nUna tienda con problema en la cabecera");
+const AVISO_LARGO =
+  "Corrective action is required to continue. Abre esta página de Epic y " +
+  "vuelve a conectar la cuenta: https://www.epicgames.com/id/login/continuation?code=ejemplo";
+
+for (const ancho of [1400, 620]) {
+  const r = await conLaApp(
+    async (pagina) => {
+      await pagina.getByRole("button", { name: "Desactivar Epic" }).waitFor();
+      return pagina.evaluate(() => {
+        const raiz = document.documentElement;
+        const region = document.querySelector(".tabla-viewport")!;
+        const aviso = document.querySelector(".connectors")!.getBoundingClientRect();
+        return {
+          paginaSeDesplaza: raiz.scrollHeight > raiz.clientHeight + 1,
+          seVaDeLado: raiz.scrollWidth > raiz.clientWidth + 1,
+          alto: Math.round(region.getBoundingClientRect().height),
+          avisoDentro: aviso.right <= window.innerWidth + 0.5,
+        };
+      });
+    },
+    {
+      ancho,
+      alto: 900,
+      respuestas: {
+        connector_states: [{ store: "epic", enabled: true, last_error: AVISO_LARGO }],
+      },
+    },
+  );
+
+  comprobar(`${ancho} px · la página sigue sin desplazarse`, !r.paginaSeDesplaza);
+  comprobar(`${ancho} px · el aviso no se va de lado`, !r.seVaDeLado && r.avisoDentro);
+  comprobar(`${ancho} px · a la lista le queda sitio (${r.alto} px)`, r.alto > 400);
+}
+
 console.log("\nPared de portadas");
 for (const ancho of ANCHOS) {
   const r = await conLaApp(
