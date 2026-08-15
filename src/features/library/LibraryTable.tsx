@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { LibraryRow } from "../../lib/api";
 import { ETIQUETA_ESTADO } from "../../lib/estado";
 import { useVirtualGrid } from "./useVirtualGrid";
@@ -70,6 +71,29 @@ export function LibraryTable({
     rowHeight: ALTO_FILA,
   });
   const alMarcar = useSeleccion(rows, selected, onSelect);
+
+  // Con ↑↓ la fila abierta se va de la ventana virtualizada en cuanto bajas
+  // veinte juegos, y el inspector acaba enseñando uno que ya no está en
+  // pantalla. Traerla a la vista es lo que hace que recorrer la lista con el
+  // teclado sea recorrerla de verdad. La aritmética es la misma que virtualiza:
+  // fila por alto de fila, sin medir nada.
+  useEffect(() => {
+    const caja = containerRef.current;
+    if (caja === null || abierto === null) return;
+
+    const indice = rows.findIndex((row) => row.game_id === abierto);
+    if (indice === -1) return;
+
+    // La cabecera va pegada arriba y taparía la fila que acaba de entrar.
+    const cabecera = caja.querySelector("thead")?.clientHeight ?? 0;
+    const arriba = indice * ALTO_FILA;
+    const abajo = arriba + ALTO_FILA;
+
+    if (arriba - cabecera < caja.scrollTop) caja.scrollTop = arriba - cabecera;
+    else if (abajo > caja.scrollTop + caja.clientHeight) {
+      caja.scrollTop = abajo - caja.clientHeight;
+    }
+  }, [abierto, rows, containerRef]);
 
   if (rows.length === 0) {
     return <p className="hint">Ningún juego encaja con lo que has filtrado.</p>;

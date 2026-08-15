@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import type {
   Account,
   AppInfo,
@@ -109,8 +109,31 @@ const CUATRO = [
 
 const marcaDe = (titulo: string) => screen.getByLabelText(`Seleccionar ${titulo}`) as HTMLInputElement;
 
+/** De qué juego es la ficha que hay abierta, sea acoplada o superpuesta. */
+const fichaAbierta = () => screen.queryByRole("heading", { level: 2 })?.textContent ?? null;
+
+/**
+ * Dentro de la ficha y no en toda la pantalla: el filtro de la barra también se
+ * llama «Estado», y buscar por nombre a secas encuentra los dos.
+ */
+const enLaFicha = () =>
+  within(screen.getByRole("heading", { level: 2 }).closest(".ficha") as HTMLElement);
+
+/**
+ * El ancho de la ventana es lo que decide entre inspector y hoja, así que aquí
+ * hay que poder moverlo: happy-dom lo expone y `matchMedia` le hace caso.
+ */
+function anchura(px: number) {
+  (
+    window as unknown as { happyDOM: { setViewport: (v: { width: number }) => void } }
+  ).happyDOM.setViewport({ width: px });
+}
+
 describe("App", () => {
   beforeEach(() => {
+    // Ancha por defecto: es donde la biblioteca se ve entera, y la ventana
+    // estrecha es lo que se prueba aparte.
+    anchura(1400);
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
     state.hasIgdb = true;
@@ -314,6 +337,113 @@ describe("App", () => {
     const celeste = state.guardados.find(([id]) => id === CUATRO[0]!.game_id);
     expect(celeste?.[2]).toBe(9);
     expect(celeste?.[3]).toBe("corto y redondo");
+  });
+
+  it("desde la tabla la ficha se abre acoplada, y con ↑↓ se recorre la lista", async () => {
+    // Es la razón de que el inspector exista: comparar juegos de uno en uno sin
+    // volver a la tabla a buscar el siguiente ni perder la ficha al hacerlo.
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    expect(fichaAbierta()).toBe("Celeste");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    fireEvent.keyDown(window, { key: "ArrowDown" });
+    expect(fichaAbierta()).toBe("Hades");
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(fichaAbierta()).toBe("Celeste");
+
+    // Y en el extremo no se cierra ni salta al otro lado: se queda donde está.
+    fireEvent.keyDown(window, { key: "ArrowUp" });
+    expect(fichaAbierta()).toBe("Celeste");
+  });
+
+  it("escribiendo una nota, ↑↓ mueve el cursor y no de juego", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    fireEvent.keyDown(enLaFicha().getByLabelText("Notas"), { key: "ArrowDown" });
+    expect(fichaAbierta()).toBe("Celeste");
+  });
+
+  it("en una ventana estrecha la ficha de la tabla se abre en hoja", async () => {
+    // Por debajo de su rango el inspector no cabe al lado de la tabla, y
+    // dejarlo ahí recortaría el título justo cuando estás comparando fichas.
+    anchura(1000);
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    expect(screen.getByRole("dialog")).toBeDefined();
+    expect(fichaAbierta()).toBe("Celeste");
+  });
+
+  it("desde las portadas la ficha se abre en hoja, con el arte de la tienda", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = [
+      fila({
+        title: "Celeste",
+        sort_title: "celeste",
+        summary: "Ayuda a Madeline a sobrevivir a sus demonios.",
+        store_cover_url: "https://cdn.cloudflare.steamstatic.com/steam/apps/504230/header.jpg",
+      }),
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Portadas" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Celeste/ }));
+
+    expect(screen.getByRole("dialog")).toBeDefined();
+    expect(screen.getByText(/sobrevivir a sus demonios/)).toBeDefined();
+    // Decorativa —el título va debajo—, así que no tiene rol y se busca por lo
+    // que es: la imagen apaisada de la tienda, que es lo que la hoja añade.
+    const arte = document.querySelector(".hoja-arte");
+    expect(arte?.tagName).toBe("IMG");
+    expect(arte?.getAttribute("src")).toContain("header.jpg");
+  });
+
+  it("sin portada de tienda y sin resumen la hoja se abre igual", async () => {
+    // El caso de quien no ha configurado IGDB, que es el que promete el aviso
+    // de la cabecera: la ficha tiene menos que enseñar, no menos que funcionar.
+    anchura(1000);
+    state.accounts = [cuentaSteam];
+    state.rows = [fila({ title: "Celeste", sort_title: "celeste" })];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    expect(screen.getByRole("dialog")).toBeDefined();
+    expect(screen.getByText(/Sin resumen/)).toBeDefined();
+    expect(document.querySelector(".hoja-arte")?.tagName).toBe("DIV");
+    expect(enLaFicha().getByLabelText("Notas")).toBeDefined();
+  });
+
+  it("guardar desde la hoja escribe lo mismo que guardar desde el inspector", async () => {
+    // Un solo formulario y un solo guardado: la presentación no puede cambiar
+    // lo que llega a la base de datos.
+    state.accounts = [cuentaSteam];
+    state.rows = [fila({ title: "Celeste", sort_title: "celeste", rating: 9 })];
+
+    for (const [ancho, esperado] of [
+      [1400, null],
+      [1000, "dialog"],
+    ] as const) {
+      anchura(ancho);
+      const { unmount } = render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+      expect(screen.queryByRole("dialog") === null ? null : "dialog").toBe(esperado);
+
+      fireEvent.change(enLaFicha().getByLabelText("Estado"), { target: { value: "finished" } });
+      fireEvent.click(enLaFicha().getByRole("button", { name: "Guardar" }));
+      await waitFor(() => expect(state.guardados).toHaveLength(1));
+
+      expect(state.guardados[0]).toEqual([state.rows[0]!.game_id, "finished", 9, null]);
+      state.guardados = [];
+      unmount();
+    }
   });
 
   it("la cola de revisión ofrece los candidatos y la salida sin ficha", async () => {

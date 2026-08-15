@@ -36,7 +36,7 @@ strong{font-weight:600}
 <p>La aplicación tiene un sistema de diseño propio en lugar de 324 líneas de CSS sin tokens. La biblioteca es una pantalla con dos presentaciones sobre el mismo estado —tabla densa y pared de portadas—, la ficha es un único componente que se acopla como inspector o se abre como hoja, la cola de revisión se resuelve comparando en lote, y una pestaña «Hoy» propone a qué jugar. Nada de esto exige una migración de base de datos.</p>
 
 <h2>Estado</h2>
-<p><strong>Fases 1 a 4 hechas</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>). Quedan la 5, la 6 y la 7. En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (30) y <code>cargo test -p storage -p domain</code> (18). <strong>No se ha ejecutado nunca <code>cargo test --workspace</code> ni <code>bun run tauri dev</code></strong>: se trabajó en un contenedor sin <code>webkit2gtk</code> ni pantalla, así que <code>src-tauri</code> no se ha compilado y la ventana no se ha abierto. Ninguna de las cuatro fases toca <code>src-tauri</code>.</p>
+<p><strong>Fases 1 a 5 hechas</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>, y la 5 en el commit que trae este párrafo). Quedan la 6 y la 7. En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (36), <code>bun run build &amp;&amp; bun run visual</code> (98 comprobaciones de maquetación) y —por primera vez, en la máquina del usuario y no en el contenedor— <code>cargo fmt</code>, <code>cargo clippy --all-targets --workspace</code> y <code>cargo test --workspace</code> (69 tests, 1 ignorado). <strong>Sigue sin ejecutarse <code>bun run tauri dev</code></strong>: la ventana no se ha abierto todavía. Ninguna de las cinco fases toca <code>src-tauri</code>.</p>
 
 <p>Pendiente del criterio del usuario, con la aplicación abierta y su biblioteca de verdad. Nada de esto es un fallo conocido; son cinco juicios que no se pueden hacer sin mirar:</p>
 <table>
@@ -46,16 +46,24 @@ strong{font-weight:600}
 <tr><td>Tamaño de baldosa, hoy 126×168</td><td><code>LibraryWall.tsx</code> <code>ANCHO</code> / <code>ALTO_PORTADA</code></td></tr>
 <tr><td>La casilla de selección de la pared solo sale al pasar por encima o al enfocar. Discreta con el arte, quizá demasiado</td><td><code>.pared-marca</code> en <code>styles.css</code></td></tr>
 <tr><td>El lote escribe secuencialmente, una llamada por juego. Con cuatro es instantáneo; con trescientos son trescientas idas y vueltas</td><td><code>BulkBar.tsx</code>; un comando en lote sería <code>src-tauri</code>, y <strong>no está en este plan</strong></td></tr>
+<tr><td>El ancho al que la ficha deja de acoplarse y pasa a hoja, hoy 82rem. Está medido —es la suma de lo que necesita cada pieza— pero se nota en una ventana de 1280, que es donde justo cambia</td><td><code>Library.tsx</code> <code>CABE_EL_INSPECTOR</code> + <code>main</code> en <code>styles.css</code></td></tr>
+<tr><td>Alto de la banda de arte de la hoja, hoy 15rem, y ancho de la hoja, hoy 34rem</td><td><code>.hoja-arte</code> / <code>.hoja-caja</code> en <code>styles.css</code></td></tr>
+<tr><td>El resumen en el inspector se queda en siete líneas y se desplaza dentro. En la hoja va entero</td><td><code>.detail .resumen</code> en <code>styles.css</code></td></tr>
 </table>
 
-<p>Y lo que la pared no ha visto nunca: <strong>arte real</strong>. Los CDN de Steam e IGDB estaban bloqueados en aquel entorno, así que la vista de portadas está juzgada entera con rectángulos de color. Es donde más probable es que algo cante al abrirla con carátulas.</p>
+<p>Y lo que ni la pared ni la hoja han visto nunca: <strong>arte real</strong>. Los CDN de Steam e IGDB estaban bloqueados en aquel entorno, así que la vista de portadas está juzgada entera con rectángulos de color, y la banda apaisada de la hoja también: el arnés visual la mide con un SVG de 460×215 servido desde la propia página. Es donde más probable es que algo cante al abrirla con carátulas de verdad.</p>
 
-<p>Cuatro cosas pasaron distinto de como las cuenta el resto de este documento, y mandan estas:</p>
+<p>Estas cosas pasaron distinto de como las cuenta el resto de este documento, y mandan estas:</p>
 <ul>
 <li><code>LibraryGrid.tsx</code> se borró en la fase 3, y la 4 escribió <code>LibraryWall.tsx</code> nuevo en vez de renombrarlo.</li>
 <li>De <code>useVirtualGrid</code> se reaprovecha la <strong>aritmética</strong>, no la forma de pintar: la tabla usa filas espaciadoras y la pared <code>transform</code>. Dentro de una tabla, mover el <code>tbody</code> saca las celdas de su columna.</li>
 <li>Hay tres ficheros que el plan no nombraba: <code>src/lib/estado.ts</code> (etiquetas de estado en un solo sitio), <code>src/features/library/useSeleccion.ts</code> (el rango con mayúsculas, compartido por las dos vistas) y <code>sort.test.ts</code>.</li>
 <li>La fase 2 encontró y arregló una patología anterior al plan: cinco de las seis subconsultas de la biblioteca arrancaban por <code>store_entry</code>. Los <code>CROSS JOIN</code> que lo arreglan <strong>son necesarios</strong> y los vigila un test; quitarlos no rompe ningún resultado, solo multiplica por ochenta lo que tarda.</li>
+<li>La fase 5 tuvo que ensanchar <code>main</code> de 72rem a 80rem. Con 72 el inspector <strong>no cabe nunca</strong> —la tabla necesita 56rem, el inspector 20 y el hueco 1, y a <code>main</code> le quedaban 69— así que la ficha acoplada habría nacido muerta. El 72 era heredado, igual que los 900 px de la ventana; el 80 es la suma, y el arnés visual la comprueba a 1312, 1400 y 1600.</li>
+<li>El resumen sale en las <strong>dos</strong> presentaciones, no solo en la hoja. Lo que la hoja tiene y el inspector no es el arte apaisado, que es lo que justificaba tener dos; esconder además el texto habría dejado sin resumen a quien mira la biblioteca en tabla.</li>
+<li>La ficha usa ya <code>ESTADOS</code> y <code>ETIQUETA_ESTADO</code> de <code>src/lib/estado.ts</code>. Era el último sitio con su propia copia de la lista, que es justo lo que ese fichero decía haber quitado.</li>
+<li>La fase 5 arregló de paso dos cosas que se veían y no eran suyas: la celda de la casilla recortaba —el navegador pintaba unos puntos suspensivos al lado de cada casilla de la tabla— y la fila abierta se recuadraba celda a celda en vez de como una fila. Las dos son de la fase 3, y la primera la vigila ahora una comprobación del arnés.</li>
+<li>Se borró el CSS muerto que dejó la fase 4 al no renombrar <code>LibraryGrid.tsx</code>: <code>.grid</code>, <code>.grid-viewport</code>, <code>.card</code> y <code>.card-title</code> no los usaba nadie.</li>
 </ul>
 
 <h2>Scope</h2>
@@ -253,7 +261,7 @@ bun run tauri dev            # tiene que abrir la ventana</code></pre>
 <h2>Unknowns</h2>
 <table>
 <tr><th>Incógnita</th><th>Cómo resolverla</th><th>Plan B</th></tr>
-<tr><td>Qué imagen luce mejor de cabecera en la hoja: el <code>header.jpg</code> de Steam (apaisado) o el logo de GOG (apaisado con otra proporción)</td><td>Mirarlo con una biblioteca real en la fase 5; las dos ya se sirven en la cola de revisión (<code>ReviewQueue.tsx:79</code>)</td><td>Recortar las dos a la misma caja, como ya hace <code>.origen img</code> en <code>styles.css:184-188</code></td></tr>
+<tr><td>Qué imagen luce mejor de cabecera en la hoja: el <code>header.jpg</code> de Steam (apaisado) o el logo de GOG (apaisado con otra proporción)</td><td>Mirarlo con una biblioteca real en la fase 5; las dos ya se sirven en la cola de revisión (<code>ReviewQueue.tsx:79</code>)</td><td><strong>Aplicado el plan B</strong>: la fase 5 se cerró sin arte real, así que las dos se recortan a la misma caja (<code>.hoja-arte</code>, 15rem de alto y <code>object-fit: cover</code>), como ya hace <code>.origen img</code>. Sigue sin mirarse con carátulas de verdad</td></tr>
 <tr><td>Cuántas estanterías de «Hoy» sobreviven con una biblioteca pequeña</td><td>Probar con 20 juegos en la fase 7</td><td>Umbral mínimo por estantería; por debajo, no se pinta</td></tr>
 <tr><td>Qué forma toma la tabla en una pantalla estrecha</td><td>De las tres superficies es la única que no sobrevive a un teléfono: la pared y «Hoy» son rejilla y filas y escalan solas, pero nueve columnas en 390 px no son un punto de ruptura, son otra forma. Se decide cuando llegue la versión de móvil y tableta, no aquí</td><td>Por debajo de su rango, la biblioteca se queda solo en modo pared, que sí escala. Queda anotado como bifurcación conocida para no descubrirla entonces</td></tr>
 <tr><td>Qué <code>minWidth</code> debe quedar en <code>tauri.conf.json</code></td><td>Con las siete fases cerradas, medir el ancho al que cada vista deja de funcionar de verdad y poner ese, o quitarlo</td><td>Dejar el 900 heredado, sabiendo ya que es arbitrario y no un requisito</td></tr>

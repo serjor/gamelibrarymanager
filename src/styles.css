@@ -26,6 +26,10 @@
   --texto-atenuado: #5a5f6e;
   --acento: #2f5fd0;
   --error: #b3261e;
+  /* El velo de la hoja. Sale de la tinta en claro y del fondo en oscuro porque
+     lo que hace falta en los dos temas es oscurecer, y el token que es oscuro
+     no es el mismo en cada uno. */
+  --velo: color-mix(in srgb, var(--texto) 45%, transparent);
 
   /* Estado de la partida. Semánticos y aparte del acento a propósito: el
      acento marca dónde estás, estos dicen qué es cada juego. Confundirlos
@@ -73,6 +77,7 @@
     --texto-atenuado: #9aa0ae;
     --acento: #8ab4f8;
     --error: #f2857b;
+    --velo: color-mix(in srgb, var(--fondo) 80%, transparent);
 
     --estado-pendiente: #d4b263;
     --estado-jugando: #79c0dd;
@@ -106,8 +111,13 @@ body {
   outline-offset: 2px;
 }
 
+/* 80rem no es una medida de lectura, es una suma: la tabla no funciona por
+   debajo de 56rem, el inspector mide 20rem, entre los dos va 1rem de hueco y
+   aquí se van 3rem de relleno. Con menos, la ficha acoplada no cabe nunca y el
+   inspector sería código muerto. El mismo número está en `Library.tsx`, que es
+   quien decide con él entre inspector y hoja. */
 main {
-  max-width: 72rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: var(--e-8) var(--e-6);
   display: flex;
@@ -127,10 +137,15 @@ h2 {
   margin: 0;
 }
 
+/* Los asistentes son una columna de campos, y `main` ha crecido para que quepa
+   la ficha acoplada al lado de la tabla. Sin tope, ese ancho se lo lleva
+   también un campo de texto, y escribir ahí una clave de API es seguir una
+   línea de metro y medio de larga. */
 form {
   display: flex;
   flex-direction: column;
   gap: var(--e-3);
+  max-width: 32rem;
 }
 
 label {
@@ -564,6 +579,14 @@ button.link {
   text-overflow: ellipsis;
 }
 
+/* La casilla no es texto y no cabía: con el relleno de las demás celdas, los
+   20 px que ocupa se salían de los 19 que quedaban, y `text-overflow` pintaba
+   unos puntos suspensivos al lado de cada casilla de la tabla. */
+.tabla td:first-child {
+  padding: 0;
+  text-align: center;
+}
+
 /* Las filas espaciadoras de la virtualización no llevan celdas, y sin esto
    heredarían el borde inferior y pintarían una raya suelta. */
 .tabla tbody tr:not([class]) td,
@@ -584,8 +607,28 @@ button.link {
   background: color-mix(in srgb, var(--acento) 12%, transparent);
 }
 
+/* La fila que está enseñando el inspector, recuadrada como una fila y no como
+   nueve celdas: con `border-collapse` un `box-shadow` sobre el `<tr>` no se
+   pinta, así que cada celda pone su parte del recuadro y solo las de los
+   extremos ponen los lados. */
 .tabla tr.abierta td {
-  box-shadow: inset 0 0 0 1px var(--acento);
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento);
+}
+
+.tabla tr.abierta td:first-child {
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento),
+    inset 1px 0 0 var(--acento);
+}
+
+.tabla tr.abierta td:last-child {
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento),
+    inset -1px 0 0 var(--acento);
 }
 
 .tabla .celda {
@@ -660,72 +703,23 @@ button.link {
   padding: 0;
 }
 
-.grid-viewport {
-  flex: 1;
-  height: 70vh;
-  overflow-y: auto;
-}
-
-.grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--e-4);
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-}
-
-.card {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--e-1);
-  text-align: left;
-  border: none;
-  padding: 0;
-}
-
-.card img,
-.cover-placeholder {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border-radius: var(--radio-m);
-  background: var(--hueco);
-}
-
-.cover-placeholder {
-  display: grid;
-  place-items: center;
-  padding: var(--e-3);
-  font-size: var(--t-s);
-  text-align: center;
-}
-
-.card-title {
-  font-weight: 600;
-  font-size: var(--t-m);
-  line-height: 1.2;
-}
-
-.detail {
-  width: 20rem;
-  flex-shrink: 0;
+/* La ficha, sin envoltorio: lo que se ve igual esté acoplada o superpuesta.
+   Que el formulario esté aquí y no repetido en cada presentación es lo mismo
+   que en el componente hay una sola llamada a `setUserState`: no existe el
+   sitio donde una de las dos podría empezar a verse distinta. */
+.ficha {
   display: flex;
   flex-direction: column;
   gap: var(--e-2);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-l);
-  padding: var(--e-5);
-  position: sticky;
-  top: var(--e-5);
 }
 
-.detail textarea,
-.detail select,
-.detail input {
+.ficha p {
+  margin: 0;
+}
+
+.ficha textarea,
+.ficha select,
+.ficha input {
   font: inherit;
   padding: var(--e-2) var(--e-3);
   border: 1px solid var(--borde);
@@ -733,4 +727,94 @@ button.link {
   background: transparent;
   color: inherit;
   width: 100%;
+}
+
+.resumen {
+  font-size: var(--t-m);
+  line-height: 1.5;
+}
+
+/* Acoplada. La columna sigue a la tabla mientras se desplaza, y no se lleva
+   por delante el sitio del formulario cuando el resumen es largo: el texto se
+   queda con su alto y se desplaza dentro. */
+.detail {
+  width: 20rem;
+  flex-shrink: 0;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+  padding: var(--e-5);
+  position: sticky;
+  top: var(--e-5);
+}
+
+/* Siete líneas justas, en `em` sobre la interlínea: un alto en `rem` corta la
+   séptima por la mitad y un renglón partido se lee como texto roto, no como
+   texto que sigue más abajo. */
+.detail .resumen {
+  max-height: 10.5em;
+  overflow-y: auto;
+}
+
+/* Superpuesta.
+   El velo lo pinta el propio `<dialog>`, estirado a la ventana entera, y no
+   `::backdrop`: el pseudo-elemento no hereda las variables del elemento en
+   todos los motores, y un token que no llega deja el velo transparente. Así el
+   fondo sale del mismo sitio que todo lo demás. */
+.hoja {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: var(--e-5);
+  border: none;
+  background: var(--velo);
+  overflow: auto;
+}
+
+/* Con `[open]`: sin esto el `display` de aquí le ganaría al `display: none` que
+   el navegador le pone a un diálogo cerrado, y la hoja se vería antes de
+   abrirse. */
+.hoja[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoja::backdrop {
+  background: none;
+}
+
+.hoja-caja {
+  width: min(34rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+}
+
+/* Alto explícito y recorte, no `aspect-ratio`: Steam sirve una cabecera 2,14:1
+   y GOG un logo con otra proporción, y la ficha tiene que empezar siempre a la
+   misma altura mida lo que mida la imagen. */
+.hoja-arte {
+  display: block;
+  width: 100%;
+  height: 15rem;
+  object-fit: cover;
+  border-radius: var(--radio-l) var(--radio-l) 0 0;
+}
+
+/* Sin arte, una banda y no un agujero de 15rem: se nota que ahí iba una imagen
+   sin que la ficha se abra enseñando nada. */
+.hoja-arte-vacia {
+  height: 4rem;
+  background: var(--hueco);
+  border-bottom: 1px dashed var(--borde);
+}
+
+.hoja-cuerpo {
+  padding: var(--e-5);
 }

@@ -38,6 +38,18 @@ export interface Respuestas {
   library: LibraryRow[];
 }
 
+/**
+ * Una cabecera apaisada con las proporciones de la de Steam (460×215), servida
+ * desde la propia página: lo que se mide es la caja donde se recorta, y para
+ * eso no hace falta el CDN ni haber configurado nada.
+ */
+export const ARTE_APAISADO =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='460' height='215'>" +
+      "<rect width='460' height='215' fill='gray'/></svg>",
+  );
+
 export function juego(overrides: Partial<LibraryRow> = {}): LibraryRow {
   const title = overrides.title ?? "Juego";
   return {
@@ -68,8 +80,8 @@ export function juego(overrides: Partial<LibraryRow> = {}): LibraryRow {
  */
 export function bibliotecaDeEjemplo(): LibraryRow[] {
   return [
-    juego({ title: "Disco Elysium: The Final Cut", owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10 }),
-    juego({ title: "Hades", playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9 }),
+    juego({ title: "Disco Elysium: The Final Cut", owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: ARTE_APAISADO, summary: "Un detective amnésico despierta en una ciudad que se cae a trozos y tiene que resolver un asesinato mientras discute consigo mismo. Cada habilidad es una voz, y todas mienten un poco.".repeat(2) }),
+    juego({ title: "Hades", playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: ARTE_APAISADO }),
     juego({ title: "Ori and the Blind Forest: Definitive Edition", owned_stores: ["steam", "gog"], playtime_minutes: 660, status: "finished", rating: 8 }),
     juego({ title: "Outer Wilds", playtime_minutes: 0, status: "backlog" }),
     juego({ title: "Divinity: Original Sin 2", owned_stores: ["gog"], playtime_minutes: 0, status: "backlog" }),
