@@ -21,6 +21,19 @@ impl StoreId {
     }
 }
 
+/// Whether a store connector is on, and what went wrong the last time it ran.
+///
+/// Epic is the reason this exists. Its authentication rests on the private API
+/// of its own launcher, so it can stop working on a day nobody chose, and one
+/// broken store cannot be allowed to make the application useless. Turning the
+/// connector off leaves the rest of the library exactly as it was.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ConnectorState {
+    pub store: StoreId,
+    pub enabled: bool,
+    pub last_error: Option<String>,
+}
+
 /// Una entrada de tienda es propiedad o deseo. Nada más: son los dos únicos
 /// listados que los conectores saben leer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

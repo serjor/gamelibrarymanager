@@ -1,0 +1,36 @@
+{
+  "e6ff9d3d4b2a4a5e9b7c0a1d2e3f4a5b": {
+    "id": "e6ff9d3d4b2a4a5e9b7c0a1d2e3f4a5b",
+    "title": "Cardpocalypse",
+    "namespace": "a1b2c3d4e5f6478899aabbccddeeff00",
+    "description": "Cardpocalypse",
+    "keyImages": [
+      {
+        "type": "DieselGameBoxWide",
+        "url": "https://cdn1.epicgames.com/offer/cards_wide-1920x1080"
+      },
+      {
+        "type": "DieselGameBoxTall",
+        "url": "https://cdn1.epicgames.com/offer/cards_tall-1200x1600"
+      },
+      {
+        "type": "Thumbnail",
+        "url": "https://cdn1.epicgames.com/offer/cards_thumb-360x480"
+      }
+    ],
+    "categories": [
+      { "path": "applications" },
+      { "path": "games" },
+      { "path": "games/edition" },
+      { "path": "games/edition/base" }
+    ],
+    "customAttributes": {
+      "CanRunOffline": { "type": "STRING", "value": "true" }
+    },
+    "productSlug": "cardpocalypse/home",
+    "catalogNs": {
+      "mappings": [{ "pageSlug": "cardpocalypse", "pageType": "productHome" }]
+    },
+    "creationDate": "2019-10-16T14:22:11.000Z"
+  }
+}

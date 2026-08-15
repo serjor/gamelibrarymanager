@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use connectors::{GogConnector, SteamConnector};
+use connectors::{EpicConnector, GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
 use metadata::IgdbClient;
 use secrets::{Backend, EncryptedFileStore, KeyringStore, SecretStore};
@@ -46,7 +46,11 @@ impl AppState {
         let http_for_igdb = http.clone();
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
         connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http.clone())));
-        connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http)));
+        connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http.clone())));
+        // Registered like any other. What sets Epic apart is not how it is
+        // built but that it can be switched off: `connector_state` says so and
+        // the synchronisation obeys.
+        connectors.insert(StoreId::Epic, Arc::new(EpicConnector::new(http)));
 
         let backend = secrets::detect(SERVICE);
         let secrets: Option<Arc<dyn SecretStore>> = match backend {

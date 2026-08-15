@@ -3,17 +3,18 @@
 
 // Público porque `generate_handler!` necesita llegar al elemento que genera
 // `#[tauri::command]`, y un `pub use` de la función sola no lo arrastra.
+pub mod epic;
 pub mod gog;
 
 use domain::{
-    AuthContext, EntryKind, GameId, GameLink, LinkMethod, PlayStatus, ScoredCandidate,
-    StoreAccount, StoreAccountId, StoreEntryId, StoreId, UserState,
+    AuthContext, ConnectorState, EntryKind, GameId, GameLink, LinkMethod, PlayStatus,
+    ScoredCandidate, StoreAccount, StoreAccountId, StoreEntryId, StoreId, UserState,
 };
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use serde::Serialize;
 use storage::repositories::{
-    GameLinkRepository, GameRepository, LibraryRepository, LibraryRow, MatchCandidateRepository,
-    StoreAccountRepository, StoreEntryRepository, UserStateRepository,
+    ConnectorStateRepository, GameLinkRepository, GameRepository, LibraryRepository, LibraryRow,
+    MatchCandidateRepository, StoreAccountRepository, StoreEntryRepository, UserStateRepository,
 };
 use tauri::{AppHandle, Emitter, State};
 use time::OffsetDateTime;
@@ -113,6 +114,34 @@ pub struct AccountView {
     pub account_ref: String,
     pub display_name: Option<String>,
     pub last_sync_at: Option<i64>,
+}
+
+/// The connectors that are switched off or that failed the last time they ran.
+///
+/// Only those: a store with nothing to say has no row, and the interface reads
+/// the absence as on and healthy. Writing the healthy state down would mean
+/// deciding on the first run which stores exist.
+#[tauri::command]
+pub async fn connector_states(state: State<'_, AppState>) -> Result<Vec<ConnectorState>, AppError> {
+    Ok(ConnectorStateRepository(&state.db).all().await?)
+}
+
+/// Turns a connector off, or back on.
+///
+/// It is what makes a broken store survivable: Epic rests on the private API of
+/// its own launcher, and the day that changes the user can switch it off and
+/// keep the rest of the library working instead of watching every
+/// synchronisation fail.
+#[tauri::command]
+pub async fn set_connector_enabled(
+    state: State<'_, AppState>,
+    store: StoreId,
+    enabled: bool,
+) -> Result<(), AppError> {
+    ConnectorStateRepository(&state.db)
+        .set_enabled(store, enabled)
+        .await?;
+    Ok(())
 }
 
 /// Emite el progreso a la ventana y consulta la bandera de cancelación.

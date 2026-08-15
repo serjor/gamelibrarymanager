@@ -1,10 +1,18 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
 import { render, screen } from "@testing-library/react";
-import type { Account, AppInfo, LibraryRow, LibrarySummary, ReviewItem } from "./lib/api";
+import type {
+  Account,
+  AppInfo,
+  ConnectorState,
+  LibraryRow,
+  LibrarySummary,
+  ReviewItem,
+} from "./lib/api";
 
 const state = {
   info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true } as AppInfo,
   accounts: [] as Account[],
+  connectors: [] as ConnectorState[],
   hasIgdb: true,
   summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
   queue: [] as ReviewItem[],
@@ -20,15 +28,24 @@ mock.module("./lib/api", () => ({
   api: {
     appInfo: () => Promise.resolve(state.info),
     listAccounts: () => Promise.resolve(state.accounts),
+    connectorStates: () => Promise.resolve(state.connectors),
+    setConnectorEnabled: (store: string, enabled: boolean) => {
+      state.connectors = state.connectors.map((connector) =>
+        connector.store === store ? { ...connector, enabled } : connector,
+      );
+      return Promise.resolve();
+    },
     hasIgdbCredentials: () => Promise.resolve(state.hasIgdb),
     librarySummary: () => Promise.resolve(state.summary),
     reviewQueue: () => Promise.resolve(state.queue),
-    syncNow: () => Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [] }),
+    syncNow: () =>
+      Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [], skipped: [] }),
     resolveIdentities: () =>
       Promise.resolve({ linked: 0, review: 0, unknown: 0, cancelled: false }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
     connectGog: () => Promise.resolve("id"),
+    connectEpic: () => Promise.resolve("id"),
     setIgdbCredentials: () => Promise.resolve(),
     reviewConfirm: () => Promise.resolve(),
     reviewConfirmMany: () => Promise.resolve(0),
@@ -56,10 +73,18 @@ const cuentaGog: Account = {
   last_sync_at: null,
 };
 
+const cuentaEpic: Account = {
+  store: "epic",
+  account_ref: "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7",
+  display_name: "serjor",
+  last_sync_at: null,
+};
+
 describe("App", () => {
   beforeEach(() => {
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
+    state.connectors = [];
     state.hasIgdb = true;
     state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
     state.queue = [];
@@ -115,18 +140,72 @@ describe("App", () => {
     expect(await screen.findByLabelText("Clave de API de Steam")).toBeDefined();
   });
 
-  it("con las dos tiendas conectadas ya no ofrece conectar ninguna", async () => {
-    state.accounts = [cuentaSteam, cuentaGog];
+  it("ofrece conectar Epic cuando aún no hay cuenta de Epic", async () => {
+    state.accounts = [cuentaSteam];
+    render(<App />);
+    (await screen.findByRole("button", { name: "Conectar Epic" })).click();
+    // Se busca algo que solo esté en el asistente: el encabezado se llama igual
+    // que el botón que lleva hasta él y no distinguiría nada.
+    expect(await screen.findByLabelText("Client ID")).toBeDefined();
+    expect(screen.getByText(/Tu contraseña de Epic no pasa por aquí/)).toBeDefined();
+  });
+
+  it("con las tres tiendas conectadas ya no ofrece conectar ninguna", async () => {
+    state.accounts = [cuentaSteam, cuentaGog, cuentaEpic];
     render(<App />);
     await screen.findByRole("button", { name: "Sincronizar" });
     expect(screen.queryByRole("button", { name: "Conectar Steam" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Conectar GOG" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Conectar Epic" })).toBeNull();
+  });
+
+  it("una tienda que va bien no sale por ninguna parte", async () => {
+    // El estado del conector solo se enseña cuando hay algo que contar: una
+    // lista permanente de «todo bien» es ruido que nadie lee.
+    state.accounts = [cuentaSteam, cuentaEpic];
+    state.connectors = [{ store: "epic", enabled: true, last_error: null }];
+    render(<App />);
+    await screen.findByRole("button", { name: "Sincronizar" });
+    expect(screen.queryByRole("button", { name: "Desactivar Epic" })).toBeNull();
+  });
+
+  it("un conector que ha fallado dice por qué y se puede desactivar", async () => {
+    // Es el «done when» de la fase 7: Epic se rompe, se ve el motivo, y apagarlo
+    // no toca ni Steam ni GOG.
+    state.accounts = [cuentaSteam, cuentaEpic];
+    state.connectors = [
+      { store: "epic", enabled: true, last_error: "credenciales inválidas o caducadas" },
+    ];
+    render(<App />);
+
+    expect(await screen.findByText(/credenciales inválidas o caducadas/)).toBeDefined();
+    (await screen.findByRole("button", { name: "Desactivar Epic" })).click();
+
+    expect(await screen.findByRole("button", { name: "Reactivar Epic" })).toBeDefined();
+    // Y lo que importa: las demás siguen donde estaban.
+    expect(screen.getByRole("button", { name: "Sincronizar" })).toBeDefined();
+    expect(screen.getByText(/steam/)).toBeDefined();
+  });
+
+  it("un conector desactivado explica que lo suyo sigue en la biblioteca", async () => {
+    state.accounts = [cuentaSteam, cuentaEpic];
+    state.connectors = [{ store: "epic", enabled: false, last_error: null }];
+    render(<App />);
+    expect(await screen.findByText(/sigue en la biblioteca/)).toBeDefined();
   });
 
   it("sin ninguna cuenta se puede empezar por GOG en vez de por Steam", async () => {
     render(<App />);
     (await screen.findByRole("button", { name: "o empezar por GOG" })).click();
     expect(await screen.findByRole("button", { name: /Iniciar sesión en GOG/ })).toBeDefined();
+  });
+
+  it("sin ninguna cuenta también se puede empezar por Epic", async () => {
+    // Quien solo tenga Epic no puede quedarse en un callejón en la primera
+    // pantalla, que es justo lo que le pasaba a quien solo tenía GOG.
+    render(<App />);
+    (await screen.findByRole("button", { name: "o empezar por Epic" })).click();
+    expect(await screen.findByRole("button", { name: /Iniciar sesión en Epic/ })).toBeDefined();
   });
 
   it("muestra el recuento de fichas, copias y pendientes", async () => {

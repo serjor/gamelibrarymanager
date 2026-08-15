@@ -5,6 +5,7 @@ import {
   errorMessage,
   type Account,
   type AppInfo,
+  type ConnectorState,
   type LibraryRow,
   type LibrarySummary,
   type ReviewItem,
@@ -13,14 +14,29 @@ import {
 } from "./lib/api";
 import { SteamSetup } from "./features/onboarding/SteamSetup";
 import { GogSetup } from "./features/onboarding/GogSetup";
+import { EpicSetup } from "./features/onboarding/EpicSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library } from "./features/library/Library";
 
+/** Las tiendas que se saben leer, con el nombre que se enseña de cada una. */
+const TIENDAS = [
+  ["steam", "Steam"],
+  ["gog", "GOG"],
+  ["epic", "Epic"],
+] as const;
+
+type Tienda = (typeof TIENDAS)[number][0];
+
+function nombreDe(store: string): string {
+  return TIENDAS.find(([id]) => id === store)?.[1] ?? store;
+}
+
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [connectors, setConnectors] = useState<ConnectorState[]>([]);
   const [hasIgdb, setHasIgdb] = useState(false);
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
@@ -29,7 +45,7 @@ export function App() {
   const [tab, setTab] = useState<"library" | "review">("library");
   // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
   // aplicación: se entra a ellos cuando el usuario quiere.
-  const [setup, setSetup] = useState<"steam" | "gog" | "igdb" | null>(null);
+  const [setup, setSetup] = useState<Tienda | "igdb" | null>(null);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -43,15 +59,18 @@ export function App() {
       setInfo(nextInfo);
       if (!nextInfo.unlocked) return;
 
-      const [nextAccounts, nextIgdb, nextSummary, nextQueue, nextRows] = await Promise.all([
-        api.listAccounts(),
-        api.hasIgdbCredentials(),
-        api.librarySummary(),
-        api.reviewQueue(),
-        api.library(),
-      ]);
+      const [nextAccounts, nextConnectors, nextIgdb, nextSummary, nextQueue, nextRows] =
+        await Promise.all([
+          api.listAccounts(),
+          api.connectorStates(),
+          api.hasIgdbCredentials(),
+          api.librarySummary(),
+          api.reviewQueue(),
+          api.library(),
+        ]);
       if (!alive()) return;
       setAccounts(nextAccounts);
+      setConnectors(nextConnectors);
       setHasIgdb(nextIgdb);
       setSummary(nextSummary);
       setQueue(nextQueue);
@@ -130,6 +149,7 @@ export function App() {
       <main>
         {setup === "steam" && <SteamSetup onConnected={cerrarSetup} />}
         {setup === "gog" && <GogSetup onConnected={cerrarSetup} />}
+        {setup === "epic" && <EpicSetup onConnected={cerrarSetup} />}
         {setup === "igdb" && <IgdbSetup onConnected={cerrarSetup} />}
         <button className="link" onClick={() => setSetup(null)}>
           Volver
@@ -139,14 +159,18 @@ export function App() {
   }
 
   // Hay que empezar por algún sitio, y Steam es la única tienda con una vía
-  // oficial. Pero quien no tenga Steam no puede quedarse en un callejón.
+  // oficial. Pero quien no tenga Steam no puede quedarse en un callejón, y eso
+  // vale para todas las demás: la lista sale de TIENDAS para que añadir una no
+  // se olvide de esta pantalla.
   if (accounts.length === 0) {
     return (
       <main>
         <SteamSetup onConnected={refresh} />
-        <button className="link" onClick={() => setSetup("gog")}>
-          o empezar por GOG
-        </button>
+        {TIENDAS.filter(([store]) => store !== "steam").map(([store, nombre]) => (
+          <button key={store} className="link" onClick={() => setSetup(store)}>
+            o empezar por {nombre}
+          </button>
+        ))}
       </main>
     );
   }
@@ -155,8 +179,12 @@ export function App() {
   // solo la primera pantalla, quien empezara por GOG se quedaba sin ninguna
   // forma de añadir Steam después.
   const conectadas = new Set(accounts.map((account) => account.store));
-  const porConectar = ([["steam", "Steam"], ["gog", "GOG"]] as const).filter(
-    ([store]) => !conectadas.has(store),
+  const porConectar = TIENDAS.filter(([store]) => !conectadas.has(store));
+
+  // Solo los conectores que tienen algo que decir. Una tienda que va bien no
+  // sale: la fila ni siquiera existe hasta que pasa algo.
+  const conProblema = connectors.filter(
+    (conector) => !conector.enabled || conector.last_error !== null,
   );
 
   return (
@@ -208,6 +236,34 @@ export function App() {
           </li>
         ))}
       </ul>
+
+      {/* Una tienda rota no puede volver inútil la aplicación. Se dice qué le
+          pasa y se ofrece apagarla, que es lo que deja el resto intacto. */}
+      {conProblema.length > 0 && (
+        <ul className="connectors">
+          {conProblema.map((conector) => (
+            <li key={conector.store}>
+              <strong>{nombreDe(conector.store)}</strong>{" "}
+              {conector.enabled
+                ? `no pudo sincronizar: ${conector.last_error}`
+                : "está desactivado: no se sincroniza, y lo que ya trajo sigue en la biblioteca."}{" "}
+              <button
+                className="link"
+                disabled={busy !== null}
+                onClick={() =>
+                  void run("connector", () =>
+                    api.setConnectorEnabled(conector.store, !conector.enabled),
+                  )
+                }
+              >
+                {conector.enabled
+                  ? `Desactivar ${nombreDe(conector.store)}`
+                  : `Reactivar ${nombreDe(conector.store)}`}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {summary && (
         <p className="summary">

@@ -37,6 +37,24 @@ honestidad aunque no obligue a nada:
   aporta el usuario al conectar su cuenta y se guarda en el almacén de
   secretos, como cualquier otra credencial.
 
+  Conector de Epic (crates/connectors/src/epic/)
+  Epic no publica ninguna API de biblioteca: lo que hay es la API privada de su
+  propio lanzador. El flujo de autorización y los endpoints vigentes se
+  determinaron leyendo legendary, GPLv3, y comprobándolos a mano el 2026-08-15:
+    - https://github.com/legendary-gl/legendary
+      Copyright (c) derrod y contribuidores de legendary
+  De ahí salen tres cosas que ninguna documentación cuenta: que el código de
+  autorización llega en el cuerpo de `id/api/redirect` y no en una redirección,
+  que el token hay que pedirlo con `token_type=eg1`, y que el espacio de
+  nombres `ue` son assets de Unreal Engine y no juegos. No se ha copiado
+  código: la implementación es propia y en Rust.
+
+  Credenciales de cliente del lanzador de Epic
+  Como con GOG, Epic no permite registrar aplicaciones de terceros y el único
+  cliente que su servidor de autorización reconoce es el de su lanzador. Ese
+  par está publicado en legendary. Este programa **no lo lleva dentro**: lo
+  aporta el usuario al conectar su cuenta.
+
 Sobre las tiendas
 -----------------
 Este proyecto no está afiliado a Valve, GOG, CD PROJEKT ni Epic Games. Los

@@ -1,0 +1,16 @@
+{
+  "access_token": "RENEWED_ACCESS_TOKEN",
+  "expires_in": 28800,
+  "expires_at": "2026-08-16T00:12:10.000Z",
+  "token_type": "bearer",
+  "refresh_token": "ROTATED_REFRESH_TOKEN",
+  "refresh_expires": 86400,
+  "refresh_expires_at": "2026-08-16T16:12:10.000Z",
+  "account_id": "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7",
+  "client_id": "34a02cf8f4414e29b15921876da36f9a",
+  "internal_client": true,
+  "client_service": "launcher",
+  "displayName": "serjor",
+  "app": "launcher",
+  "in_app_id": "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7"
+}

@@ -1,0 +1,20 @@
+{
+  "1e8bda5cdbea4b7d81a8c733e2a48f18": {
+    "id": "1e8bda5cdbea4b7d81a8c733e2a48f18",
+    "title": "Kena: Bridge of Spirits",
+    "namespace": "d5241c76f178492ea1540fce45616757",
+    "keyImages": [
+      {
+        "type": "OfferImageWide",
+        "url": "https://cdn1.epicgames.com/offer/kena_wide-1920x1080"
+      },
+      {
+        "type": "OfferImageTall",
+        "url": "https://cdn1.epicgames.com/offer/kena_tall-1200x1600"
+      }
+    ],
+    "categories": [{ "path": "applications" }, { "path": "games" }],
+    "productSlug": "kena-bridge-of-spirits/home",
+    "creationDate": "2021-09-21T09:00:00.000Z"
+  }
+}

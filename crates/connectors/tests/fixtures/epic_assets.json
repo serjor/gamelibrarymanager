@@ -1,0 +1,34 @@
+[
+  {
+    "appName": "Cardpocalypse",
+    "labelName": "Live-Windows",
+    "buildVersion": "1.0.5-CL-12345-Windows",
+    "catalogItemId": "e6ff9d3d4b2a4a5e9b7c0a1d2e3f4a5b",
+    "namespace": "a1b2c3d4e5f6478899aabbccddeeff00",
+    "assetId": "Cardpocalypse"
+  },
+  {
+    "appName": "CardpocalypseDeckPack",
+    "labelName": "Live-Windows",
+    "buildVersion": "1.0.0-CL-98-Windows",
+    "catalogItemId": "f7e8d9c0b1a2439485766758493021ab",
+    "namespace": "a1b2c3d4e5f6478899aabbccddeeff00",
+    "assetId": "CardpocalypseDeckPack"
+  },
+  {
+    "appName": "Snapdragon",
+    "labelName": "Live-Windows",
+    "buildVersion": "2.1.0-CL-99911-Windows",
+    "catalogItemId": "1e8bda5cdbea4b7d81a8c733e2a48f18",
+    "namespace": "d5241c76f178492ea1540fce45616757",
+    "assetId": "Snapdragon"
+  },
+  {
+    "appName": "BlueprintMegapack",
+    "labelName": "Live-Windows",
+    "buildVersion": "1.0.0",
+    "catalogItemId": "3c4d5e6f70819293a4b5c6d7e8f90112",
+    "namespace": "ue",
+    "assetId": "BlueprintMegapack"
+  }
+]

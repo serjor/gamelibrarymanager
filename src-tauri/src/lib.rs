@@ -9,7 +9,7 @@ mod sync;
 pub mod testing {
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::state::credential_key;
-    pub use crate::sync::{Silent, SyncReport, sync_account, sync_all};
+    pub use crate::sync::{Silent, SyncReport, sync_account, sync_all, sync_stores};
 }
 
 use state::AppState;
@@ -34,7 +34,10 @@ pub fn run() {
             commands::unlock_secrets,
             commands::connect_steam,
             commands::gog::connect_gog,
+            commands::epic::connect_epic,
             commands::list_accounts,
+            commands::connector_states,
+            commands::set_connector_enabled,
             commands::sync_now,
             commands::library_summary,
             commands::set_igdb_credentials,

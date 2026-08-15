@@ -11,7 +11,10 @@ use crate::model::{StoreAccountId, StoreId};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ConnectorError {
-    #[error("credenciales inválidas o caducadas")]
+    // Every message says what to do and not only what failed. A store that
+    // stops answering is the most common failure of the whole application, and
+    // "invalid credentials" leaves the user with nowhere to go.
+    #[error("credenciales inválidas o caducadas: vuelve a conectar la cuenta")]
     Unauthorized,
     #[error("la tienda limitó las peticiones")]
     RateLimited,

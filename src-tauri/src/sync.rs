@@ -8,11 +8,18 @@
 //! puede probar de extremo a extremo contra un servidor de mentira y una base
 //! de datos de verdad, sin arrancar Tauri.
 
-use domain::{AuthContext, EntryKind, StoreAccount, StoreConnector, StoreEntry, StoreSession};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+
+use domain::{
+    AuthContext, EntryKind, StoreAccount, StoreConnector, StoreEntry, StoreId, StoreSession,
+};
 use secrets::SecretStore;
 use serde::Serialize;
 use storage::Database;
-use storage::repositories::{StoreAccountRepository, StoreEntryRepository};
+use storage::repositories::{
+    ConnectorStateRepository, StoreAccountRepository, StoreEntryRepository,
+};
 use time::OffsetDateTime;
 
 use crate::error::AppError;
@@ -53,6 +60,9 @@ pub struct SyncReport {
     /// Cuentas que han fallado, con el motivo. Una tienda caída no puede
     /// impedir que las demás se sincronicen.
     pub failures: Vec<SyncFailure>,
+    /// Stores that were left out because their connector is switched off. It is
+    /// said out loud: a library that quietly stops growing looks like a bug.
+    pub skipped: Vec<String>,
     /// El usuario paró a mitad. Lo ya volcado se queda: es idempotente.
     pub cancelled: bool,
 }
@@ -68,8 +78,24 @@ pub async fn sync_all(
     state: &AppState,
     progress: &dyn ProgressSink,
 ) -> Result<SyncReport, AppError> {
-    let accounts = StoreAccountRepository(&state.db).active().await?;
     let secrets = state.secrets().await?;
+    sync_stores(&state.db, secrets.as_ref(), &state.connectors, progress).await
+}
+
+/// Every connected account, one after another.
+///
+/// It takes its collaborators instead of the global state so that the switch
+/// and the isolation between stores can be proved against a pretend server and
+/// a real database, without starting Tauri.
+pub async fn sync_stores(
+    db: &Database,
+    secrets: &dyn SecretStore,
+    available: &HashMap<StoreId, Arc<dyn StoreConnector>>,
+    progress: &dyn ProgressSink,
+) -> Result<SyncReport, AppError> {
+    let accounts = StoreAccountRepository(db).active().await?;
+    let connectors = ConnectorStateRepository(db);
+    let disabled = disabled_stores(&connectors).await?;
     let mut report = SyncReport::default();
     let total = accounts.len();
 
@@ -78,22 +104,25 @@ pub async fn sync_all(
             report.cancelled = true;
             break;
         }
+        // A switched off connector is not asked anything, not even for a token.
+        // That is the whole point of the switch: a store whose authentication
+        // broke stops costing the user a failed request on every run.
+        if disabled.contains(&account.store) {
+            let name = account.store.as_str().to_owned();
+            if !report.skipped.contains(&name) {
+                report.skipped.push(name);
+            }
+            continue;
+        }
         progress.report(SyncProgress {
             store: account.store.as_str().to_owned(),
             stage: "biblioteca",
             done: index,
             total,
         });
-        let result = match state.connectors.get(&account.store) {
+        let result = match available.get(&account.store) {
             Some(connector) => {
-                sync_account(
-                    &state.db,
-                    secrets.as_ref(),
-                    connector.as_ref(),
-                    &account,
-                    &mut report,
-                )
-                .await
+                sync_account(db, secrets, connector.as_ref(), &account, &mut report).await
             }
             None => Err(AppError::Message(format!(
                 "sin conector para {}",
@@ -101,16 +130,39 @@ pub async fn sync_all(
             ))),
         };
 
-        if let Err(error) = result {
-            report.failures.push(SyncFailure {
-                store: account.store.as_str().to_owned(),
-                account: account.display_name.unwrap_or(account.account_ref),
-                reason: error.to_string(),
-            });
+        // The reason is written down and not only reported, because the next
+        // time the user opens the application the report is gone and the empty
+        // library is still there. With several accounts of one store the last
+        // one has the say, which is the one the user just watched run.
+        match result {
+            Ok(()) => connectors.record_error(account.store, None).await?,
+            Err(error) => {
+                let reason = error.to_string();
+                connectors
+                    .record_error(account.store, Some(&reason))
+                    .await?;
+                report.failures.push(SyncFailure {
+                    store: account.store.as_str().to_owned(),
+                    account: account.display_name.unwrap_or(account.account_ref),
+                    reason,
+                });
+            }
         }
     }
 
     Ok(report)
+}
+
+async fn disabled_stores(
+    connectors: &ConnectorStateRepository<'_>,
+) -> Result<HashSet<StoreId>, AppError> {
+    Ok(connectors
+        .all()
+        .await?
+        .into_iter()
+        .filter(|state| !state.enabled)
+        .map(|state| state.store)
+        .collect())
 }
 
 pub async fn sync_account(

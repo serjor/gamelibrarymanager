@@ -26,7 +26,19 @@ export interface SyncReport {
   wishlist: number;
   removed: number;
   failures: SyncFailure[];
+  /** Tiendas que se han saltado por tener el conector desactivado. */
+  skipped: string[];
   cancelled: boolean;
+}
+
+/**
+ * Estado de un conector. Solo llegan los que tienen algo que decir: una tienda
+ * sin fila está encendida y sin errores.
+ */
+export interface ConnectorState {
+  store: string;
+  enabled: boolean;
+  last_error: string | null;
 }
 
 export interface LibrarySummary {
@@ -98,7 +110,14 @@ export const api = {
   /** Abre el login de GOG y no resuelve hasta que el usuario termina o cierra. */
   connectGog: (clientId: string, clientSecret: string) =>
     invoke<string>("connect_gog", { clientId, clientSecret }),
+  /** Igual que el de GOG, salvo que el código llega en el cuerpo de la página. */
+  connectEpic: (clientId: string, clientSecret: string) =>
+    invoke<string>("connect_epic", { clientId, clientSecret }),
   listAccounts: () => invoke<Account[]>("list_accounts"),
+  connectorStates: () => invoke<ConnectorState[]>("connector_states"),
+  /** Apaga o vuelve a encender una tienda sin tocar las demás. */
+  setConnectorEnabled: (store: string, enabled: boolean) =>
+    invoke<void>("set_connector_enabled", { store, enabled }),
   syncNow: () => invoke<SyncReport>("sync_now"),
   librarySummary: () => invoke<LibrarySummary>("library_summary"),
   hasIgdbCredentials: () => invoke<boolean>("has_igdb_credentials"),
