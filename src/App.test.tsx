@@ -249,6 +249,49 @@ describe("App", () => {
     }
   });
 
+  it("cambiar de vista no cambia qué juegos hay delante", async () => {
+    // Filtro y orden se aplican en un solo sitio y las dos vistas pintan el
+    // resultado. La comprobación es que no hay dos sitios donde divergir.
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    await screen.findByRole("button", { name: "Celeste" });
+
+    const conjunto = () =>
+      screen
+        .getAllByLabelText(/^Seleccionar /)
+        .map((e) => e.getAttribute("aria-label"))
+        .sort();
+
+    fireEvent.change(screen.getByPlaceholderText("Buscar en la biblioteca"), {
+      target: { value: "out" },
+    });
+    expect(conjunto()).toEqual(["Seleccionar Outer Wilds"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Portadas" }));
+    expect(conjunto()).toEqual(["Seleccionar Outer Wilds"]);
+    // Y sigue siendo la pared, no la tabla disfrazada.
+    expect(screen.queryByRole("columnheader")).toBeNull();
+  });
+
+  it("lo seleccionado en la tabla sigue seleccionado en las portadas", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    await screen.findByRole("button", { name: "Celeste" });
+
+    fireEvent.click(marcaDe("Celeste"));
+    fireEvent.click(marcaDe("Hades"), { shiftKey: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Portadas" }));
+
+    expect(marcaDe("Celeste").checked).toBe(true);
+    expect(marcaDe("Hades").checked).toBe(true);
+    expect(marcaDe("Prey").checked).toBe(false);
+    // La barra de lote no se entera de que ha cambiado la vista.
+    expect(screen.getByText("2 seleccionados")).toBeDefined();
+  });
+
   it("el lote escribe una vez por juego y no se lleva por delante lo escrito", async () => {
     state.accounts = [cuentaSteam];
     state.rows = CUATRO;

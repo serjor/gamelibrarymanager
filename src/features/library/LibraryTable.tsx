@@ -1,7 +1,7 @@
-import { useRef } from "react";
 import type { LibraryRow } from "../../lib/api";
 import { ETIQUETA_ESTADO } from "../../lib/estado";
 import { useVirtualGrid } from "./useVirtualGrid";
+import { conMayusculas, useSeleccion } from "./useSeleccion";
 import type { Sort, SortField } from "./sort";
 
 /** Alto de fila fijo: la virtualización es aritmética, no medición. */
@@ -69,9 +69,7 @@ export function LibraryTable({
     itemCount: rows.length,
     rowHeight: ALTO_FILA,
   });
-
-  /** Desde dónde cuenta el rango del siguiente ⇧+clic. */
-  const ancla = useRef<number | null>(null);
+  const alMarcar = useSeleccion(rows, selected, onSelect);
 
   if (rows.length === 0) {
     return <p className="hint">Ningún juego encaja con lo que has filtrado.</p>;
@@ -79,26 +77,6 @@ export function LibraryTable({
 
   const visibles = rows.slice(range.start, range.end);
   const alto = { arriba: offsetY, abajo: totalHeight - offsetY - visibles.length * ALTO_FILA };
-
-  const alMarcar = (indice: number, conMayusculas: boolean) => {
-    const fila = rows[indice];
-    if (!fila) return;
-
-    if (conMayusculas && ancla.current !== null) {
-      // El rango se cuenta sobre lo que se está viendo, ya filtrado y ordenado,
-      // que es lo que el usuario acaba de señalar con el ratón.
-      const desde = Math.min(ancla.current, indice);
-      const hasta = Math.max(ancla.current, indice);
-      onSelect(
-        rows.slice(desde, hasta + 1).map((r) => r.game_id),
-        true,
-      );
-      return;
-    }
-
-    ancla.current = indice;
-    onSelect([fila.game_id], !selected.has(fila.game_id));
-  };
 
   // Pulsar la columna por la que ya se ordena da la vuelta; cambiar de columna
   // empieza siempre ascendente.
@@ -154,11 +132,7 @@ export function LibraryTable({
                     type="checkbox"
                     checked={marcada}
                     aria-label={`Seleccionar ${row.title}`}
-                    // El evento nativo es el que trae la tecla: con el teclado
-                    // llega sin ella, que es justo lo que se quiere.
-                    onChange={(e) =>
-                      alMarcar(indice, (e.nativeEvent as MouseEvent).shiftKey === true)
-                    }
+                    onChange={(e) => alMarcar(indice, conMayusculas(e))}
                   />
                 </td>
                 <td className="tt">

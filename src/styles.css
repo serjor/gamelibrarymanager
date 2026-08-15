@@ -81,6 +81,15 @@
   }
 }
 
+/* El `padding` y el borde caben dentro del ancho declarado. Sin esto, decirle
+   a una portada que mida 168 px de alto y darle relleno da 184, y una rejilla
+   virtualizada —que cuenta las filas con aritmética— empieza a pisarse. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   /* Explícito y no heredado del `color-scheme`: en cuanto un token define el
@@ -333,6 +342,167 @@ button.link {
   display: flex;
   flex-direction: column;
 }
+
+/* Sale de la caja sin dejar de existir: `opacity` y no `display`, para que el
+   teclado y los lectores de pantalla lleguen igual a lo que está tapado. */
+.visualmente-oculta {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+}
+
+.barra .filters {
+  flex: 1;
+}
+
+.vistas {
+  display: flex;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
+  overflow: hidden;
+}
+
+.vista {
+  border: none;
+  border-radius: 0;
+  padding: var(--e-2) var(--e-4);
+  font-size: var(--t-s);
+  color: var(--texto-atenuado);
+}
+
+.vista.activa {
+  background: var(--acento);
+  color: var(--superficie);
+  font-weight: 600;
+}
+
+.pared-viewport {
+  height: 70vh;
+  overflow-y: auto;
+}
+
+/* Las medidas las pone el componente: son las mismas con las que calcula qué
+   filas tocan, y separarlas en dos sitios es pedir que dejen de cuadrar. */
+.pared {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  justify-content: space-between;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+}
+
+.pared > li {
+  position: relative;
+  /* La rejilla virtualizada cuenta las filas con aritmética: una baldosa que
+     se pase de su alto no descuadra su fila, descuadra todas las de abajo. */
+  overflow: hidden;
+}
+
+.baldosa {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  text-align: left;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.baldosa img,
+.baldosa .cover-placeholder {
+  width: 100%;
+  height: var(--alto-portada);
+  object-fit: cover;
+  border-radius: var(--radio-m);
+  background: var(--hueco);
+}
+
+.baldosa .cover-placeholder {
+  display: grid;
+  place-items: center;
+  padding: var(--e-3);
+  font-size: var(--t-s);
+  text-align: center;
+}
+
+.baldosa-titulo {
+  font-weight: 600;
+  font-size: var(--t-s);
+  line-height: 1.2;
+  /* Dos líneas y ni una más: la fila mide lo que mide y un título largo no
+     puede empujar la de abajo. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.baldosa .hint {
+  font-size: var(--t-xs);
+}
+
+/* La casilla solo estorba cuando no se está usando: aparece al pasar por
+   encima, al enfocar, si está marcada, o mientras haya algo seleccionado. */
+.pared-marca {
+  position: absolute;
+  top: var(--e-2);
+  left: var(--e-2);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.pared > li:hover .pared-marca,
+.pared > li:focus-within .pared-marca,
+.pared-marca:checked,
+.pared[data-seleccionando] .pared-marca {
+  opacity: 1;
+}
+
+.pared > li.marcada img,
+.pared > li.marcada .cover-placeholder {
+  outline: 3px solid var(--acento);
+  outline-offset: -3px;
+}
+
+.pared > li.abierta img,
+.pared > li.abierta .cover-placeholder {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* El estado, en una esquina y del color que le toca. Va con `aria-hidden`: el
+   nombre accesible de la baldosa ya lo lleva escrito. */
+.punto {
+  position: absolute;
+  top: var(--e-2);
+  right: var(--e-2);
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--fondo);
+}
+
+.punto.backlog { background: var(--estado-pendiente); }
+.punto.playing { background: var(--estado-jugando); }
+.punto.finished { background: var(--estado-terminado); }
+.punto.abandoned { background: var(--estado-abandonado); }
 
 /* El rango en el que esta vista funciona: de 56rem para arriba. Por debajo se
    desplaza en horizontal dentro de su propia caja, sin arrastrar consigo el
