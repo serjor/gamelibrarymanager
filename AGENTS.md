@@ -36,6 +36,13 @@ Antes de escribir código, lee también:
 | --- | --- |
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
 
+### `docs/ui/` — interfaz
+
+| Convención | De qué trata |
+| --- | --- |
+| [Ningún componente declara un color: todos salen de los tokens](docs/ui/tokens-como-unica-fuente-de-color.md) | La paleta y su variante oscura se definen una vez. Ni literales, ni `Canvas`, ni colores derivados de `currentColor`. |
+| [Un estado para los dos modos de vista: las vistas solo pintan](docs/ui/un-estado-para-los-dos-modos-de-vista.md) | Filtro, orden y selección viven en `Library.tsx`; la tabla y la pared pintan lo que les llega. Y lo que hace sus propios cortes no es un modo de vista. |
+
 ### `docs/testing/` — comprobaciones
 
 | Convención | De qué trata |
@@ -44,7 +51,7 @@ Antes de escribir código, lee también:
 
 ### Pendientes de documentar
 
-Áreas previstas y todavía vacías: `docs/domain/`, `docs/ui/`.
+Áreas previstas y todavía vacías: `docs/domain/`.
 
 ## Comprobaciones
 

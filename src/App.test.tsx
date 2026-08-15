@@ -112,17 +112,36 @@ const CUATRO = [
   fila({ title: "Prey", sort_title: "prey", playtime_minutes: 120, rating: 6 }),
 ];
 
+/**
+ * Una biblioteca con material para tres estanterías de «Hoy» a la vez: dos
+ * empezados, uno sin estrenar y uno con copia en dos tiendas. Las fechas van
+ * relativas al reloj porque los cortes de «Hoy» también.
+ */
+const AHORA = Math.floor(Date.now() / 1000);
+const DIA = 86_400;
+const PARA_HOY = [
+  fila({ title: "Hades", sort_title: "hades", status: "playing", playtime_minutes: 3120, last_played_at: AHORA - 2 * DIA }),
+  fila({ title: "Celeste", sort_title: "celeste", status: "playing", playtime_minutes: 900, last_played_at: AHORA - 100 * DIA }),
+  fila({ title: "Prey", sort_title: "prey", owned_stores: ["steam", "gog"], playtime_minutes: 120, last_played_at: AHORA - 10 * DIA }),
+  fila({ title: "Outer Wilds", sort_title: "outer wilds" }),
+];
+
 const marcaDe = (titulo: string) => screen.getByLabelText(`Seleccionar ${titulo}`) as HTMLInputElement;
 
-/** De qué juego es la ficha que hay abierta, sea acoplada o superpuesta. */
-const fichaAbierta = () => screen.queryByRole("heading", { level: 2 })?.textContent ?? null;
+/**
+ * De qué juego es la ficha que hay abierta, sea acoplada o superpuesta.
+ *
+ * Por el identificador al que apunta `aria-labelledby`, y no por «el segundo
+ * encabezado de la pantalla»: «Hoy» también tiene uno para su propuesta.
+ */
+const tituloDeLaFicha = () => document.getElementById("ficha-titulo");
+const fichaAbierta = () => tituloDeLaFicha()?.textContent ?? null;
 
 /**
  * Dentro de la ficha y no en toda la pantalla: el filtro de la barra también se
  * llama «Estado», y buscar por nombre a secas encuentra los dos.
  */
-const enLaFicha = () =>
-  within(screen.getByRole("heading", { level: 2 }).closest(".ficha") as HTMLElement);
+const enLaFicha = () => within(tituloDeLaFicha()!.closest(".ficha") as HTMLElement);
 
 /** Dos fichas que puntúan igual: el motivo más común de acabar en la cola. */
 const EMPATE: ReviewItem = {
@@ -495,6 +514,71 @@ describe("App", () => {
       state.guardados = [];
       unmount();
     }
+  });
+
+  it("«Hoy» propone lo que tienes a medias, y no lo repite en las estanterías", async () => {
+    // Proponer algo nuevo mientras tienes uno empezado es lo que hace crecer la
+    // pila, que es justo lo que esta pantalla intenta deshacer.
+    state.accounts = [cuentaSteam];
+    state.rows = PARA_HOY;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
+
+    expect((await screen.findByRole("heading", { level: 2 })).textContent).toBe("Hades");
+    expect(screen.getByText("Lo tienes a medias")).toBeDefined();
+
+    // Cada estantería con su motivo, y solo las que tienen algo dentro: «hace
+    // mucho que no lo tocas» no sale porque nada llega a los seis meses.
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Lo dejaste a medias",
+      "Sin estrenar",
+      "Lo tienes dos veces",
+    ]);
+
+    // Y el destacado no vuelve a salir abajo: verlo dos veces en la misma
+    // pantalla hace pensar que son dos juegos.
+    expect(screen.queryAllByRole("button", { name: /^Hades/ })).toHaveLength(0);
+    expect(screen.getByRole("button", { name: /^Celeste/ })).toBeDefined();
+  });
+
+  it("«Hoy» no enseña estanterías vacías ni revienta con la biblioteca vacía", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = [];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
+
+    expect(await screen.findByText(/Todavía no hay ningún juego en propiedad/)).toBeDefined();
+    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+  });
+
+  it("«Hoy» hace sus propios cortes y no hereda los filtros de la biblioteca", async () => {
+    // Es lo que separa «Hoy» de un tercer modo de vista: la tabla y la pared
+    // comparten contrato —filtras y las dos enseñan lo filtrado—, y esta
+    // pantalla propone lo suyo.
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    await screen.findByRole("button", { name: "Celeste" });
+
+    fireEvent.change(screen.getByPlaceholderText("Buscar en la biblioteca"), {
+      target: { value: "celeste" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Hoy" }));
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("Outer Wilds");
+  });
+
+  it("desde «Hoy» la ficha se abre en hoja aunque la ventana sea ancha", async () => {
+    // Aquí no hay una lista al lado que mantener a la vista, y lo que se está
+    // mirando es el arte.
+    state.accounts = [cuentaSteam];
+    state.rows = CUATRO;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hoy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Abrir la ficha" }));
+
+    expect(screen.getByRole("dialog")).toBeDefined();
+    expect(fichaAbierta()).toBe("Outer Wilds");
   });
 
   it("lo que gana con holgura viene ya elegido, y lo que empata no", async () => {

@@ -200,6 +200,44 @@ for (const [ancho, desde, juego, arte] of [
   comprobar(`${ancho} px desde ${desde} · el velo se pinta`, r.velo);
 }
 
+console.log("\nHoy");
+for (const ancho of ANCHOS) {
+  const r = await conLaApp(
+    async (pagina) => {
+      await pagina.getByRole("button", { name: "Hoy" }).click();
+      await pagina.locator(".destacado").waitFor();
+      return pagina.evaluate(() => {
+        const caja = document.querySelector(".destacado")!;
+        const rect = caja.getBoundingClientRect();
+        return {
+          // Es la única pieza de esta pantalla con dos columnas, así que es la
+          // única que puede quedarse sin sitio para el texto.
+          destacadoDesborda: [...caja.querySelectorAll("*")].some(
+            (dentro) => dentro.getBoundingClientRect().right > rect.right + 0.5,
+          ),
+          // La baldosa es la misma que la de la pared, con las mismas medidas:
+          // si se sale de su hueco aquí, es que la estantería no las respeta.
+          baldosasFuera: [...document.querySelectorAll(".estante > li")].filter((hueco) => {
+            const dentro = hueco.querySelector(".baldosa");
+            return (
+              dentro !== null &&
+              dentro.getBoundingClientRect().height > hueco.getBoundingClientRect().height + 0.5
+            );
+          }).length,
+          estantes: document.querySelectorAll(".estante").length,
+          deLado: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      });
+    },
+    { ancho },
+  );
+
+  comprobar(`${ancho} px · el destacado no se sale de su caja`, !r.destacadoDesborda);
+  comprobar(`${ancho} px · ninguna baldosa se sale de su hueco`, r.baldosasFuera === 0);
+  comprobar(`${ancho} px · hay estanterías que pintar`, r.estantes > 0);
+  comprobar(`${ancho} px · la página no se va de lado`, !r.deLado);
+}
+
 console.log("\nCola de revisión");
 for (const ancho of ANCHOS) {
   const r = await conLaApp(

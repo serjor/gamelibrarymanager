@@ -433,6 +433,20 @@ button.link {
   padding: 0;
 }
 
+/* El hueco de una portada que no existe. La forma se declara aquí y **el tamaño
+   lo pone quien la usa**: la baldosa y el destacado de «Hoy» miden distinto, y
+   una portada que no está tiene que ocupar exactamente lo que ocuparía si
+   estuviera. */
+.cover-placeholder {
+  display: grid;
+  place-items: center;
+  padding: var(--e-3);
+  font-size: var(--t-s);
+  text-align: center;
+  border-radius: var(--radio-m);
+  background: var(--hueco);
+}
+
 .baldosa img,
 .baldosa .cover-placeholder {
   width: 100%;
@@ -440,14 +454,6 @@ button.link {
   object-fit: cover;
   border-radius: var(--radio-m);
   background: var(--hueco);
-}
-
-.baldosa .cover-placeholder {
-  display: grid;
-  place-items: center;
-  padding: var(--e-3);
-  font-size: var(--t-s);
-  text-align: center;
 }
 
 .baldosa-titulo {
@@ -772,6 +778,70 @@ button.link {
 .lote [role="alert"] {
   flex-basis: 100%;
   padding: 0;
+}
+
+/* «Hoy»: una propuesta y estanterías con su motivo. */
+.hoy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+}
+
+.destacado {
+  display: flex;
+  gap: var(--e-5);
+  align-items: flex-start;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+  background: var(--superficie);
+  padding: var(--e-5);
+  /* Envuelve en cuanto el texto se queda sin sitio: es la única pieza de esta
+     pantalla que no escala sola, porque tiene dos columnas. */
+  flex-wrap: wrap;
+}
+
+/* La portada del destacado, más grande que una baldosa y con la misma
+   proporción 3:4. Aquí el tamaño sí vive en el CSS: no hay ninguna aritmética
+   que dependa de él, que es lo que obliga a la pared a llevarlo en su código. */
+.destacado-arte img,
+.destacado-arte .cover-placeholder {
+  display: block;
+  width: 10.5rem;
+  height: 14rem;
+  object-fit: cover;
+}
+
+.destacado-texto {
+  flex: 1;
+  min-width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.destacado-texto p {
+  margin: 0;
+}
+
+.estante-caja h3 {
+  margin: 0;
+}
+
+.estante-caja .hint {
+  margin: var(--e-1) 0 var(--e-3);
+}
+
+/* Una fila que se desplaza en horizontal dentro de su caja: las columnas miden
+   lo que mide una baldosa, así que caben las que quepan y las demás esperan a
+   un lado en vez de partir la fila y desordenar la estantería. */
+.estante {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--e-2);
+  display: grid;
+  grid-auto-flow: column;
+  gap: var(--e-4);
+  overflow-x: auto;
 }
 
 /* La ficha, sin envoltorio: lo que se ve igual esté acoplada o superpuesta.

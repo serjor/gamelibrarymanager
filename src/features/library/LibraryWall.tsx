@@ -10,9 +10,13 @@ import { conMayusculas, useSeleccion } from "./useSeleccion";
  * `aspect-ratio`: un item de rejilla estirado no aporta altura a su fila, la
  * fila se reparte el alto sobrante del contenedor y las portadas acaban
  * pisándose unas a otras. 126×168 es la proporción 3:4 de las carátulas.
+ *
+ * Salen de aquí y no del CSS porque son las mismas con las que la pared calcula
+ * qué filas tocan. Las estanterías de «Hoy» las importan en vez de repetirlas:
+ * una baldosa que midiera distinto según la pantalla no sería la misma baldosa.
  */
-const ANCHO = 126;
-const ALTO_PORTADA = 168;
+export const ANCHO = 126;
+export const ALTO_PORTADA = 168;
 /**
  * Portada más el rótulo. Los 56 son medidos, no estimados: dos líneas de
  * título (31), la línea de tiendas (14) y los dos huecos de 4 entre los tres.

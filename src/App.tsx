@@ -17,6 +17,7 @@ import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library, type Vista } from "./features/library/Library";
+import { Today } from "./features/today/Today";
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
@@ -26,7 +27,9 @@ export function App() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
-  const [tab, setTab] = useState<"library" | "review">("library");
+  // Arranca en la biblioteca y no en «Hoy»: si la recomendación falla, no
+  // conviene que sea lo primero que ves cada día.
+  const [tab, setTab] = useState<"library" | "today" | "review">("library");
   // El modo de vista vive aquí y no dentro de la biblioteca porque cambiar de
   // pestaña la desmonta: si lo guardara ella, volver de «Por revisar» te
   // devolvería siempre a la tabla aunque estuvieras mirando las portadas.
@@ -250,6 +253,12 @@ export function App() {
           Biblioteca
         </button>
         <button
+          className={tab === "today" ? "tab active" : "tab"}
+          onClick={() => setTab("today")}
+        >
+          Hoy
+        </button>
+        <button
           className={tab === "review" ? "tab active" : "tab"}
           onClick={() => setTab("review")}
         >
@@ -257,11 +266,11 @@ export function App() {
         </button>
       </nav>
 
-      {tab === "library" ? (
+      {tab === "library" && (
         <Library rows={rows} vista={vista} onVista={setVista} onSaved={refresh} />
-      ) : (
-        <ReviewQueue items={queue} onResolved={refresh} />
       )}
+      {tab === "today" && <Today rows={rows} onSaved={refresh} />}
+      {tab === "review" && <ReviewQueue items={queue} onResolved={refresh} />}
     </main>
   );
 }
