@@ -36,9 +36,15 @@ Antes de escribir código, lee también:
 | --- | --- |
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
 
+### `docs/testing/` — comprobaciones
+
+| Convención | De qué trata |
+| --- | --- |
+| [Una comprobación afirma sobre la estructura, no sobre lo que parece](docs/testing/afirmar-sobre-la-estructura.md) | Contar sentencias en vez de cronometrarlas, afirmar sobre el plan de una consulta en vez de sobre lo que tarda, y medir la maquetación en vez de mirarla. Una captura no es una comprobación. |
+
 ### Pendientes de documentar
 
-Áreas previstas y todavía vacías: `docs/domain/`, `docs/ui/`, `docs/testing/`.
+Áreas previstas y todavía vacías: `docs/domain/`, `docs/ui/`.
 
 ## Comprobaciones
 
@@ -53,9 +59,21 @@ bunx tsc --noEmit && bun run lint && bun test
 bun run tauri dev            # tiene que abrir la ventana
 ```
 
-Hay una comprobación que CI **no** puede hacer, porque necesita una sesión de
-escritorio con secret-service:
+Hay dos comprobaciones que CI **no** puede hacer. La primera necesita una sesión
+de escritorio con secret-service:
 
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
+
+La segunda necesita un Chromium, porque mide la maquetación de verdad —solapes,
+desbordes, alineación de columnas y contraste— y eso no lo sabe `bun test`, que
+con happy-dom mide todos los contenedores a cero:
+
+```sh
+bun run build && bun run visual
+```
+
+Si no encuentra navegador: `bunx playwright install chromium`, o `CHROMIUM_PATH`
+apuntando al que ya tengas. Cómo se escribe una comprobación así está en
+[afirmar sobre la estructura](docs/testing/afirmar-sobre-la-estructura.md).
