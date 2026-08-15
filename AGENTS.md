@@ -9,6 +9,9 @@ Antes de escribir código, lee también:
 - `.agents/plans/0001-game-library-manager/plan.html` — el plan acordado, con las
   decisiones cerradas **y sus alternativas descartadas**. No se relitigan: si
   crees que alguna está mal, dilo y espera respuesta en vez de cambiarla.
+- `.agents/plans/0002-rediseno-ui/plan.html` — el rediseño de la interfaz, con la
+  misma regla. Al lado, `maquetas.html` recoge navegables las cinco alternativas
+  que se compararon, incluidas las cuatro descartadas.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — cómo
   se escribe y dónde va un documento nuevo.
 
@@ -33,11 +36,26 @@ Antes de escribir código, lee también:
 | Convención | De qué trata |
 | --- | --- |
 | [Todo enlace de la interfaz necesita alcance explícito en la capacidad](docs/tauri/alcance-de-urls-en-capacidades.md) | `opener:allow-open-url` habilita el comando pero no da alcance, y los patrones se comparan sin normalizar. |
+| [Lo que el webview necesita del entorno se pone en `main.rs`](docs/tauri/preparar-el-webview-antes-de-que-arranque-gtk.md) | Antes de que arranque GTK, tras un `cfg` de plataforma y respetando lo que ya venga puesto. En el script de desarrollo solo arregla la máquina de quien lo escribe. |
 | [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | Leer la página de una tienda solo se hace donde emite el código, sin lógica dentro del script y sin darle comandos. |
+
+### `docs/ui/` — interfaz
+
+| Convención | De qué trata |
+| --- | --- |
+| [Ningún componente declara un color: todos salen de los tokens](docs/ui/tokens-como-unica-fuente-de-color.md) | La paleta y su variante oscura se definen una vez. Ni literales, ni `Canvas`, ni colores derivados de `currentColor`. |
+| [Un estado para los dos modos de vista: las vistas solo pintan](docs/ui/un-estado-para-los-dos-modos-de-vista.md) | Filtro, orden y selección viven en `Library.tsx`; la tabla y la pared pintan lo que les llega. Y lo que hace sus propios cortes no es un modo de vista. |
+| [Se desplaza una sola región, y llega a los bordes de la ventana](docs/ui/una-sola-region-que-se-desplaza.md) | La altura se reparte con `flex` y `min-height: 0`; el tope de ancho lo pone la pieza y no el marco, o el hueco de los lados deja de responder a la rueda. |
+
+### `docs/testing/` — comprobaciones
+
+| Convención | De qué trata |
+| --- | --- |
+| [Una comprobación afirma sobre la estructura, no sobre lo que parece](docs/testing/afirmar-sobre-la-estructura.md) | Contar sentencias en vez de cronometrarlas, afirmar sobre el plan de una consulta en vez de sobre lo que tarda, y medir la maquetación en vez de mirarla. Una captura no es una comprobación. |
 
 ### Pendientes de documentar
 
-Áreas previstas y todavía vacías: `docs/domain/`, `docs/ui/`, `docs/testing/`.
+Áreas previstas y todavía vacías: `docs/domain/`.
 
 ## Comprobaciones
 
@@ -52,9 +70,21 @@ bunx tsc --noEmit && bun run lint && bun test
 bun run tauri dev            # tiene que abrir la ventana
 ```
 
-Hay una comprobación que CI **no** puede hacer, porque necesita una sesión de
-escritorio con secret-service:
+Hay dos comprobaciones que CI **no** puede hacer. La primera necesita una sesión
+de escritorio con secret-service:
 
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
+
+La segunda necesita un Chromium, porque mide la maquetación de verdad —solapes,
+desbordes, alineación de columnas y contraste— y eso no lo sabe `bun test`, que
+con happy-dom mide todos los contenedores a cero:
+
+```sh
+bun run build && bun run visual
+```
+
+Si no encuentra navegador: `bunx playwright install chromium`, o `CHROMIUM_PATH`
+apuntando al que ya tengas. Cómo se escribe una comprobación así está en
+[afirmar sobre la estructura](docs/testing/afirmar-sobre-la-estructura.md).

@@ -379,10 +379,13 @@ pub async fn review_queue(state: State<'_, AppState>) -> Result<Vec<ReviewItem>,
 
 /// Confirma varios emparejamientos de una vez.
 ///
-/// No es el emparejamiento automático por la puerta de atrás: cada par lo ha
-/// elegido el usuario mirándolo, y queda como enlace `manual`, que ningún
-/// algoritmo volverá a tocar. Lo único que ahorra es repetir el mismo gesto
-/// ciento cincuenta veces.
+/// No es el emparejamiento automático por la puerta de atrás. La interfaz trae
+/// ya elegido el mejor candidato de lo que **no** empata, porque repetir con un
+/// clic lo que la pantalla ya dice es trabajo inventado; pero eso se enseña en
+/// una columna y no se escribe hasta que el usuario confirma. Lo que empata
+/// sigue llegando sin elegir, que es exactamente lo que el umbral se negó a
+/// decidir. Cada par queda como enlace `manual`, que ningún algoritmo volverá a
+/// tocar. Lo único que ahorra es repetir el mismo gesto ciento cincuenta veces.
 #[tauri::command]
 pub async fn review_confirm_many(
     state: State<'_, AppState>,

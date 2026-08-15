@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cinco bibliotecas</title>
+<style>
+  :root {
+    --ink: #08090c;
+    --room: #101219;
+    --panel: #161923;
+    --edge: #262b39;
+    --edge-soft: #1d2130;
+    --text: #e8eaf0;
+    --text-dim: #9aa1b4;
+    --text-faint: #6b7286;
+    --hue: #c0432b;
+
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* ── Cabecera ─────────────────────────────────────────────── */
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 5vw, 3.2rem);
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+    margin: 0.35rem 0 0;
+    text-wrap: balance;
+  }
+
+  .deck {
+    margin: 0.6rem 0 0;
+    max-width: 62ch;
+    color: var(--text-dim);
+  }
+
+  .deck b { color: var(--text); font-weight: 600; }
+
+  /* ── Selector de alternativa ──────────────────────────────── */
+
+  .rail {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+  }
+
+  .rail button {
+    appearance: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    text-align: left;
+    padding: 0.8rem 0.9rem 0.85rem;
+    background: var(--room);
+    color: var(--text-dim);
+    border: 1px solid var(--edge-soft);
+    border-top: 2px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    font: inherit;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .rail button:hover { background: var(--panel); color: var(--text); }
+
+  .rail button[aria-selected="true"] {
+    background: var(--panel);
+    color: var(--text);
+    border-top-color: var(--c);
+    border-color: var(--edge);
+  }
+
+  .rail .letter {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    color: var(--c);
+  }
+
+  .rail .name {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    line-height: 1.15;
+    color: inherit;
+  }
+
+  .rail .sub {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: var(--text-faint);
+  }
+
+  /* ── Ventana de la aplicación ─────────────────────────────── */
+
+  .exhibit {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .window {
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.8);
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--room);
+    border-bottom: 1px solid var(--edge);
+    font-size: 0.75rem;
+    color: var(--text-faint);
+  }
+
+  .titlebar .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--edge);
+    flex: none;
+  }
+
+  .titlebar .app-name {
+    font-family: var(--mono);
+    letter-spacing: 0.03em;
+  }
+
+  .titlebar .surfaces {
+    margin-left: auto;
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .titlebar .surfaces button {
+    appearance: none;
+    font: inherit;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+
+  .titlebar .surfaces button:hover { color: var(--text); }
+
+  .titlebar .surfaces button[aria-selected="true"] {
+    background: var(--c);
+    border-color: var(--c);
+    color: #fff;
+  }
+
+  .stage {
+    height: clamp(520px, 64vh, 700px);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .stage > * { height: 100%; }
+
+  /* ── Ficha técnica ────────────────────────────────────────── */
+
+  .dossier {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--edge-soft);
+    border: 1px solid var(--edge-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .dossier section {
+    background: var(--room);
+    padding: 0.85rem 0.95rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .dossier h3 {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+
+  .dossier p { margin: 0; font-size: 0.82rem; line-height: 1.45; color: var(--text-dim); }
+  .dossier p b { color: var(--text); font-weight: 600; }
+  .dossier code {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 12%, transparent);
+    padding: 0.05rem 0.25rem;
+    border-radius: 2px;
+  }
+
+  .cost {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text);
+  }
+
+  .bar {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .bar i {
+    width: 14px; height: 6px;
+    background: var(--edge);
+    border-radius: 1px;
+  }
+
+  .bar i.on { background: var(--c); }
+
+  /* ── Cierre ───────────────────────────────────────────────── */
+
+  .close {
+    border-top: 1px solid var(--edge-soft);
+    padding-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .close h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.4rem;
+    margin: 0;
+  }
+
+  .close p { margin: 0; color: var(--text-dim); max-width: 68ch; }
+  .close ul { margin: 0.2rem 0 0; padding-left: 1.1rem; color: var(--text-dim); }
+  .close li { margin-bottom: 0.35rem; }
+  .close b { color: var(--text); }
+
+  :focus-visible {
+    outline: 2px solid var(--c);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    .rail { grid-template-columns: 1fr 1fr; }
+    .dossier { grid-template-columns: 1fr 1fr; }
+    .stage { height: 560px; }
+  }
+
+  @media (max-width: 560px) {
+    .rail { grid-template-columns: 1fr; }
+    .dossier { grid-template-columns: 1fr; }
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     A — ESTANTERÍA. Pared de portadas, cero cromo, el arte manda.
+     ════════════════════════════════════════════════════════════ */
+
+  .a {
+    background: #08090c;
+    color: #f2f3f5;
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .a-top {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 0.9rem 1.3rem;
+    flex: none;
+  }
+
+  .a-top .brand {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.01em;
+  }
+
+  .a-k {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: #6a6f7d;
+    border: 1px solid #1e222c;
+    border-radius: 4px;
+    padding: 0.3rem 0.7rem;
+  }
+
+  .a-k kbd {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    border: 1px solid #2a2f3b;
+    border-radius: 3px;
+    padding: 0 0.25rem;
+    color: #8b91a1;
+  }
+
+  .a-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .a-chip {
+    font-size: 0.75rem;
+    padding: 0.22rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid #232834;
+    color: #8b91a1;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .a-chip.on { background: #f2f3f5; color: #08090c; border-color: #f2f3f5; font-weight: 600; }
+
+  .a-wall {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.2rem 1.3rem 1.5rem;
+    display: grid;
+    /* Baldosa y fila con medidas explícitas, no `aspect-ratio` sobre un item de
+       rejilla: con el rótulo en `position:absolute` el item no aporta altura,
+       la fila se reparte el alto sobrante del contenedor y las portadas acaban
+       pisándose. 126×168 es la proporción 3:4 de las carátulas de IGDB. */
+    grid-template-columns: repeat(auto-fill, 126px);
+    grid-auto-rows: 168px;
+    justify-content: space-between;
+    gap: 0.7rem;
+    align-content: start;
+  }
+
+  .a-tile {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+    background: #14161d;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .a-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px -8px rgb(0 0 0 / 0.9);
+    z-index: 2;
+  }
+
+  /* En la app real aquí va la carátula, que ya lleva el título dentro. Con
+     portadas de mentira hay que escribirlo, en bajo contraste al reposo para
+     no falsear la densidad visual de la pared. */
+  .a-tile .cap {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 1.6rem 0.5rem 0.45rem;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.92), transparent);
+    text-align: left;
+    opacity: 0.55;
+    transition: opacity 0.18s;
+  }
+
+  .a-tile:hover .cap, .a-tile:focus-visible .cap { opacity: 1; }
+
+  .a-tile .cap b { display: block; font-size: 0.78rem; line-height: 1.15; color: #fff; }
+  .a-tile .cap span { font-size: 0.68rem; color: #b7bcc8; opacity: 0; transition: opacity 0.18s; }
+  .a-tile:hover .cap span, .a-tile:focus-visible .cap span { opacity: 1; }
+
+  .a-tile .flag {
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgb(0 0 0 / 0.45);
+  }
+
+  /* Ficha A: portada a sangre */
+  .a-hero {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2.5rem;
+    overflow: hidden;
+  }
+
+  .a-hero .bg { position: absolute; inset: 0; filter: saturate(1.05); }
+
+  .a-hero .scrim {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(to top, rgb(6 7 10 / 0.97) 12%, rgb(6 7 10 / 0.55) 48%, rgb(6 7 10 / 0.15) 100%),
+      linear-gradient(to right, rgb(6 7 10 / 0.9), transparent 62%);
+  }
+
+  .a-hero .body { position: relative; max-width: 40rem; display: flex; flex-direction: column; gap: 0.8rem; }
+
+  .a-hero h2 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4.2vw, 3rem);
+    line-height: 0.98;
+    letter-spacing: -0.025em;
+    font-weight: 800;
+    text-wrap: balance;
+  }
+
+  .a-meta { display: flex; gap: 0.6rem; align-items: center; font-size: 0.8rem; color: #b7bcc8; flex-wrap: wrap; }
+  .a-meta .pill { border: 1px solid #333a49; border-radius: 999px; padding: 0.1rem 0.55rem; }
+  .a-hero p.sum { margin: 0; color: #c9cdd8; font-size: 0.9rem; max-width: 46ch; }
+
+  .a-acts { display: flex; gap: 0.5rem; margin-top: 0.4rem; flex-wrap: wrap; }
+
+  .a-acts button {
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 0.5rem 1.1rem;
+    border-radius: 4px;
+    border: 1px solid #3a4152;
+    background: rgb(255 255 255 / 0.06);
+    color: #e8eaf0;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+
+  .a-acts button.primary { background: #f2f3f5; color: #08090c; border-color: #f2f3f5; }
+
+  .a-back {
+    position: absolute; top: 1.1rem; left: 1.3rem;
+    z-index: 3;
+    font: inherit; font-size: 0.78rem;
+    background: rgb(0 0 0 / 0.5); color: #c9cdd8;
+    border: 1px solid #2a2f3b; border-radius: 4px;
+    padding: 0.25rem 0.7rem; cursor: pointer;
+  }
+
+  /* Revisión A: una a una, a pantalla completa */
+  .a-duel { height: 100%; display: flex; flex-direction: column; padding: 1.6rem 2rem 1.4rem; gap: 1.1rem; }
+  .a-duel .head { display: flex; align-items: baseline; gap: 0.8rem; }
+  .a-duel .head h2 { margin: 0; font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+  .a-duel .head span { font-size: 0.8rem; color: #6a6f7d; font-family: var(--mono); }
+  .a-duel .q { margin: 0; color: #9aa1b4; font-size: 0.86rem; max-width: 60ch; }
+  .a-duel .cards { display: flex; gap: 1rem; flex: 1; min-height: 0; }
+
+  .a-cand {
+    flex: 1;
+    display: flex; flex-direction: column; gap: 0.6rem;
+    background: #101219; border: 1px solid #1c2029;
+    border-radius: 6px; padding: 0.9rem; cursor: pointer;
+    font: inherit; color: inherit; text-align: left;
+  }
+
+  .a-cand:hover { border-color: #4a5265; background: #141822; }
+  .a-cand .art { flex: 1; border-radius: 4px; min-height: 0; }
+  .a-cand b { font-size: 0.92rem; }
+  .a-cand span { font-size: 0.76rem; color: #7d8394; font-family: var(--mono); }
+  .a-cand .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 3px;
+    background: #22283a; color: #b7bcc8;
+    font-family: var(--mono); font-size: 0.7rem;
+  }
+  .a-duel .foot { display: flex; gap: 1.2rem; font-size: 0.76rem; color: #6a6f7d; font-family: var(--mono); }
+
+  /* ════════════════════════════════════════════════════════════
+     B — HOJA DE CÁLCULO. Densidad, orden, edición en lote.
+     ════════════════════════════════════════════════════════════ */
+
+  .b {
+    background: #fbfbfa;
+    color: #17201c;
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .b-bar {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #dfe2dd;
+    background: #f3f4f1;
+    flex: none;
+  }
+
+  .b-bar input {
+    font: inherit; font-size: 0.8rem;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid #cfd4cd; border-radius: 3px;
+    background: #fff; color: inherit;
+    width: 190px;
+  }
+
+  .b-bar .view {
+    font: inherit; font-size: 0.76rem;
+    padding: 0.26rem 0.6rem;
+    border: 1px solid #cfd4cd; border-radius: 3px;
+    background: #fff; cursor: pointer; color: #4a5450;
+  }
+
+  .b-bar .view.on { background: #1e7a5a; border-color: #1e7a5a; color: #fff; font-weight: 600; }
+  .b-bar .count { margin-left: auto; font-family: var(--mono); font-size: 0.72rem; color: #6c7671; }
+
+  .b-scroll { flex: 1; overflow: auto; }
+
+  .b table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+
+  .b thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: #fbfbfa;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6c7671;
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid #c9cfc8;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .b thead th:hover { color: #1e7a5a; }
+  .b thead th .caret { color: #1e7a5a; font-size: 0.65rem; }
+
+  .b tbody td {
+    padding: 0.3rem 0.6rem;
+    border-bottom: 1px solid #ecedea;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .b tbody tr:hover td { background: #f2f7f4; }
+  .b tbody tr.sel td { background: #e6f2ec; }
+
+  .b .num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  .b .thumb { width: 22px; height: 30px; border-radius: 2px; display: block; }
+  .b .tt { font-weight: 600; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; }
+
+  .b .st {
+    display: inline-block;
+    font-size: 0.68rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 2px;
+    border: 1px solid;
+    font-weight: 600;
+  }
+
+  .b .st.playing  { color: #1e6b7a; border-color: #a7cdd5; background: #e6f3f6; }
+  .b .st.backlog  { color: #7a5b1e; border-color: #ddc79a; background: #f7f0e2; }
+  .b .st.finished { color: #1e7a5a; border-color: #a5cfbe; background: #e6f2ec; }
+  .b .st.abandoned{ color: #7a3a3a; border-color: #d8b3b3; background: #f7ebeb; }
+  .b .st.none     { color: #8b938f; border-color: #dfe2dd; background: #f3f4f1; }
+
+  .b .store {
+    font-family: var(--mono); font-size: 0.65rem;
+    padding: 0.05rem 0.3rem; border-radius: 2px;
+    border: 1px solid #cfd4cd; color: #4a5450; margin-right: 2px;
+  }
+
+  .b input[type="checkbox"] { accent-color: #1e7a5a; margin: 0; }
+
+  .b-bulk {
+    flex: none;
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    background: #17201c; color: #eef2ef;
+    font-size: 0.78rem;
+  }
+
+  .b-bulk b { font-family: var(--mono); }
+  .b-bulk select, .b-bulk button {
+    font: inherit; font-size: 0.76rem;
+    padding: 0.2rem 0.5rem; border-radius: 3px;
+    border: 1px solid #3d4a44; background: #22302a; color: #eef2ef; cursor: pointer;
+  }
+  .b-bulk button.go { background: #1e7a5a; border-color: #1e7a5a; font-weight: 600; }
+  .b-bulk .esc { margin-left: auto; color: #93a49c; font-family: var(--mono); font-size: 0.7rem; }
+
+  /* Ficha B: inspector lateral, formulario denso */
+  .b-split { display: flex; height: 100%; overflow: hidden; }
+  .b-split .left { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .b-insp {
+    width: 300px; flex: none;
+    border-left: 1px solid #dfe2dd;
+    background: #f3f4f1;
+    padding: 0.9rem;
+    display: flex; flex-direction: column; gap: 0.55rem;
+    overflow-y: auto;
+  }
+  .b-insp h2 { margin: 0; font-size: 1rem; line-height: 1.2; }
+  .b-insp .kv { display: grid; grid-template-columns: 88px 1fr; gap: 0.15rem 0.5rem; font-size: 0.76rem; }
+  .b-insp .kv dt { color: #6c7671; font-family: var(--mono); font-size: 0.7rem; }
+  .b-insp .kv dd { margin: 0; }
+  .b-insp label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6c7671; font-weight: 600; margin-top: 0.3rem; }
+  .b-insp select, .b-insp textarea, .b-insp input {
+    font: inherit; font-size: 0.8rem; width: 100%;
+    padding: 0.3rem 0.45rem; border: 1px solid #cfd4cd; border-radius: 3px; background: #fff; color: inherit;
+  }
+  .b-insp .save { background: #1e7a5a; color: #fff; border-color: #1e7a5a; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+  .b-insp .hint { font-size: 0.7rem; color: #8b938f; font-family: var(--mono); }
+
+  /* ════════════════════════════════════════════════════════════
+     C — BACKLOG. El estado del juego es la interfaz.
+     ════════════════════════════════════════════════════════════ */
+
+  .c {
+    background: #171b22;
+    color: #dfe4ec;
+    font-family: var(--sans);
+    display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  }
+
+  .c-top {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.7rem 1rem; flex: none;
+    border-bottom: 1px solid #232a34;
+  }
+
+  .c-top h2 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+  .c-top .goal {
+    font-size: 0.75rem; color: #8992a3;
+    border: 1px solid #2b333f; border-radius: 999px; padding: 0.15rem 0.6rem;
+  }
+  .c-top .goal b { color: #6b5ca5; }
+  .c-add {
+    margin-left: auto; font: inherit; font-size: 0.76rem;
+    background: #6b5ca5; border: none; color: #fff; font-weight: 600;
+    padding: 0.32rem 0.8rem; border-radius: 4px; cursor: pointer;
+  }
+
+  .c-lanes {
+    flex: 1; display: grid; gap: 0.6rem; padding: 0.7rem 1rem 1rem;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow-x: auto; min-height: 0;
+  }
+
+  .c-lane { display: flex; flex-direction: column; min-width: 148px; min-height: 0; }
+
+  .c-lane .lh {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.15rem 0.5rem;
+    font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    flex: none;
+  }
+
+  .c-lane .lh .n { margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: #7b8496; letter-spacing: 0; }
+  .c-lane .lh i { width: 7px; height: 7px; border-radius: 2px; display: block; }
+
+  .c-lane .drop {
+    flex: 1; overflow-y: auto; min-height: 0;
+    display: flex; flex-direction: column; gap: 0.4rem;
+    border-radius: 5px; padding: 0.3rem;
+    background: #1c212a;
+    border: 1px dashed #262e3a;
+  }
+
+  .c-lane.hot .drop { border-color: #6b5ca5; background: #1f2130; }
+
+  .c-card {
+    display: flex; gap: 0.5rem; align-items: center;
+    background: #222834; border: 1px solid #2b333f; border-radius: 4px;
+    padding: 0.4rem; cursor: grab; text-align: left; font: inherit; color: inherit;
+  }
+
+  .c-card:hover { border-color: #4a5568; background: #262d3a; }
+  .c-card .art { width: 26px; height: 36px; border-radius: 2px; flex: none; }
+  .c-card .txt { min-width: 0; }
+  .c-card .tt { display: block; font-size: 0.76rem; font-weight: 600; line-height: 1.15; }
+  .c-card .mt { display: block; font-size: 0.66rem; color: #7b8496; font-family: var(--mono); }
+  .c-card .rate { margin-left: auto; font-family: var(--mono); font-size: 0.7rem; color: #c9a227; flex: none; }
+
+  .c-pool {
+    flex: none; border-top: 1px solid #232a34;
+    padding: 0.5rem 1rem 0.7rem; display: flex; gap: 0.45rem; align-items: center;
+    overflow-x: auto;
+  }
+  .c-pool .lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #7b8496; flex: none; font-weight: 700; }
+  .c-pool .mini { width: 30px; height: 40px; border-radius: 2px; flex: none; cursor: grab; border: 1px solid #2b333f; }
+
+  /* Ficha C: modal con el estado como una escalera */
+  .c-modal { height: 100%; display: grid; place-items: center; padding: 1.5rem; }
+  .c-sheet {
+    width: min(620px, 100%);
+    background: #1e242e; border: 1px solid #2b333f; border-radius: 8px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .c-sheet .band { height: 96px; position: relative; }
+  .c-sheet .band .tt {
+    position: absolute; inset: auto 0 0 0; padding: 1.4rem 1.1rem 0.7rem;
+    background: linear-gradient(to top, #1e242e, transparent);
+    font-size: 1.25rem; font-weight: 700;
+  }
+  .c-sheet .in { padding: 0.9rem 1.1rem 1.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  .c-step { display: flex; gap: 0; border: 1px solid #2b333f; border-radius: 5px; overflow: hidden; }
+  .c-step button {
+    flex: 1; font: inherit; font-size: 0.75rem; padding: 0.45rem 0.2rem;
+    background: #222834; border: none; border-right: 1px solid #2b333f; color: #9aa3b4; cursor: pointer;
+  }
+  .c-step button:last-child { border-right: none; }
+  .c-step button.on { background: #6b5ca5; color: #fff; font-weight: 700; }
+  .c-row { display: flex; gap: 0.7rem; font-size: 0.78rem; color: #9aa3b4; flex-wrap: wrap; }
+  .c-row b { color: #dfe4ec; }
+  .c-stars { display: flex; gap: 0.15rem; }
+  .c-stars button { font: inherit; background: none; border: none; cursor: pointer; color: #3a4353; font-size: 1rem; padding: 0; }
+  .c-stars button.on { color: #c9a227; }
+  .c-sheet textarea {
+    font: inherit; font-size: 0.8rem; width: 100%; min-height: 62px;
+    background: #171b22; border: 1px solid #2b333f; border-radius: 4px; color: inherit; padding: 0.45rem;
+  }
+  .c-sheet .acts { display: flex; gap: 0.5rem; }
+  .c-sheet .acts button { font: inherit; font-size: 0.78rem; padding: 0.38rem 0.9rem; border-radius: 4px; cursor: pointer; border: 1px solid #2b333f; background: #222834; color: #dfe4ec; }
+  .c-sheet .acts button.go { background: #6b5ca5; border-color: #6b5ca5; font-weight: 600; }
+
+  /* Revisión C: una bandeja de entrada más */
+  .c-inbox { height: 100%; overflow-y: auto; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.55rem; }
+  .c-inbox h2 { margin: 0; font-size: 0.95rem; }
+  .c-inbox .exp { font-size: 0.78rem; color: #8992a3; margin: 0 0 0.3rem; max-width: 64ch; }
+  .c-item { display: flex; gap: 0.7rem; align-items: center; background: #1e242e; border: 1px solid #2b333f; border-radius: 5px; padding: 0.55rem 0.7rem; }
+  .c-item .art { width: 54px; height: 26px; border-radius: 2px; flex: none; }
+  .c-item .who { font-size: 0.8rem; font-weight: 600; min-width: 150px; }
+  .c-item .who span { display: block; font-size: 0.66rem; color: #7b8496; font-weight: 400; font-family: var(--mono); }
+  .c-item .opts { display: flex; gap: 0.35rem; margin-left: auto; flex-wrap: wrap; }
+  .c-opt { font: inherit; font-size: 0.72rem; padding: 0.25rem 0.55rem; border-radius: 3px; border: 1px solid #333c4a; background: #222834; color: #c3cad6; cursor: pointer; display: flex; gap: 0.35rem; align-items: center; }
+  .c-opt.on { border-color: #6b5ca5; background: #2a2740; color: #fff; }
+  .c-opt .yr { font-family: var(--mono); color: #7b8496; }
+
+  /* ════════════════════════════════════════════════════════════
+     D — TERMINAL. Teclado, monoespaciado, cero ratón.
+     ════════════════════════════════════════════════════════════ */
+
+  .d {
+    background: #0a0a0a;
+    color: #e8a33d;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: flex; flex-direction: column; height: 100%; overflow: hidden;
+    padding: 0.6rem 0.9rem 0;
+  }
+
+  .d .dim { color: #8a6a2a; }
+  .d .hi { color: #ffd08a; }
+  .d .ok { color: #7fbf6a; }
+  .d .warn { color: #d97a4a; }
+
+  /* El marco se dibuja con bordes y no con caracteres de caja: una línea de
+     ┌───┐ mide lo que mide la fuente y nunca llega al borde de una ventana
+     redimensionable. El aire de terminal lo dan el monoespaciado, el fósforo y
+     la barra de estado, no los caracteres del marco. */
+  .d-frame {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    border: 1px solid #6b5320;
+    padding: 0.55rem 0.65rem 0.35rem;
+    margin-top: 0.4rem;
+    position: relative;
+  }
+
+  .d-legend {
+    position: absolute; top: -0.72em; left: 0.9rem;
+    background: #0a0a0a; padding: 0 0.4rem;
+    color: #8a6a2a; letter-spacing: 0.04em;
+  }
+
+  .d-head {
+    flex: none; white-space: pre;
+    border-bottom: 1px solid #3a2c10;
+    padding-bottom: 0.25rem; margin-bottom: 0.25rem;
+  }
+
+  .d-body { flex: 1; overflow-y: auto; white-space: pre; margin: 0; }
+
+  .d-row { display: block; padding: 0 0.2rem; cursor: pointer; }
+  .d-row:hover { background: #1a1408; }
+  .d-row.cur { background: #e8a33d; color: #0a0a0a; }
+  .d-row.cur .dim, .d-row.cur .ok, .d-row.cur .hi { color: #3a2a08; }
+
+  .d-status {
+    flex: none; white-space: pre;
+    background: #e8a33d; color: #0a0a0a;
+    padding: 0 0.3rem; margin: 0 -0.9rem;
+    font-weight: 700;
+  }
+
+  .d-cmd { flex: none; padding: 0.25rem 0 0.5rem; white-space: pre; }
+  .d-cmd .caret { background: #e8a33d; color: #0a0a0a; }
+
+  .d-detail { flex: 1; overflow-y: auto; white-space: pre; margin: 0; }
+
+  /* ════════════════════════════════════════════════════════════
+     E — DESCUBRIMIENTO. La app te propone a qué jugar hoy.
+     ════════════════════════════════════════════════════════════ */
+
+  .e {
+    background: #f7f7f9;
+    color: #191a20;
+    font-family: var(--sans);
+    display: flex; flex-direction: column; height: 100%; overflow-y: auto;
+  }
+
+  .e-top {
+    display: flex; align-items: baseline; gap: 0.8rem;
+    padding: 1.1rem 1.5rem 0.4rem; flex: none;
+  }
+  .e-top .brand { font-family: var(--serif); font-size: 1rem; }
+  .e-top .date { font-family: var(--mono); font-size: 0.7rem; color: #8a8d99; letter-spacing: 0.06em; text-transform: uppercase; }
+  .e-top .search { margin-left: auto; font: inherit; font-size: 0.78rem; padding: 0.28rem 0.7rem; border: 1px solid #dcdde3; border-radius: 999px; background: #fff; color: inherit; width: 170px; }
+
+  .e-hero { padding: 0.5rem 1.5rem 1.2rem; display: flex; gap: 1.3rem; align-items: flex-end; flex: none; }
+  .e-hero .art { width: 168px; aspect-ratio: 3/4; border-radius: 4px; flex: none; box-shadow: 0 12px 26px -10px rgb(0 0 0 / 0.35); }
+  .e-hero .txt { min-width: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .e-hero .why {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #e0457b;
+  }
+  .e-hero h2 {
+    margin: 0; font-family: var(--serif); font-weight: 400;
+    font-size: clamp(1.7rem, 3.6vw, 2.5rem); line-height: 1.02; letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .e-hero p { margin: 0; font-size: 0.85rem; color: #565964; max-width: 52ch; }
+  .e-hero .facts { display: flex; gap: 0.5rem; font-size: 0.74rem; color: #8a8d99; font-family: var(--mono); flex-wrap: wrap; }
+  .e-hero .acts { display: flex; gap: 0.5rem; margin-top: 0.25rem; }
+  .e-hero .acts button { font: inherit; font-size: 0.8rem; padding: 0.4rem 1rem; border-radius: 999px; border: 1px solid #d3d4db; background: #fff; cursor: pointer; color: inherit; }
+  .e-hero .acts button.go { background: #191a20; border-color: #191a20; color: #fff; font-weight: 600; }
+
+  .e-shelf { padding: 0 0 1.1rem; flex: none; }
+  .e-shelf .sh { display: flex; align-items: baseline; gap: 0.6rem; padding: 0 1.5rem 0.5rem; }
+  .e-shelf .sh h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.05rem; }
+  .e-shelf .sh .n { font-family: var(--mono); font-size: 0.68rem; color: #a0a3ad; }
+  .e-shelf .sh .rule { flex: 1; height: 1px; background: #e3e4e9; }
+
+  .e-rowscroll { display: flex; gap: 0.6rem; overflow-x: auto; padding: 0.15rem 1.5rem 0.4rem; scroll-snap-type: x proximity; }
+  .e-item { flex: none; width: 104px; scroll-snap-align: start; cursor: pointer; border: none; background: none; padding: 0; text-align: left; font: inherit; color: inherit; }
+  .e-item .art { display: block; width: 104px; aspect-ratio: 3/4; border-radius: 3px; transition: transform 0.16s; }
+  .e-item:hover .art { transform: translateY(-3px); }
+  .e-item .tt { display: block; font-size: 0.74rem; font-weight: 600; line-height: 1.15; margin-top: 0.3rem; }
+  .e-item .mt { display: block; font-size: 0.68rem; color: #8a8d99; font-family: var(--mono); }
+
+  /* Ficha E: artículo */
+  .e-art { padding: 1.4rem 1.5rem 2rem; display: flex; flex-direction: column; gap: 0.9rem; }
+  .e-art .kicker { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: #e0457b; }
+  .e-art h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.02; letter-spacing: -0.02em; }
+  .e-art .lede { font-size: 0.95rem; color: #3e404a; max-width: 62ch; margin: 0; }
+  .e-art .grid2 { display: flex; gap: 1.3rem; align-items: flex-start; flex-wrap: wrap; }
+  .e-art .cover { width: 150px; aspect-ratio: 3/4; border-radius: 4px; flex: none; }
+  .e-art dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 0.9rem; margin: 0; font-size: 0.82rem; }
+  .e-art dt { font-family: var(--mono); font-size: 0.7rem; color: #8a8d99; text-transform: uppercase; letter-spacing: 0.06em; }
+  .e-art dd { margin: 0; }
+  .e-art .verdict { border-left: 2px solid #e0457b; padding: 0.1rem 0 0.1rem 0.9rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .e-art .verdict .q { font-family: var(--serif); font-size: 1.1rem; }
+  .e-art .opts { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .e-art .opts button { font: inherit; font-size: 0.78rem; padding: 0.35rem 0.85rem; border-radius: 999px; border: 1px solid #d3d4db; background: #fff; cursor: pointer; color: inherit; }
+  .e-art .opts button.on { background: #e0457b; border-color: #e0457b; color: #fff; font-weight: 600; }
+
+  /* Revisión E: duelo A/B */
+  .e-duel { padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .e-duel h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.6rem; }
+  .e-duel p { margin: 0; font-size: 0.85rem; color: #565964; max-width: 64ch; }
+  .e-pair { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .e-pick { flex: 1; min-width: 200px; border: 1px solid #e3e4e9; border-radius: 6px; background: #fff; padding: 0.8rem; display: flex; gap: 0.8rem; align-items: center; cursor: pointer; font: inherit; color: inherit; text-align: left; }
+  .e-pick:hover { border-color: #e0457b; }
+  .e-pick .art { width: 58px; aspect-ratio: 3/4; border-radius: 3px; flex: none; }
+  .e-pick b { display: block; font-size: 0.9rem; }
+  .e-pick span { font-size: 0.74rem; color: #8a8d99; font-family: var(--mono); }
+  .e-duel .skip { font: inherit; font-size: 0.8rem; background: none; border: none; color: #8a8d99; text-decoration: underline; cursor: pointer; align-self: flex-start; padding: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Game Library Manager · propuesta de rediseño</p>
+    <h1>Cinco bibliotecas</h1>
+    <p class="deck">
+      La misma biblioteca —412 copias, 400 fichas, 12 por revisar— entendida de cinco maneras
+      incompatibles entre sí. No son cinco pieles: cada una decide <b>qué es la aplicación</b>,
+      y de ahí salen distinta arquitectura de información, distinta interacción y distinto
+      trabajo en el backend. Elige una; las otras cuatro quedan escritas como descartadas.
+    </p>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Alternativas"></nav>
+
+  <div class="exhibit">
+    <div class="window">
+      <div class="titlebar">
+        <span class="dot"></span>
+        <span class="app-name">Game Library Manager</span>
+        <div class="surfaces" id="surfaces" role="tablist" aria-label="Pantallas"></div>
+      </div>
+      <div class="stage" id="stage"></div>
+    </div>
+    <div class="dossier" id="dossier"></div>
+  </div>
+
+  <section class="close">
+    <h2>Lo elegido</h2>
+    <p>
+      <b>B como esqueleto, A como modo de vista y E como pantalla aparte.</b> La biblioteca
+      es una sola pantalla con dos presentaciones sobre el mismo estado —los mismos filtros,
+      la misma selección—, y «Hoy» es una pestaña independiente.
+    </p>
+    <ul>
+      <li><b>Por qué E no es un tercer modo de vista.</b> A y B comparten contrato: filtras y
+        las dos enseñan lo filtrado. E ignora tus filtros y propone sus propios cortes. Como
+        vista habría que inventar qué hace «género = RPG» sobre estanterías curadas, y
+        ninguna respuesta es buena.</li>
+      <li><b>Por qué la biblioteca es la pantalla de inicio y no «Hoy».</b> Si la
+        recomendación falla, no conviene que sea lo primero que ves cada día.</li>
+      <li><b>Por qué la revisión se queda con el tratamiento de B.</b> Con dos tiendas son 12
+        pendientes y da igual; con Epic (fase 7) son cientos, y solo el lote comparable
+        aguanta eso.</li>
+    </ul>
+    <p>
+      Descartadas <b>C</b> (arrastrar y soltar accesible escrito a mano, más
+      <code style="color:var(--text-dim);background:none;padding:0">started_at</code> /
+      <code style="color:var(--text-dim);background:none;padding:0">finished_at</code> que
+      hoy no se escriben) y <b>D</b> (rompe la accesibilidad y toda la suite de tests, que
+      afirma sobre roles de botón). Las dos quedan recogidas en el plan con su motivo.
+    </p>
+  </section>
+</div>
+
+<script>
+  // ── Datos ──────────────────────────────────────────────────
+  // Una biblioteca plausible: mezcla de tiendas, horas, estados y géneros,
+  // con los casos incómodos incluidos (duplicados, sin portada, sin tocar).
+
+  const GAMES = [
+    { t: "Disco Elysium: The Final Cut", y: 2021, g: "RPG",        s: ["steam","gog"], h: 1240, st: "finished",  r: 10, last: "2023-02-11" },
+    { t: "Hades",                        y: 2020, g: "Acción",     s: ["steam"],       h: 3120, st: "playing",   r: 9,  last: "2026-08-12" },
+    { t: "Hollow Knight",                y: 2017, g: "Plataformas",s: ["steam","gog"], h: 2760, st: "playing",   r: 9,  last: "2026-08-09" },
+    { t: "Outer Wilds",                  y: 2019, g: "Aventura",   s: ["steam"],       h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Baldur's Gate 3",              y: 2023, g: "RPG",        s: ["steam"],       h: 5400, st: "playing",   r: 10, last: "2026-08-13" },
+    { t: "Return of the Obra Dinn",      y: 2018, g: "Puzzle",     s: ["gog"],         h: 480,  st: "finished",  r: 9,  last: "2022-11-03" },
+    { t: "Cyberpunk 2077",               y: 2020, g: "RPG",        s: ["gog"],         h: 1860, st: "abandoned", r: 6,  last: "2021-04-18" },
+    { t: "Slay the Spire",               y: 2019, g: "Estrategia", s: ["steam"],       h: 4200, st: "playing",   r: 8,  last: "2026-07-30" },
+    { t: "Celeste",                      y: 2018, g: "Plataformas",s: ["steam"],       h: 900,  st: "finished",  r: 9,  last: "2020-06-22" },
+    { t: "The Witcher 3: Wild Hunt",     y: 2015, g: "RPG",        s: ["gog","steam"], h: 7200, st: "finished",  r: 10, last: "2019-01-14" },
+    { t: "Stardew Valley",               y: 2016, g: "Simulación", s: ["steam","gog"], h: 2400, st: null,        r: null, last: "2024-03-02" },
+    { t: "Dead Cells",                   y: 2018, g: "Acción",     s: ["steam"],       h: 660,  st: "backlog",   r: null, last: "2021-09-09" },
+    { t: "Pentiment",                    y: 2022, g: "Aventura",   s: ["steam"],       h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Tunic",                        y: 2022, g: "Aventura",   s: ["steam"],       h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Inscryption",                  y: 2021, g: "Puzzle",     s: ["gog"],         h: 720,  st: "finished",  r: 9,  last: "2023-08-19" },
+    { t: "Factorio",                     y: 2020, g: "Simulación", s: ["steam"],       h: 9600, st: "abandoned", r: 8,  last: "2022-02-27" },
+    { t: "LIMBO",                        y: 2010, g: "Plataformas",s: ["steam","gog"], h: 240,  st: "finished",  r: 7,  last: "2016-05-01" },
+    { t: "Into the Breach",              y: 2018, g: "Estrategia", s: ["steam"],       h: 540,  st: null,        r: null, last: "2020-12-30" },
+    { t: "Subnautica",                   y: 2018, g: "Aventura",   s: ["steam","gog"], h: 1080, st: "abandoned", r: 7,  last: "2021-01-11" },
+    { t: "Divinity: Original Sin 2",     y: 2017, g: "RPG",        s: ["gog"],         h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Hyper Light Drifter",          y: 2016, g: "Acción",     s: ["steam"],       h: 300,  st: null,        r: null, last: "2018-07-05" },
+    { t: "Papers, Please",               y: 2013, g: "Puzzle",     s: ["gog"],         h: 420,  st: "finished",  r: 8,  last: "2017-03-22" },
+    { t: "Kentucky Route Zero",          y: 2020, g: "Aventura",   s: ["gog"],         h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Terraria",                     y: 2011, g: "Aventura",   s: ["steam"],       h: 3600, st: null,        r: null, last: "2019-08-17" },
+    { t: "Frostpunk",                    y: 2018, g: "Estrategia", s: ["steam","gog"], h: 180,  st: "backlog",   r: null, last: "2020-02-08" },
+    { t: "Ori and the Blind Forest",     y: 2015, g: "Plataformas",s: ["steam"],       h: 660,  st: "finished",  r: 8,  last: "2018-11-26" },
+    { t: "Prey",                         y: 2017, g: "Acción",     s: ["steam"],       h: 0,    st: "backlog",   r: null, last: null },
+    { t: "Death Stranding",              y: 2019, g: "Aventura",   s: ["steam"],       h: 120,  st: "abandoned", r: 5,  last: "2021-06-14" },
+    { t: "Cultist Simulator",            y: 2018, g: "Simulación", s: ["gog"],         h: 90,   st: null,        r: null, last: "2019-04-02" },
+    { t: "Bloodborne PSX",               y: 2022, g: "Acción",     s: ["gog"],         h: 0,    st: "backlog",   r: null, last: null },
+  ];
+
+  // Resúmenes de IGDB para unos cuantos. Los que no lo tienen enseñan el caso
+  // real de una biblioteca sin metadatos: la ficha se sostiene igual.
+  const SUMMARIES = {
+    "Disco Elysium: The Final Cut": "Una ciudad rota, un detective peor, y veinticuatro habilidades que discuten contigo dentro de tu propia cabeza.",
+    "Hades": "Escapar del inframundo, morir, y que morir sea la forma de avanzar. La conversación con tu padre cambia en cada intento.",
+    "Hollow Knight": "Un reino de insectos bajo tierra, sin mapa hasta que lo compras y sin explicaciones nunca.",
+    "Outer Wilds": "Veintidós minutos hasta que el sol explota. Lo único que conservas entre bucles es lo que has entendido.",
+    "Baldur's Gate 3": "Un parásito en el ojo, una compañía que no se fía de ti y un sistema de reglas que deja probarlo todo.",
+    "Return of the Obra Dinn": "Un barco que vuelve al puerto con sesenta cadáveres y un reloj que te deja mirar el instante de cada muerte.",
+    "Cyberpunk 2077": "Night City vendida como el futuro y jugada como una ciudad que se cae a pedazos. Llegó rota y se arregló tarde.",
+    "Slay the Spire": "Subir una torre construyendo un mazo que casi siempre acaba siendo el mismo, hasta que un día no.",
+  };
+
+  const STATUS = {
+    playing:   { label: "Jugando",   short: "JUG", color: "#4fa3c7" },
+    backlog:   { label: "Pendiente", short: "PEN", color: "#c9a227" },
+    finished:  { label: "Terminado", short: "FIN", color: "#4fa87a" },
+    abandoned: { label: "Abandonado",short: "ABN", color: "#c76b5a" },
+    none:      { label: "Sin marcar",short: "—",   color: "#6b7280" },
+  };
+
+  // Portadas de mentira, deterministas: el mismo título da siempre el mismo
+  // color. Sirven para juzgar el ritmo de la rejilla sin depender de la red.
+  function hash(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+
+  function art(title, opts = {}) {
+    const n = hash(title);
+    const hue = n % 360;
+    const hue2 = (hue + 25 + (n % 40)) % 360;
+    const dark = opts.dark !== false;
+    const l1 = dark ? 22 : 62, l2 = dark ? 9 : 40;
+    const sat = 30 + (n % 35);
+    const ang = 120 + (n % 90);
+    return `background:linear-gradient(${ang}deg,hsl(${hue} ${sat}% ${l1}%),hsl(${hue2} ${sat + 10}% ${l2}%));`;
+  }
+
+  function hours(m) {
+    if (!m) return "—";
+    if (m < 60) return m + " min";
+    return Math.round(m / 60) + " h";
+  }
+
+  function since(d) {
+    if (!d) return "nunca";
+    return d.slice(0, 4);
+  }
+
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  // ── Conceptos ──────────────────────────────────────────────
+
+  const CONCEPTS = [
+    {
+      id: "a", letter: "A", hue: "#c0432b",
+      name: "Estantería",
+      sub: "El arte a sangre. Cero cromo.",
+      who: "Quien abre la app <b>para mirar su colección</b> y reconoce cada juego por la portada antes de leer el título.",
+      cost: 3,
+      costNote: "Necesita exponer la portada apaisada de tienda y el <code>summary</code> que ya están en SQLite pero no llegan al frontend.",
+      breaks: "A 900 px de ancho la pared baja a 5 columnas y la ficha a sangre se come el texto. Sin IGDB configurado la pared es un muro de rectángulos grises.",
+      data: "<code>store_entry.cover_url</code> y <code>game.summary</code> a <code>LibraryRow</code>. Sin migración."
+    },
+    {
+      id: "b", letter: "B", hue: "#1e7a5a",
+      name: "Hoja de cálculo",
+      sub: "Densidad, orden y edición en lote.",
+      who: "Quien tiene <b>400 fichas y las quiere gobernar</b>: ordenar por horas, marcar treinta como abandonadas de una vez, ver qué está duplicado.",
+      cost: 1,
+      costNote: "La más barata. Ordenar y seleccionar son puro frontend; los datos que enseña ya están todos en <code>LibraryRow</code>.",
+      breaks: "Es fea a propósito y no vende el producto a nadie que no sea tú. Con la biblioteca vacía no hay nada que enseñar salvo cabeceras.",
+      data: "Ninguno nuevo. Se aprovecha <code>playtime_minutes</code>, <code>genres</code> y <code>owned_stores</code> tal cual."
+    },
+    {
+      id: "c", letter: "C", hue: "#6b5ca5",
+      name: "Backlog",
+      sub: "El estado del juego es la interfaz.",
+      who: "Quien no tiene un problema de catálogo sino <b>de culpa</b>: 400 comprados, 12 empezados, y quiere cerrar cosas.",
+      cost: 4,
+      costNote: "Arrastrar y soltar sin dependencias es código propio, y <code>set_user_state</code> no escribe <code>started_at</code> ni <code>finished_at</code> aunque las columnas existan.",
+      breaks: "Las cinco columnas sí caben a 900 px —el mínimo que la ventana trae heredado del andamiaje, medido—, pero cada tarjeta baja a ~148 px y los títulos rompen a dos y tres líneas. Y una columna «Sin marcar» con 300 tarjetas deja de ser un tablero.",
+      data: "<code>started_at</code> / <code>finished_at</code> en <code>set_user_state</code> y en el repositorio. Sin migración: las columnas ya están."
+    },
+    {
+      id: "d", letter: "D", hue: "#e8a33d",
+      name: "Terminal",
+      sub: "Teclado, monoespaciado, sin ratón.",
+      who: "Tú, si la app es una herramienta más del escritorio y no un escaparate. <b>Coherente con el proyecto</b>: local, sin cuentas, sin telemetría.",
+      cost: 2,
+      costNote: "Cero backend. El coste está en el analizador de órdenes y en la ayuda, y en que hay que diseñar el teclado entero, no adornarlo después.",
+      breaks: "Accesibilidad: una rejilla de texto no la lee un lector de pantalla como lee botones, y toda la suite de <code>App.test.tsx</code> afirma sobre roles de botón.",
+      data: "Ninguno nuevo."
+    },
+    {
+      id: "e", letter: "E", hue: "#e0457b",
+      name: "Descubrimiento",
+      sub: "Te propone a qué jugar hoy.",
+      who: "Quien tiene <b>tanto comprado que ya no sabe qué tiene</b> y necesita que la app decida por él en vez de darle un buscador.",
+      cost: 5,
+      costNote: "Las estanterías necesitan la última partida, que hoy solo vive dentro del JSON crudo de Steam. Eso es columna nueva y migración.",
+      breaks: "Sin IGDB no hay ni resumen ni géneros y las estanterías temáticas se quedan en dos. Con 20 juegos en la biblioteca las recomendaciones se repiten.",
+      data: "<code>rtime_last_played</code> de <code>store_entry.raw</code> a columna propia + migración. Más <code>summary</code>."
+    },
+  ];
+
+  const SURFACES = [
+    { id: "lib",    label: "Biblioteca" },
+    { id: "detail", label: "Ficha" },
+    { id: "review", label: "Por revisar" },
+  ];
+
+  let current = "a";
+  let surface = "lib";
+  let picked = 1; // índice del juego abierto en la ficha
+
+  // ── A · Estantería ─────────────────────────────────────────
+
+  function renderA(s) {
+    if (s === "lib") {
+      const chips = ["Todo", "Jugando", "Pendiente", "Sin tocar", "En dos tiendas"]
+        .map((c, i) => `<button class="a-chip${i === 0 ? " on" : ""}">${c}</button>`).join("");
+      const tiles = GAMES.map((g, i) => `
+        <button class="a-tile" style="${art(g.t)}" data-open="${i}">
+          <i class="flag" style="background:${STATUS[g.st || "none"].color}"></i>
+          <span class="cap">
+            <b>${esc(g.t)}</b>
+            <span>${g.s.join(" · ")} · ${hours(g.h)}</span>
+          </span>
+        </button>`).join("");
+      return `
+        <div class="a">
+          <div class="a-top">
+            <span class="brand">Biblioteca</span>
+            <div class="a-chips">${chips}</div>
+            <span class="a-k"><kbd>Ctrl</kbd><kbd>K</kbd> buscar</span>
+          </div>
+          <div class="a-wall">${tiles}</div>
+        </div>`;
+    }
+    if (s === "detail") {
+      const g = GAMES[picked];
+      return `
+        <div class="a-hero">
+          <div class="bg" style="${art(g.t)}"></div>
+          <div class="scrim"></div>
+          <button class="a-back" data-surface="lib">← Biblioteca</button>
+          <div class="body">
+            <div class="a-meta">
+              <span class="pill">${g.y}</span>
+              <span class="pill">${g.g}</span>
+              <span class="pill">${g.s.join(" · ")}</span>
+              <span>${hours(g.h)} jugadas</span>
+            </div>
+            <h2>${esc(g.t)}</h2>
+            <p class="sum">${SUMMARIES[g.t]
+              ? esc(SUMMARIES[g.t])
+              : `<span style="opacity:0.6">Sin resumen: IGDB no tiene ficha de este juego, así que la ficha se sostiene con el título de ${g.s[0]}.</span>`}</p>
+            <div class="a-acts">
+              <button class="primary">${g.st === "playing" ? "Sigo jugando" : "Marcar jugando"}</button>
+              <button>Terminado</button>
+              <button>Nota ${g.r ?? "—"}/10</button>
+              <button>Escribir</button>
+            </div>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="a" style="padding:0">
+        <div class="a-duel">
+          <div class="head"><h2>LIMBO</h2><span>1 / 12</span></div>
+          <p class="q">IGDB tiene dos fichas con este nombre y puntúan igual. La portada y el año
+            las separan. Si eliges mal, pierdes las notas de una de las dos.</p>
+          <div class="cards">
+            <button class="a-cand">
+              <div class="art" style="${art("Limbo 2010")}"></div>
+              <b><span class="num">1</span> Limbo</b>
+              <span>2010 · Playdead · 100 %</span>
+            </button>
+            <button class="a-cand">
+              <div class="art" style="${art("Limbo 2011")}"></div>
+              <b><span class="num">2</span> Limbo</b>
+              <span>2011 · reedición · 100 %</span>
+            </button>
+            <button class="a-cand" style="max-width:190px">
+              <div class="art" style="background:#14161d;border:1px dashed #2a2f3b"></div>
+              <b><span class="num">3</span> Ninguno</b>
+              <span>usar el título de Steam</span>
+            </button>
+          </div>
+          <div class="foot">
+            <span>1 · 2 · 3 elegir</span><span>↵ confirmar</span><span>S saltar</span><span>⌫ deshacer</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── B · Hoja de cálculo ────────────────────────────────────
+
+  function bRows(sel) {
+    return GAMES.map((g, i) => {
+      const st = g.st || "none";
+      return `<tr class="${sel.includes(i) ? "sel" : ""}" data-open="${i}">
+        <td><input type="checkbox" ${sel.includes(i) ? "checked" : ""} aria-label="Seleccionar ${esc(g.t)}"></td>
+        <td><span class="thumb" style="${art(g.t)}"></span></td>
+        <td class="tt">${esc(g.t)}</td>
+        <td class="num">${g.y}</td>
+        <td>${g.g}</td>
+        <td>${g.s.map(s => `<span class="store">${s}</span>`).join("")}</td>
+        <td class="num">${g.h ? Math.round(g.h / 60) : "—"}</td>
+        <td class="num">${since(g.last)}</td>
+        <td><span class="st ${st}">${STATUS[st].label}</span></td>
+        <td class="num">${g.r ?? "—"}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function bTable(sel) {
+    const cols = ["", "", "Título ▾", "Año", "Género", "Tiendas", "Horas", "Últ.", "Estado", "Nota"];
+    return `
+      <div class="b-scroll">
+        <table>
+          <thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead>
+          <tbody>${bRows(sel)}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function renderB(s) {
+    if (s === "lib") {
+      const sel = [6, 15, 18, 27];
+      return `
+        <div class="b">
+          <div class="b-bar">
+            <input type="search" placeholder="Buscar…" value="">
+            <button class="view on">Todo</button>
+            <button class="view">Sin tocar</button>
+            <button class="view">Duplicados</button>
+            <button class="view">+ vista</button>
+            <span class="count">30 de 400 · 4 seleccionados</span>
+          </div>
+          ${bTable(sel)}
+          <div class="b-bulk">
+            <b>4 seleccionados</b>
+            <select><option>Estado → Abandonado</option><option>Estado → Pendiente</option></select>
+            <button class="go">Aplicar</button>
+            <button>Nota…</button>
+            <button>Exportar CSV</button>
+            <span class="esc">Esc para salir · ⇧+clic rango</span>
+          </div>
+        </div>`;
+    }
+    if (s === "detail") {
+      const g = GAMES[picked];
+      const st = g.st || "none";
+      return `
+        <div class="b">
+          <div class="b-split">
+            <div class="left">
+              <div class="b-bar">
+                <input type="search" placeholder="Buscar…">
+                <button class="view on">Todo</button>
+                <span class="count">30 de 400</span>
+              </div>
+              ${bTable([picked])}
+            </div>
+            <aside class="b-insp">
+              <h2>${esc(g.t)}</h2>
+              <dl class="kv">
+                <dt>Año</dt><dd>${g.y}</dd>
+                <dt>Género</dt><dd>${g.g}</dd>
+                <dt>Tiendas</dt><dd>${g.s.join(", ")}</dd>
+                <dt>Horas</dt><dd>${hours(g.h)}</dd>
+                <dt>Últ. partida</dt><dd>${g.last ?? "nunca"}</dd>
+                <dt>game_id</dt><dd style="font-family:var(--mono);font-size:0.68rem">2222…2222</dd>
+              </dl>
+              <label>Estado</label>
+              <select><option>${STATUS[st].label}</option><option>Pendiente</option><option>Jugando</option><option>Terminado</option><option>Abandonado</option></select>
+              <label>Nota</label>
+              <input type="number" value="${g.r ?? ""}" min="1" max="10">
+              <label>Notas</label>
+              <textarea rows="4">${g.r && g.r >= 9 ? "Se acabó demasiado pronto." : ""}</textarea>
+              <button class="save">Guardar</button>
+              <span class="hint">↑↓ cambiar de fila sin cerrar</span>
+            </aside>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="b">
+        <div class="b-bar">
+          <button class="view on">Empates (8)</button>
+          <button class="view">El resto (4)</button>
+          <button class="view">Sin candidatos (1)</button>
+          <span class="count">12 pendientes · 8 preseleccionados</span>
+        </div>
+        <div class="b-scroll">
+          <table>
+            <thead><tr><th></th><th>Entrada de tienda</th><th>Tienda</th><th>Candidato IGDB</th><th>Año</th><th>%</th><th>Alternativas</th></tr></thead>
+            <tbody>
+              ${[
+                ["LIMBO", "steam", "Limbo", 2010, 100, "Limbo (2011) · Limbo (2013)"],
+                ["Limbo", "gog", "Limbo", 2010, 100, "Limbo (2011)"],
+                ["Hades", "steam", "Hades", 2020, 100, "Hades II (2024)"],
+                ["Disco Elysium - The Final Cut", "gog", "Disco Elysium: The Final Cut", 2021, 97, "Disco Elysium (2019)"],
+                ["The Witcher 3: Wild Hunt GOTY", "gog", "The Witcher 3: Wild Hunt", 2015, 94, "…Complete Edition (2022)"],
+                ["Ori and the Blind Forest DE", "steam", "Ori and the Blind Forest: Definitive Edition", 2016, 92, "Ori and the Blind Forest (2015)"],
+              ].map(([a, s2, c, y, p, alt], i) => `
+                <tr class="${i < 4 ? "sel" : ""}">
+                  <td><input type="checkbox" ${i < 4 ? "checked" : ""} aria-label="Confirmar ${esc(a)}"></td>
+                  <td class="tt">${esc(a)}</td>
+                  <td><span class="store">${s2}</span></td>
+                  <td class="tt">${esc(c)}</td>
+                  <td class="num">${y}</td>
+                  <td class="num">${p}</td>
+                  <td style="color:#8b938f">${esc(alt)}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        <div class="b-bulk">
+          <b>8 seleccionados</b>
+          <button class="go">Confirmar los 8</button>
+          <button>Crear ficha con el título de la tienda</button>
+          <span class="esc">Es el mismo lote que hoy, pero comparable de un vistazo</span>
+        </div>
+      </div>`;
+  }
+
+  // ── C · Backlog ────────────────────────────────────────────
+
+  function renderC(s) {
+    if (s === "lib") {
+      const lanes = [
+        { k: "none",      title: "Sin marcar" },
+        { k: "backlog",   title: "Pendiente" },
+        { k: "playing",   title: "Jugando" },
+        { k: "finished",  title: "Terminado" },
+        { k: "abandoned", title: "Abandonado" },
+      ];
+      const html = lanes.map(l => {
+        const items = GAMES.filter(g => (g.st || "none") === l.k);
+        return `
+          <div class="c-lane">
+            <div class="lh"><i style="background:${STATUS[l.k].color}"></i>${l.title}<span class="n">${items.length}</span></div>
+            <div class="drop">
+              ${items.slice(0, 8).map((g, i) => `
+                <button class="c-card" draggable="true" data-open="${GAMES.indexOf(g)}">
+                  <span class="art" style="${art(g.t)}"></span>
+                  <span class="txt">
+                    <span class="tt">${esc(g.t)}</span>
+                    <span class="mt">${hours(g.h)} · ${g.s[0]}</span>
+                  </span>
+                  ${g.r ? `<span class="rate">${g.r}</span>` : ""}
+                </button>`).join("")}
+              ${items.length > 8 ? `<span style="font-size:0.7rem;color:#7b8496;padding:0.2rem 0.3rem;font-family:var(--mono)">+${items.length - 8} más</span>` : ""}
+            </div>
+          </div>`;
+      }).join("");
+      return `
+        <div class="c">
+          <div class="c-top">
+            <h2>Mi backlog</h2>
+            <span class="goal">Este año: <b>7 de 12</b> terminados</span>
+            <button class="c-add">+ Traer de la biblioteca</button>
+          </div>
+          <div class="c-lanes">${html}</div>
+          <div class="c-pool">
+            <span class="lbl">Sin clasificar (368)</span>
+            ${GAMES.slice(0, 14).map(g => `<span class="mini" style="${art(g.t)}" title="${esc(g.t)}"></span>`).join("")}
+            <span style="font-size:0.7rem;color:#7b8496;font-family:var(--mono);flex:none">arrastra a una columna →</span>
+          </div>
+        </div>`;
+    }
+    if (s === "detail") {
+      const g = GAMES[picked];
+      const st = g.st || "none";
+      const order = ["none", "backlog", "playing", "finished", "abandoned"];
+      return `
+        <div class="c">
+          <div class="c-modal">
+            <div class="c-sheet">
+              <div class="band" style="${art(g.t)}"><div class="tt">${esc(g.t)}</div></div>
+              <div class="in">
+                <div class="c-step">
+                  ${order.map(k => `<button class="${k === st ? "on" : ""}">${STATUS[k].label}</button>`).join("")}
+                </div>
+                <div class="c-row">
+                  <span>${g.y}</span><span>${g.g}</span>
+                  <span><b>${hours(g.h)}</b> jugadas</span>
+                  <span>última partida <b>${g.last ?? "nunca"}</b></span>
+                  <span>en <b>${g.s.join(" y ")}</b></span>
+                </div>
+                <div class="c-row" style="align-items:center">
+                  <span>Nota</span>
+                  <span class="c-stars">${[1,2,3,4,5,6,7,8,9,10].map(n => `<button class="${g.r && n <= g.r ? "on" : ""}" aria-label="${n} de 10">◆</button>`).join("")}</span>
+                </div>
+                <textarea placeholder="Por qué lo dejaste, por dónde ibas, si merece la pena volver…">${g.st === "abandoned" ? "Lo dejé en el segundo acto. Volver solo si sacan el parche de rendimiento." : ""}</textarea>
+                <div class="acts">
+                  <button class="go">Guardar</button>
+                  <button data-surface="lib">Volver al tablero</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="c">
+        <div class="c-inbox">
+          <h2>Por revisar · 12</h2>
+          <p class="exp">Emparejamientos que la app no se ha atrevido a cerrar sola. Se resuelven
+            como el resto del tablero: eligiendo, no rellenando formularios.</p>
+          ${[
+            ["LIMBO", "steam", [["Limbo", 2010], ["Limbo", 2011]]],
+            ["Limbo", "gog", [["Limbo", 2010], ["Limbo", 2011]]],
+            ["Hades", "steam", [["Hades", 2020], ["Hades II", 2024]]],
+            ["Disco Elysium - The Final Cut", "gog", [["Disco Elysium: The Final Cut", 2021], ["Disco Elysium", 2019]]],
+            ["The Witcher 3 GOTY", "gog", [["The Witcher 3: Wild Hunt", 2015], ["…Complete Edition", 2022]]],
+          ].map(([title, store, opts]) => `
+            <div class="c-item">
+              <span class="art" style="${art(title + store)}"></span>
+              <span class="who">${esc(title)}<span>en ${store}</span></span>
+              <span class="opts">
+                ${opts.map((o, i) => `<button class="c-opt${i === 0 ? " on" : ""}">${esc(o[0])} <span class="yr">${o[1]}</span></button>`).join("")}
+                <button class="c-opt">ninguno</button>
+              </span>
+            </div>`).join("")}
+          <div style="display:flex;gap:0.5rem;margin-top:0.4rem">
+            <button class="c-add">Confirmar los 5 elegidos</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ── D · Terminal ───────────────────────────────────────────
+
+  function pad(s, n) {
+    s = String(s);
+    return s.length > n ? s.slice(0, n - 1) + "…" : s + " ".repeat(n - s.length);
+  }
+
+  function renderD(s) {
+    if (s === "lib") {
+      const rows = GAMES.map((g, i) => {
+        const st = g.st || "none";
+        const cur = i === 3 ? " cur" : "";
+        return `<span class="d-row${cur}" data-open="${i}">` +
+          `<span class="dim">${pad(i + 1, 4)}</span>` +
+          pad(g.t, 36) +
+          `<span class="dim">${pad(g.y, 6)}</span>` +
+          pad(g.g, 13) +
+          `<span class="${st === "finished" ? "ok" : st === "abandoned" ? "warn" : ""}">${pad(STATUS[st].short, 5)}</span>` +
+          `<span class="dim">${pad(g.s.join(","), 12)}</span>` +
+          `<span class="hi">${String(g.h ? Math.round(g.h / 60) + "h" : "—").padStart(6)}</span>` +
+          `<span class="dim">${String(since(g.last)).padStart(7)}</span>` +
+          `</span>`;
+      }).join("");
+      return `
+        <div class="d">
+          <div class="d-frame">
+            <span class="d-legend">biblioteca</span>
+            <div class="d-head"><span class="dim">  #   </span><span class="hi">TÍTULO                              AÑO   GÉNERO       EST  TIENDAS         HORAS   ÚLT.</span></div>
+            <div class="d-body">${rows}</div>
+          </div>
+          <div class="d-status"> BIBLIOTECA  30/400 filtradas   pendientes:12   última sync: hace 4 min   ?:ayuda </div>
+          <div class="d-cmd"><span class="ok">:</span>filter genero=RPG horas&gt;20<span class="caret"> </span></div>
+        </div>`;
+    }
+    if (s === "detail") {
+      const g = GAMES[picked];
+      const st = g.st || "none";
+      return `
+        <div class="d">
+          <div class="d-frame">
+            <span class="d-legend">ficha</span>
+            <div class="d-detail">
+  <span class="hi" style="font-size:1.6em;font-weight:700">${esc(g.t)}</span>
+
+  <span class="dim">título     </span> ${esc(g.t)}
+  <span class="dim">año        </span> ${g.y}
+  <span class="dim">género     </span> ${g.g}
+  <span class="dim">tiendas    </span> ${g.s.map(x => `<span class="ok">${x}</span>`).join("  ")}
+  <span class="dim">horas      </span> <span class="hi">${hours(g.h)}</span>
+  <span class="dim">última     </span> ${g.last ?? "nunca"}
+  <span class="dim">estado     </span> <span class="ok">${STATUS[st].label.toLowerCase()}</span>
+  <span class="dim">nota       </span> ${g.r ? "◆".repeat(g.r) + "◇".repeat(10 - g.r) + "  " + g.r + "/10" : "<span class='dim'>sin nota</span>"}
+  <span class="dim">game_id    </span> <span class="dim">22222222-2222-7222-8222-222222222222</span>
+
+  <span class="dim">notas ─────────────────────────────────────────────────────────────────────────────</span>
+  ${g.r && g.r >= 9 ? "Lo empecé por el sistema de habilidades y me quedé por la ciudad." : "<span class=\"dim\">(vacías — pulsa i para escribir)</span>"}
+            </div>
+          </div>
+          <div class="d-status"> FICHA  4/30   :set status=… · :set nota=… · i editar notas · q volver </div>
+          <div class="d-cmd"><span class="ok">:</span>set status=playing<span class="caret"> </span></div>
+        </div>`;
+    }
+    return `
+      <div class="d">
+        <div class="d-frame">
+          <span class="d-legend">revisión · 1/12</span>
+          <div class="d-detail">
+  tienda   <span class="hi">steam</span>   entrada  <span class="hi">LIMBO</span>   appid 48000
+
+  <span class="dim">IGDB devuelve dos fichas que puntúan igual. Elige con un número.</span>
+
+  <span class="ok">[1]</span>  Limbo                                  <span class="dim">2010</span>   <span class="hi">100%</span>   igdb.com/games/limbo
+  <span class="ok">[2]</span>  Limbo                                  <span class="dim">2011</span>   <span class="hi">100%</span>   <span class="dim">sin slug</span>
+  <span class="ok">[0]</span>  <span class="dim">ninguno — crear ficha con el título de la tienda</span>
+
+  <span class="dim">──────────────────────────────────────────────────────────────────────────────────────</span>
+  <span class="dim">cola</span>   <span class="ok">████████</span><span class="dim">░░░░</span>  8 elegidas · 4 sin decidir
+
+  <span class="dim">siguiente</span>  Limbo <span class="dim">(gog)</span> · Hades <span class="dim">(steam)</span> · Disco Elysium - The Final Cut <span class="dim">(gog)</span>
+          </div>
+        </div>
+        <div class="d-status"> REVISIÓN  1/12   1-9 elegir · ↵ siguiente · u deshacer · :confirm escribe las 8 </div>
+        <div class="d-cmd"><span class="ok">:</span>confirm<span class="caret"> </span></div>
+      </div>`;
+  }
+
+  // ── E · Descubrimiento ─────────────────────────────────────
+
+  function shelf(title, why, list) {
+    return `
+      <section class="e-shelf">
+        <div class="sh"><h3>${title}</h3><span class="n">${list.length} · ${why}</span><span class="rule"></span></div>
+        <div class="e-rowscroll">
+          ${list.map(g => `
+            <button class="e-item" data-open="${GAMES.indexOf(g)}">
+              <span class="art" style="${art(g.t, { dark: false })}"></span>
+              <span class="tt">${esc(g.t)}</span>
+              <span class="mt">${g.h ? hours(g.h) : "sin abrir"}</span>
+            </button>`).join("")}
+        </div>
+      </section>`;
+  }
+
+  function renderE(s) {
+    if (s === "lib") {
+      const g = GAMES[3];
+      return `
+        <div class="e">
+          <div class="e-top">
+            <span class="brand">Tu biblioteca</span>
+            <span class="date">Viernes, 14 de agosto</span>
+            <input class="search" type="search" placeholder="Buscar…">
+          </div>
+          <div class="e-hero">
+            <span class="art" style="${art(g.t, { dark: false })}"></span>
+            <div class="txt">
+              <span class="why">Hoy · lo compraste hace 3 años y no lo has abierto</span>
+              <h2>${esc(g.t)}</h2>
+              <p>Una aventura de 22 horas que casi todo el mundo termina. Está en Steam, sin
+                empezar, y es de los pocos de tu biblioteca que se juegan de una sentada.</p>
+              <div class="facts"><span>${g.y}</span><span>${g.g}</span><span>~22 h</span><span>steam</span></div>
+              <div class="acts">
+                <button class="go">Empiezo hoy</button>
+                <button>Otro</button>
+                <button>No me apetece</button>
+              </div>
+            </div>
+          </div>
+          ${shelf("Sin tocar desde 2019", "la última vez fue hace seis años", GAMES.filter(g => g.last && g.last < "2020"))}
+          ${shelf("Empezados y sin terminar", "abiertos y aparcados", GAMES.filter(g => g.st === "playing" || g.st === "abandoned"))}
+          ${shelf("Los tienes dos veces", "comprados en Steam y en GOG", GAMES.filter(g => g.s.length > 1))}
+          ${shelf("Cortos: menos de 10 horas", "para una semana floja", GAMES.filter(g => g.h > 0 && g.h < 600))}
+        </div>`;
+    }
+    if (s === "detail") {
+      const g = GAMES[picked];
+      return `
+        <div class="e">
+          <article class="e-art">
+            <span class="kicker">Ficha · en tu biblioteca desde 2021</span>
+            <h2>${esc(g.t)}</h2>
+            <p class="lede">Lo tienes en ${g.s.join(" y en ")}. ${g.h ? "Le has echado " + hours(g.h) + ", la última vez en " + (g.last ?? "—") + "." : "No lo has abierto nunca."}</p>
+            <div class="grid2">
+              <span class="cover" style="${art(g.t, { dark: false })}"></span>
+              <dl>
+                <dt>Año</dt><dd>${g.y}</dd>
+                <dt>Género</dt><dd>${g.g}</dd>
+                <dt>Tiendas</dt><dd>${g.s.join(", ")}</dd>
+                <dt>Jugado</dt><dd>${hours(g.h)}</dd>
+                <dt>Última vez</dt><dd>${g.last ?? "nunca"}</dd>
+              </dl>
+            </div>
+            <div class="verdict">
+              <span class="q">¿Qué haces con él?</span>
+              <div class="opts">
+                <button class="${g.st === "playing" ? "on" : ""}">Lo estoy jugando</button>
+                <button class="${g.st === "backlog" ? "on" : ""}">Pendiente</button>
+                <button class="${g.st === "finished" ? "on" : ""}">Terminado</button>
+                <button class="${g.st === "abandoned" ? "on" : ""}">Lo dejo</button>
+              </div>
+              <span style="font-size:0.78rem;color:#8a8d99">Y si quieres, escribe por qué. Es lo único
+                que esta app sabe de ti que no sabe ninguna tienda.</span>
+            </div>
+            <button class="skip" data-surface="lib" style="font:inherit;font-size:0.8rem;background:none;border:none;color:#8a8d99;text-decoration:underline;cursor:pointer;padding:0;align-self:flex-start">← Volver</button>
+          </article>
+        </div>`;
+    }
+    return `
+      <div class="e">
+        <div class="e-duel">
+          <span class="kicker" style="font-family:var(--mono);font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:#e0457b">Por revisar · 1 de 12</span>
+          <h2>Tu «LIMBO» de Steam, ¿cuál de estos dos es?</h2>
+          <p>IGDB tiene las dos fichas y puntúan igual. Elige mal y las notas de una se pierden;
+            por eso preguntamos en vez de decidir.</p>
+          <div class="e-pair">
+            <button class="e-pick">
+              <span class="art" style="${art("Limbo 2010", { dark: false })}"></span>
+              <span><b>Limbo</b><span>2010 · Playdead · el original</span></span>
+            </button>
+            <button class="e-pick">
+              <span class="art" style="${art("Limbo 2011", { dark: false })}"></span>
+              <span><b>Limbo</b><span>2011 · reedición de consola</span></span>
+            </button>
+          </div>
+          <button class="skip">Ninguno de los dos: usa el título de Steam</button>
+          <p style="font-size:0.78rem;color:#a0a3ad">Quedan 11. A este ritmo, dos minutos.</p>
+        </div>
+      </div>`;
+  }
+
+  const RENDER = { a: renderA, b: renderB, c: renderC, d: renderD, e: renderE };
+
+  // ── Montaje ────────────────────────────────────────────────
+
+  const rail = document.getElementById("rail");
+  const surfacesEl = document.getElementById("surfaces");
+  const stage = document.getElementById("stage");
+  const dossier = document.getElementById("dossier");
+
+  rail.innerHTML = CONCEPTS.map(c => `
+    <button role="tab" data-c="${c.id}" style="--c:${c.hue}">
+      <span class="letter">${c.letter}</span>
+      <span class="name">${c.name}</span>
+      <span class="sub">${c.sub}</span>
+    </button>`).join("");
+
+  surfacesEl.innerHTML = SURFACES.map(s => `
+    <button role="tab" data-s="${s.id}">${s.label}</button>`).join("");
+
+  function draw() {
+    const c = CONCEPTS.find(x => x.id === current);
+    document.documentElement.style.setProperty("--c", c.hue);
+
+    rail.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-selected", String(b.dataset.c === current)));
+    surfacesEl.querySelectorAll("button").forEach(b =>
+      b.setAttribute("aria-selected", String(b.dataset.s === surface)));
+
+    stage.innerHTML = RENDER[current](surface);
+
+    dossier.innerHTML = `
+      <section>
+        <h3>Para quién</h3>
+        <p>${c.who}</p>
+      </section>
+      <section>
+        <h3>Lo que cuesta</h3>
+        <p class="cost"><span class="bar">${[1,2,3,4,5].map(n => `<i class="${n <= c.cost ? "on" : ""}"></i>`).join("")}</span></p>
+        <p>${c.costNote}</p>
+      </section>
+      <section>
+        <h3>Dónde se rompe</h3>
+        <p>${c.breaks}</p>
+      </section>
+      <section>
+        <h3>Datos que le faltan hoy</h3>
+        <p>${c.data}</p>
+      </section>`;
+  }
+
+  document.addEventListener("click", e => {
+    const railBtn = e.target.closest("#rail button");
+    if (railBtn) { current = railBtn.dataset.c; surface = "lib"; draw(); return; }
+
+    const surfBtn = e.target.closest("#surfaces button");
+    if (surfBtn) { surface = surfBtn.dataset.s; draw(); return; }
+
+    const back = e.target.closest("[data-surface]");
+    if (back) { surface = back.dataset.surface; draw(); return; }
+
+    const open = e.target.closest("[data-open]");
+    if (open) { picked = Number(open.dataset.open); surface = "detail"; draw(); }
+  });
+
+  draw();
+</script>
+</body>
+</html>

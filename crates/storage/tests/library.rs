@@ -64,6 +64,15 @@ fn entrada(
     }
 }
 
+/// Lo que de verdad guarda el conector de Steam, que es de donde sale la última
+/// partida: `steam/parse.rs` mete `rtime_last_played` en el JSON crudo.
+fn como_la_guarda_steam(mut entry: StoreEntry, ultima: i64) -> StoreEntry {
+    entry.cover_url = Some("https://cdn.cloudflare.steamstatic.com/header.jpg".to_owned());
+    entry.store_url = Some("https://store.steampowered.com/app/632470".to_owned());
+    entry.raw = serde_json::json!({ "appid": 632_470, "rtime_last_played": ultima });
+    entry
+}
+
 #[tokio::test]
 async fn una_ficha_con_dos_tiendas_suma_horas_y_lista_ambas() {
     let db = Database::in_memory().await.expect("base");
@@ -73,8 +82,13 @@ async fn una_ficha_con_dos_tiendas_suma_horas_y_lista_ambas() {
     let ficha = juego("Disco Elysium", &["RPG", "Aventura"]);
     GameRepository(&db).upsert(&ficha).await.expect("ficha");
 
-    let en_steam = entrada(steam, StoreId::Steam, "632470", EntryKind::Owned, 1200);
-    let en_gog = entrada(gog, StoreId::Gog, "151239", EntryKind::Owned, 300);
+    let en_steam = como_la_guarda_steam(
+        entrada(steam, StoreId::Steam, "632470", EntryKind::Owned, 1200),
+        1_700_000_000,
+    );
+    let mut en_gog = entrada(gog, StoreId::Gog, "151239", EntryKind::Owned, 300);
+    en_gog.cover_url = Some("https://images.gog-statics.com/logo.jpg".to_owned());
+    en_gog.store_url = Some("https://www.gog.com/game/disco_elysium".to_owned());
     let deseado = entrada(gog, StoreId::Gog, "999", EntryKind::Wishlist, 0);
     StoreEntryRepository(&db)
         .upsert_many(&[en_steam.clone(), en_gog.clone(), deseado.clone()])
@@ -131,4 +145,87 @@ async fn una_ficha_con_dos_tiendas_suma_horas_y_lista_ambas() {
     assert_eq!(row.rating, Some(10));
     assert_eq!(row.genres, vec!["RPG".to_owned(), "Aventura".to_owned()]);
     assert_eq!(row.release_year, Some(2019));
+
+    // Con copia en las dos tiendas, la imagen y el enlace salen los dos de
+    // Steam: su cabecera está pensada para verse apaisada y GOG solo da el
+    // logo. Que salgan de la misma copia es lo que evita enseñar la imagen de
+    // una tienda con el enlace de la otra.
+    assert_eq!(
+        row.store_cover_url.as_deref(),
+        Some("https://cdn.cloudflare.steamstatic.com/header.jpg")
+    );
+    assert_eq!(
+        row.store_url.as_deref(),
+        Some("https://store.steampowered.com/app/632470")
+    );
+    assert_eq!(
+        row.last_played_at,
+        Some(1_700_000_000),
+        "la última partida sale del JSON crudo de Steam"
+    );
+}
+
+#[tokio::test]
+async fn sin_copia_en_steam_no_hay_ultima_partida() {
+    // GOG no publica ni horas ni fecha de la última partida, así que la columna
+    // se queda vacía por mucho que el juego se haya jugado. Es una carencia de
+    // la tienda, no un fallo: la interfaz tiene que poder distinguirlo de un
+    // «nunca jugado» y por eso es `None` y no un cero.
+    let db = Database::in_memory().await.expect("base");
+    let gog = cuenta(&db, StoreId::Gog).await;
+
+    let ficha = juego("Cultist Simulator", &["Simulación"]);
+    GameRepository(&db).upsert(&ficha).await.expect("ficha");
+
+    let en_gog = entrada(gog, StoreId::Gog, "1207660103", EntryKind::Owned, 90);
+    StoreEntryRepository(&db)
+        .upsert_many(std::slice::from_ref(&en_gog))
+        .await
+        .expect("entradas");
+    GameLinkRepository(&db)
+        .rebuild_auto(&[GameLink {
+            game_id: ficha.id,
+            store_entry_id: en_gog.id,
+            confidence: 1.0,
+            method: LinkMethod::Auto,
+        }])
+        .await
+        .expect("enlaces");
+
+    let rows = LibraryRepository(&db).all().await.expect("biblioteca");
+    assert_eq!(rows[0].last_played_at, None);
+    assert_eq!(rows[0].playtime_minutes, 90, "las horas sí las da GOG");
+}
+
+#[tokio::test]
+async fn steam_sin_estrenar_no_cuenta_como_jugado_en_1970() {
+    // Steam manda `rtime_last_played: 0` para lo que nunca se ha abierto. Sin
+    // convertirlo a NULL, ordenar por última partida pondría los juegos sin
+    // estrenar como los más antiguos de la biblioteca en vez de aparte.
+    let db = Database::in_memory().await.expect("base");
+    let steam = cuenta(&db, StoreId::Steam).await;
+
+    let ficha = juego("Prey", &["Acción"]);
+    GameRepository(&db).upsert(&ficha).await.expect("ficha");
+
+    let sin_estrenar = como_la_guarda_steam(
+        entrada(steam, StoreId::Steam, "480490", EntryKind::Owned, 0),
+        0,
+    );
+    StoreEntryRepository(&db)
+        .upsert_many(std::slice::from_ref(&sin_estrenar))
+        .await
+        .expect("entradas");
+    GameLinkRepository(&db)
+        .rebuild_auto(&[GameLink {
+            game_id: ficha.id,
+            store_entry_id: sin_estrenar.id,
+            confidence: 1.0,
+            method: LinkMethod::Auto,
+        }])
+        .await
+        .expect("enlaces");
+
+    let rows = LibraryRepository(&db).all().await.expect("biblioteca");
+    assert_eq!(rows[0].last_played_at, None);
 }

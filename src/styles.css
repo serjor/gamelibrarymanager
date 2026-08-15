@@ -1,27 +1,151 @@
+/* Sistema de diseño.
+ *
+ * Ningún selector de este fichero declara un color literal: todos salen de los
+ * tokens de aquí arriba. La regla existe porque la alternativa —un `#b3261e`
+ * suelto a mitad de la hoja— obliga a buscarlo a mano el día que haya que
+ * tocar el tema oscuro, y garantiza que alguno se quede sin tocar. */
+
 :root {
+  /* Sigue mandando en los controles nativos: `select`, los campos de texto y
+     las barras de desplazamiento se pintan solos según esto. Los tokens de
+     abajo cubren lo que dibujamos nosotros; esto cubre lo que dibuja el
+     sistema. */
   color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  --line: color-mix(in srgb, currentColor 15%, transparent);
+
+  /* Color. Los neutros van con un sesgo mínimo hacia el azul en vez de ser
+     grises puros: es una aplicación que se mira en una pantalla durante un
+     rato largo, y un gris exacto se lee como una decisión no tomada. */
+  --fondo: #fbfbfc;
+  --superficie: #ffffff;
+  /* El relleno de una portada que no existe, y de las cajas que hacen su
+     hueco. Antes era `color-mix` sobre `currentColor`, que cambiaba de tono
+     según quién fuera el padre. */
+  --hueco: #eceef2;
+  --borde: #d7d9e0;
+  --texto: #16181d;
+  --texto-atenuado: #5a5f6e;
+  --acento: #2f5fd0;
+  --error: #b3261e;
+  /* El velo de la hoja. Sale de la tinta en claro y del fondo en oscuro porque
+     lo que hace falta en los dos temas es oscurecer, y el token que es oscuro
+     no es el mismo en cada uno. */
+  --velo: color-mix(in srgb, var(--texto) 45%, transparent);
+
+  /* Estado de la partida. Semánticos y aparte del acento a propósito: el
+     acento marca dónde estás, estos dicen qué es cada juego. Confundirlos
+     hace que la interfaz grite en cuatro sitios a la vez. */
+  --estado-pendiente: #8a6a12;
+  --estado-jugando: #1f6b86;
+  --estado-terminado: #1c6b4f;
+  --estado-abandonado: #98413a;
+
+  /* Tipografía. Pila del sistema: la CSP no declara `font-src`, así que una
+     fuente enlazada no cargaría y una empaquetada obligaría a tocarla. */
+  --fuente: system-ui, sans-serif;
+  --t-xs: 0.75rem;
+  --t-s: 0.8125rem;
+  --t-m: 0.875rem;
+  --t-base: 1rem;
+  --t-l: 1.25rem;
+  --t-xl: 1.75rem;
+
+  /* Espaciado, en pasos de 4 px. Antes había once valores distintos entre
+     0,3rem y 3rem, que es lo mismo que no tener ninguno. */
+  --e-1: 0.25rem;
+  --e-2: 0.375rem;
+  --e-3: 0.5rem;
+  --e-4: 0.75rem;
+  --e-5: 1rem;
+  --e-6: 1.5rem;
+  --e-7: 2rem;
+  --e-8: 3rem;
+
+  --radio-s: 3px;
+  --radio-m: 6px;
+  --radio-l: 8px;
+
+  font-family: var(--fuente);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #131519;
+    --superficie: #1a1d23;
+    --hueco: #23262e;
+    --borde: #333741;
+    --texto: #e6e8ee;
+    --texto-atenuado: #9aa0ae;
+    --acento: #8ab4f8;
+    --error: #f2857b;
+    --velo: color-mix(in srgb, var(--fondo) 80%, transparent);
+
+    --estado-pendiente: #d4b263;
+    --estado-jugando: #79c0dd;
+    --estado-terminado: #6fc3a0;
+    --estado-abandonado: #e0928a;
+  }
+}
+
+/* El `padding` y el borde caben dentro del ancho declarado. Sin esto, decirle
+   a una portada que mida 168 px de alto y darle relleno da 184, y una rejilla
+   virtualizada —que cuenta las filas con aritmética— empieza a pisarse. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* La ventana es el marco, y dentro se desplaza **una** sola cosa: la lista.
+   Antes se desplazaban dos —la página y la lista, que medía `70vh`—, y eso
+   pone dos barras en pantalla a la vez y deja a la de fuera cuarenta píxeles de
+   recorrido: la rueda sobre los lados no movía nada y había que llevar el ratón
+   al centro. Con la altura repartida desde aquí, la lista se queda con lo que
+   sobra y es la única que se desplaza. */
+html,
+body,
+#root {
+  height: 100%;
 }
 
 body {
   margin: 0;
+  /* Explícito y no heredado del `color-scheme`: en cuanto un token define el
+     fondo de una superficie, el de la página tiene que salir del mismo sitio
+     o los dos temas dejan de cuadrar entre sí. */
+  background: var(--fondo);
+  color: var(--texto);
 }
 
+/* El teclado tiene que poder ver dónde está. Antes esto lo ponía el navegador
+   y cada uno lo pinta a su manera. */
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* Sin tope de ancho: lo que se desplaza tiene que llegar a los dos bordes de la
+   ventana, o la rueda sobre el hueco de los lados no encuentra nada que mover.
+   Lo que no debe estirarse hasta 1920 px se pone su propio tope —los
+   formularios, la tabla, el destacado de «Hoy»—, y entonces el hueco que dejan
+   sigue siendo parte de la caja que se desplaza.
+
+   `overflow: auto` es una red: las pantallas de la biblioteca reparten la
+   altura y nunca desbordan, pero un asistente en una ventana baja sí, y sin
+   esto sus últimas líneas quedarían fuera de alcance. */
 main {
-  max-width: 34rem;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
+  height: 100%;
+  padding: var(--e-6);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--e-4);
+  overflow: auto;
 }
 
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--e-5);
 }
 
 h1,
@@ -29,31 +153,36 @@ h2 {
   margin: 0;
 }
 
+/* Los asistentes son una columna de campos, y `main` ha crecido para que quepa
+   la ficha acoplada al lado de la tabla. Sin tope, ese ancho se lo lleva
+   también un campo de texto, y escribir ahí una clave de API es seguir una
+   línea de metro y medio de larga. */
 form {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--e-3);
+  max-width: 32rem;
 }
 
 label {
   font-weight: 600;
-  margin-top: 0.75rem;
+  margin-top: var(--e-4);
 }
 
 input {
   font: inherit;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
 }
 
 button {
   font: inherit;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -69,54 +198,49 @@ button.link {
   padding: 0;
   text-align: left;
   text-decoration: underline;
-  opacity: 0.8;
+  color: var(--texto-atenuado);
 }
 
+/* Color y no `opacity`: la transparencia se lleva por delante también los
+   bordes y los fondos de lo que haya dentro, y aquí solo se quería bajar el
+   texto un escalón. */
 .hint {
-  opacity: 0.75;
-  font-size: 0.9rem;
+  color: var(--texto-atenuado);
+  font-size: var(--t-m);
 }
 
 .accounts,
+.connectors,
 [role="alert"] {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--e-5);
+}
+
+/* Una tienda apagada o rota se lee como aviso, no como error: la aplicación
+   sigue funcionando y lo que esa tienda trajo sigue en la biblioteca. */
+.connectors {
+  color: var(--texto-atenuado);
 }
 
 [role="alert"] {
-  color: #b3261e;
-}
-
-@media (prefers-color-scheme: dark) {
-  [role="alert"] {
-    color: #f2857b;
-  }
+  color: var(--error);
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--e-3);
 }
 
-.review,
 .candidates {
   list-style: none;
   padding: 0;
-}
-
-.review > li {
-  border-top: 1px solid var(--line);
-  padding: 0.75rem 0;
-}
-
-.candidates {
   display: flex;
   flex-wrap: wrap;
   /* `stretch` iguala la altura de toda la fila: si no, cada tarjeta mide lo que
      mida su contenido y compararlas cuesta más de lo que debería. */
   align-items: stretch;
-  gap: 0.4rem;
-  margin: 0.4rem 0;
+  gap: var(--e-2);
+  margin: var(--e-2) 0;
 }
 
 .candidates > li {
@@ -129,9 +253,9 @@ button.link {
   width: 45px;
   height: 60px;
   flex: none;
-  border-radius: 3px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  border: 1px dashed var(--line);
+  border-radius: var(--radio-s);
+  background: var(--hueco);
+  border: 1px dashed var(--borde);
 }
 
 .cover-missing.wide {
@@ -144,45 +268,46 @@ button.link {
 .candidate {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--e-3);
   text-align: left;
-  padding: 0.35rem 0.5rem;
+  padding: var(--e-2) var(--e-3);
+  height: 100%;
 }
 
 .candidate img {
-  border-radius: 3px;
+  border-radius: var(--radio-s);
   object-fit: cover;
   flex: none;
 }
 
 .candidate.chosen {
-  outline: 2px solid currentColor;
+  outline: 2px solid var(--acento);
   outline-offset: -2px;
 }
 
 .candidate-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--e-1);
 }
 
-.candidate {
-  height: 100%;
+.candidate-wrap .link {
+  white-space: nowrap;
 }
 
-/* Lo que dice la tienda, arriba y con su carátula: es contra lo que se compara
-   cada candidato de IGDB, así que tiene que verse a la vez que ellos. */
+/* Lo que dice la tienda, con su carátula: es contra lo que se compara cada
+   candidato de IGDB, así que tiene que verse a la vez que ellos. */
 .origen {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--e-3);
 }
 
 /* Steam sirve una cápsula apaisada y GOG un logo también apaisado, pero con
    proporciones distintas: se recortan a la misma caja para que el título de
    cada fila empiece siempre a la misma altura. */
 .origen img {
-  border-radius: 3px;
+  border-radius: var(--radio-s);
   object-fit: cover;
   flex: none;
 }
@@ -192,133 +317,715 @@ button.link {
 }
 
 /* La barra de confirmación sigue a la vista mientras se recorre una cola de
-   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa.
-   `Canvas` es el color de fondo del sistema y sigue al `color-scheme`, así que
-   tapa lo que pasa por debajo en claro y en oscuro sin declarar dos paletas. */
+   ciento y pico: si hay que subir hasta arriba para confirmar, no se usa. El
+   fondo sale del mismo token que el de la página, así que tapa lo que pasa por
+   debajo en claro y en oscuro sin declarar dos paletas. */
 .sticky {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: Canvas;
-  padding: 0.5rem 0;
-}
-
-main {
-  max-width: 72rem;
+  background: var(--fondo);
+  padding: var(--e-3) 0;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e-3);
   align-items: center;
 }
 
 .filters input,
 .filters select {
   font: inherit;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
 }
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--line);
+  gap: var(--e-3);
+  border-bottom: 1px solid var(--borde);
 }
 
 .tab {
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  opacity: 0.7;
+  color: var(--texto-atenuado);
 }
 
 .tab.active {
   border-bottom-color: currentColor;
-  opacity: 1;
+  color: var(--texto);
 }
 
-.library-body {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.grid-viewport {
+/* De aquí para abajo la altura se reparte, no se inventa. Cada eslabón declara
+   `min-height: 0` porque un hijo de flex no se encoge por debajo de su
+   contenido salvo que se le diga, y con la cadena rota la lista crece hasta
+   sacar la página de la ventana: que es como se acaba con dos barras. */
+.library {
   flex: 1;
-  height: 70vh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+}
+
+/* `stretch` y no `flex-start`: con `flex-start` la columna de la lista mide lo
+   que mida la lista, no lo que queda de ventana, y entonces `flex: 1` sobre el
+   visor no reparte nada. Con ocho juegos no se nota; con cuatrocientos la tabla
+   crece hasta sacar el marco de la ventana. Quien no quiere estirarse lo dice
+   por su cuenta, que es lo que hace el inspector aquí abajo. */
+.library-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--e-5);
+  align-items: stretch;
+}
+
+.library-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sale de la caja sin dejar de existir: `opacity` y no `display`, para que el
+   teclado y los lectores de pantalla lleguen igual a lo que está tapado. */
+.visualmente-oculta {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+}
+
+.barra .filters {
+  flex: 1;
+}
+
+.vistas {
+  display: flex;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
+  overflow: hidden;
+}
+
+.vista {
+  border: none;
+  border-radius: 0;
+  padding: var(--e-2) var(--e-4);
+  font-size: var(--t-s);
+  color: var(--texto-atenuado);
+}
+
+.vista.activa {
+  background: var(--acento);
+  color: var(--superficie);
+  font-weight: 600;
+}
+
+.pared-viewport {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
-.grid {
+/* Las medidas las pone el componente: son las mismas con las que calcula qué
+   filas tocan, y separarlas en dos sitios es pedir que dejen de cuadrar. */
+.pared {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  justify-content: space-between;
   position: absolute;
   inset-inline: 0;
   top: 0;
 }
 
-.card {
+.pared > li {
+  position: relative;
+  /* La rejilla virtualizada cuenta las filas con aritmética: una baldosa que
+     se pase de su alto no descuadra su fila, descuadra todas las de abajo. */
+  overflow: hidden;
+}
+
+.baldosa {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--e-1);
   text-align: left;
   border: none;
+  border-radius: 0;
   padding: 0;
 }
 
-.card img,
-.cover-placeholder {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border-radius: 6px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-}
-
+/* El hueco de una portada que no existe. La forma se declara aquí y **el tamaño
+   lo pone quien la usa**: la baldosa y el destacado de «Hoy» miden distinto, y
+   una portada que no está tiene que ocupar exactamente lo que ocuparía si
+   estuviera. */
 .cover-placeholder {
   display: grid;
   place-items: center;
-  padding: 0.5rem;
-  font-size: 0.8rem;
+  padding: var(--e-3);
+  font-size: var(--t-s);
+  text-align: center;
+  border-radius: var(--radio-m);
+  background: var(--hueco);
+}
+
+.baldosa img,
+.baldosa .cover-placeholder {
+  width: 100%;
+  height: var(--alto-portada);
+  object-fit: cover;
+  border-radius: var(--radio-m);
+  background: var(--hueco);
+}
+
+.baldosa-titulo {
+  font-weight: 600;
+  font-size: var(--t-s);
+  line-height: 1.2;
+  /* Dos líneas y ni una más: la fila mide lo que mide y un título largo no
+     puede empujar la de abajo. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.baldosa .hint {
+  font-size: var(--t-xs);
+}
+
+/* La casilla solo estorba cuando no se está usando: aparece al pasar por
+   encima, al enfocar, si está marcada, o mientras haya algo seleccionado. */
+.pared-marca {
+  position: absolute;
+  top: var(--e-2);
+  left: var(--e-2);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.pared > li:hover .pared-marca,
+.pared > li:focus-within .pared-marca,
+.pared-marca:checked,
+.pared[data-seleccionando] .pared-marca {
+  opacity: 1;
+}
+
+.pared > li.marcada img,
+.pared > li.marcada .cover-placeholder {
+  outline: 3px solid var(--acento);
+  outline-offset: -3px;
+}
+
+.pared > li.abierta img,
+.pared > li.abierta .cover-placeholder {
+  outline: 2px solid var(--texto);
+  outline-offset: 2px;
+}
+
+/* El estado, en una esquina y del color que le toca. Va con `aria-hidden`: el
+   nombre accesible de la baldosa ya lo lleva escrito. */
+.punto {
+  position: absolute;
+  top: var(--e-2);
+  right: var(--e-2);
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--fondo);
+}
+
+.punto.backlog { background: var(--estado-pendiente); }
+.punto.playing { background: var(--estado-jugando); }
+.punto.finished { background: var(--estado-terminado); }
+.punto.abandoned { background: var(--estado-abandonado); }
+
+/* El rango en el que esta vista funciona: de 56rem para arriba. Por debajo se
+   desplaza en horizontal dentro de su propia caja, sin arrastrar consigo el
+   resto de la página.
+   El número no es arbitrario: las ocho columnas de ancho fijo suman 40,7rem y
+   el título se queda con lo que sobra, así que con menos de 56rem el título
+   empieza a recortarse a «Ba…» y la tabla deja de servir para nada. Encoger
+   hasta ahí no es más legible que empujar. */
+.tabla-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* El tope no es estético: 96rem + 1rem de hueco + 20rem de inspector + 3rem de
+   relleno son exactamente 120rem, que es una pantalla de 1920 maximizada. La
+   tabla nunca ocupa el sitio del inspector, así que abrir una ficha ahí no
+   mueve ni una columna. Y una fila de 1900 px tampoco se lee: el título se
+   queda en un extremo y el año en el otro. */
+.tabla {
+  width: 100%;
+  max-width: 96rem;
+  min-width: 56rem;
+  border-collapse: collapse;
+  font-size: var(--t-m);
+  /* Fijo y con `colgroup`: sin esto cada columna mide lo que mida su contenido
+     y la cabecera deja de cuadrar con las celdas al desplazar. */
+  table-layout: fixed;
+}
+
+.tabla thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--fondo);
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+  padding: 0;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-atenuado);
+}
+
+.tabla th .th {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: var(--e-2) var(--e-3);
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.tabla th.num .th {
+  text-align: right;
+}
+
+.tabla td {
+  height: 33px;
+  padding: 0 var(--e-3);
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La casilla no es texto y no cabía: con el relleno de las demás celdas, los
+   20 px que ocupa se salían de los 19 que quedaban, y `text-overflow` pintaba
+   unos puntos suspensivos al lado de cada casilla de la tabla. */
+.tabla td:first-child {
+  padding: 0;
   text-align: center;
 }
 
-.card-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  line-height: 1.2;
+/* Las filas espaciadoras de la virtualización no llevan celdas, y sin esto
+   heredarían el borde inferior y pintarían una raya suelta. */
+.tabla tbody tr:not([class]) td,
+.tabla tbody tr:empty {
+  border: none;
 }
 
-.detail {
-  width: 20rem;
-  flex-shrink: 0;
+/* Las cifras se comparan en vertical, así que a la derecha y con las cifras
+   del mismo ancho. Vale para las dos tablas: la biblioteca y la revisión. */
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla tbody tr:hover td {
+  background: var(--hueco);
+}
+
+.tabla tr.marcada td {
+  background: color-mix(in srgb, var(--acento) 12%, transparent);
+}
+
+/* La fila que está enseñando el inspector, recuadrada como una fila y no como
+   nueve celdas: con `border-collapse` un `box-shadow` sobre el `<tr>` no se
+   pinta, así que cada celda pone su parte del recuadro y solo las de los
+   extremos ponen los lados. */
+.tabla tr.abierta td {
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento);
+}
+
+.tabla tr.abierta td:first-child {
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento),
+    inset 1px 0 0 var(--acento);
+}
+
+.tabla tr.abierta td:last-child {
+  box-shadow:
+    inset 0 1px 0 var(--acento),
+    inset 0 -1px 0 var(--acento),
+    inset -1px 0 0 var(--acento);
+}
+
+.tabla .celda {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La cola de revisión, en columnas por lo mismo que la biblioteca: lo que se
+   repasa de ciento cincuenta entradas es una sola columna.
+   Su rango empieza en 65rem, que es lo que suman las cinco columnas fijas más
+   lo mínimo que necesita la entrada de tienda para enseñar carátula y título.
+   Por debajo se desplaza dentro de su caja, sin arrastrar la página. */
+.revision-viewport {
+  overflow-x: auto;
+}
+
+.revision {
+  width: 100%;
+  max-width: 96rem;
+  min-width: 65rem;
+  border-collapse: collapse;
+  font-size: var(--t-m);
+  table-layout: fixed;
+}
+
+.revision th {
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-atenuado);
+}
+
+/* Arriba y no centradas: una fila mide lo que mida su columna más alta —la de
+   los otros candidatos, que envuelve— y con las celdas centradas la entrada de
+   tienda se iría a flotar a media altura, lejos de lo que se compara con ella. */
+.revision td {
+  vertical-align: top;
+  padding: var(--e-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+/* Lo que queda por decidir, marcado. Son los empates y lo que se ha quitado a
+   mano: las únicas filas que el botón del lote no se va a llevar. */
+.revision tr.sin-elegir td {
+  background: color-mix(in srgb, var(--estado-pendiente) 10%, transparent);
+}
+
+.revision .origen strong {
+  /* Un título de tienda largo parte donde le toque en vez de estirar su
+     columna y llevarse por delante el ancho de las demás. */
+  overflow-wrap: anywhere;
+}
+
+/* En la tabla los candidatos van uno debajo de otro y no en fila: en 20rem no
+   caben dos al lado, y en columna las carátulas quedan alineadas, que es lo
+   que hace comparables dos fichas que se llaman igual. */
+.revision .candidates {
+  flex-direction: column;
+  margin: 0 0 var(--e-2);
+}
+
+/* La tarjeta y su enlace, también uno debajo del otro: al lado no caben en la
+   columna de la elegida, y forzarlo parte el «IGDB ↗» en dos líneas de dos
+   palabras. */
+.revision .candidate-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1rem;
-  position: sticky;
-  top: 1rem;
+  align-items: flex-start;
+  width: 100%;
 }
 
-.detail textarea,
-.detail select,
-.detail input {
+/* Sin `height: 100%`: con el enlace debajo, estirar la tarjeta a toda la altura
+   de su fila la echa fuera y encima de lo que venga después. */
+.revision .candidate {
+  height: auto;
+  width: 100%;
+}
+
+.tienda {
+  font-size: var(--t-xs);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-s);
+  padding: 0 var(--e-1);
+  margin-right: var(--e-1);
+  color: var(--texto-atenuado);
+}
+
+.estado {
+  font-size: var(--t-xs);
+  font-weight: 600;
+  border-radius: var(--radio-s);
+  padding: 0 var(--e-1);
+  border: 1px solid currentColor;
+}
+
+.estado.backlog { color: var(--estado-pendiente); }
+.estado.playing { color: var(--estado-jugando); }
+.estado.finished { color: var(--estado-terminado); }
+.estado.abandoned { color: var(--estado-abandonado); }
+
+/* Pegada abajo mientras dure la selección: si hay que buscarla, no se usa. */
+.lote {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  flex-wrap: wrap;
+  padding: var(--e-3);
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
+  margin-top: var(--e-3);
+}
+
+.lote-campo {
+  margin: 0;
+  font-size: var(--t-s);
+  color: var(--texto-atenuado);
+  font-weight: 400;
+}
+
+.lote select {
   font: inherit;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  font-size: var(--t-s);
+  padding: var(--e-1) var(--e-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-s);
+  background: transparent;
+  color: inherit;
+}
+
+.lote [role="alert"] {
+  flex-basis: 100%;
+  padding: 0;
+}
+
+/* «Hoy»: una propuesta y estanterías con su motivo. */
+.hoy,
+.revision-pantalla {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.hoy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+}
+
+/* Ni el destacado ni la tabla de la cola ganan nada estirándose a 1920 px: uno
+   acaba con el texto a un palmo de su portada y la otra con la entrada de
+   tienda a un extremo y el candidato al otro. */
+.destacado {
+  max-width: 64rem;
+}
+
+.destacado {
+  display: flex;
+  gap: var(--e-5);
+  align-items: flex-start;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+  background: var(--superficie);
+  padding: var(--e-5);
+  /* Envuelve en cuanto el texto se queda sin sitio: es la única pieza de esta
+     pantalla que no escala sola, porque tiene dos columnas. */
+  flex-wrap: wrap;
+}
+
+/* La portada del destacado, más grande que una baldosa y con la misma
+   proporción 3:4. Aquí el tamaño sí vive en el CSS: no hay ninguna aritmética
+   que dependa de él, que es lo que obliga a la pared a llevarlo en su código. */
+.destacado-arte img,
+.destacado-arte .cover-placeholder {
+  display: block;
+  width: 10.5rem;
+  height: 14rem;
+  object-fit: cover;
+}
+
+.destacado-texto {
+  flex: 1;
+  min-width: 15rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.destacado-texto p {
+  margin: 0;
+}
+
+.estante-caja h3 {
+  margin: 0;
+}
+
+.estante-caja .hint {
+  margin: var(--e-1) 0 var(--e-3);
+}
+
+/* Una fila que se desplaza en horizontal dentro de su caja: las columnas miden
+   lo que mide una baldosa, así que caben las que quepan y las demás esperan a
+   un lado en vez de partir la fila y desordenar la estantería. */
+.estante {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--e-2);
+  display: grid;
+  grid-auto-flow: column;
+  gap: var(--e-4);
+  overflow-x: auto;
+}
+
+/* La ficha, sin envoltorio: lo que se ve igual esté acoplada o superpuesta.
+   Que el formulario esté aquí y no repetido en cada presentación es lo mismo
+   que en el componente hay una sola llamada a `setUserState`: no existe el
+   sitio donde una de las dos podría empezar a verse distinta. */
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+}
+
+.ficha p {
+  margin: 0;
+}
+
+.ficha textarea,
+.ficha select,
+.ficha input {
+  font: inherit;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
   background: transparent;
   color: inherit;
   width: 100%;
+}
+
+.resumen {
+  font-size: var(--t-m);
+  line-height: 1.5;
+}
+
+/* Acoplada. La columna sigue a la tabla mientras se desplaza, y no se lleva
+   por delante el sitio del formulario cuando el resumen es largo: el texto se
+   queda con su alto y se desplaza dentro. */
+/* Sin `sticky`: ya no hay página que se desplace por debajo, así que la ficha
+   se queda donde está y es ella la que se desplaza por dentro cuando la ventana
+   es más baja que el formulario. */
+.detail {
+  width: 20rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+  padding: var(--e-5);
+}
+
+/* Siete líneas justas, en `em` sobre la interlínea: un alto en `rem` corta la
+   séptima por la mitad y un renglón partido se lee como texto roto, no como
+   texto que sigue más abajo. */
+.detail .resumen {
+  max-height: 10.5em;
+  overflow-y: auto;
+}
+
+/* Superpuesta.
+   El velo lo pinta el propio `<dialog>`, estirado a la ventana entera, y no
+   `::backdrop`: el pseudo-elemento no hereda las variables del elemento en
+   todos los motores, y un token que no llega deja el velo transparente. Así el
+   fondo sale del mismo sitio que todo lo demás. */
+.hoja {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: var(--e-5);
+  border: none;
+  background: var(--velo);
+  overflow: auto;
+}
+
+/* Con `[open]`: sin esto el `display` de aquí le ganaría al `display: none` que
+   el navegador le pone a un diálogo cerrado, y la hoja se vería antes de
+   abrirse. */
+.hoja[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hoja::backdrop {
+  background: none;
+}
+
+.hoja-caja {
+  width: min(34rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-l);
+}
+
+/* Alto explícito y recorte, no `aspect-ratio`: Steam sirve una cabecera 2,14:1
+   y GOG un logo con otra proporción, y la ficha tiene que empezar siempre a la
+   misma altura mida lo que mida la imagen. */
+.hoja-arte {
+  display: block;
+  width: 100%;
+  height: 15rem;
+  object-fit: cover;
+  border-radius: var(--radio-l) var(--radio-l) 0 0;
+}
+
+/* Sin arte, una banda y no un agujero de 15rem: se nota que ahí iba una imagen
+   sin que la ficha se abra enseñando nada. */
+.hoja-arte-vacia {
+  height: 4rem;
+  background: var(--hueco);
+  border-bottom: 1px dashed var(--borde);
+}
+
+.hoja-cuerpo {
+  padding: var(--e-5);
 }

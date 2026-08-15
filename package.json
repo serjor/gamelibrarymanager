@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint src",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "visual": "bun test/visual/mirar.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -30,6 +31,7 @@
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^7",
     "happy-dom": "^20",
+    "playwright-core": "^1.62.1",
     "typescript": "^5",
     "typescript-eslint": "^8",
     "vite": "^7"

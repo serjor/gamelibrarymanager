@@ -18,7 +18,8 @@ import { EpicSetup } from "./features/onboarding/EpicSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
-import { Library } from "./features/library/Library";
+import { Library, type Vista } from "./features/library/Library";
+import { Today } from "./features/today/Today";
 
 /** Las tiendas que se saben leer, con el nombre que se enseña de cada una. */
 const TIENDAS = [
@@ -42,7 +43,13 @@ export function App() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
-  const [tab, setTab] = useState<"library" | "review">("library");
+  // Arranca en la biblioteca y no en «Hoy»: si la recomendación falla, no
+  // conviene que sea lo primero que ves cada día.
+  const [tab, setTab] = useState<"library" | "today" | "review">("library");
+  // El modo de vista vive aquí y no dentro de la biblioteca porque cambiar de
+  // pestaña la desmonta: si lo guardara ella, volver de «Por revisar» te
+  // devolvería siempre a la tabla aunque estuvieras mirando las portadas.
+  const [vista, setVista] = useState<Vista>("tabla");
   // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
   // aplicación: se entra a ellos cuando el usuario quiere.
   const [setup, setSetup] = useState<Tienda | "igdb" | null>(null);
@@ -302,6 +309,12 @@ export function App() {
           Biblioteca
         </button>
         <button
+          className={tab === "today" ? "tab active" : "tab"}
+          onClick={() => setTab("today")}
+        >
+          Hoy
+        </button>
+        <button
           className={tab === "review" ? "tab active" : "tab"}
           onClick={() => setTab("review")}
         >
@@ -309,11 +322,11 @@ export function App() {
         </button>
       </nav>
 
-      {tab === "library" ? (
-        <Library rows={rows} onSaved={refresh} />
-      ) : (
-        <ReviewQueue items={queue} onResolved={refresh} />
+      {tab === "library" && (
+        <Library rows={rows} vista={vista} onVista={setVista} onSaved={refresh} />
       )}
+      {tab === "today" && <Today rows={rows} onSaved={refresh} />}
+      {tab === "review" && <ReviewQueue items={queue} onResolved={refresh} />}
     </main>
   );
 }

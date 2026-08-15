@@ -77,11 +77,26 @@ export interface LibraryRow {
   title: string;
   sort_title: string;
   cover_url: string | null;
+  /** El resumen de IGDB. Falta en las fichas nacidas del título de la tienda. */
+  summary: string | null;
   release_year: number | null;
   genres: string[];
   owned_stores: string[];
   wishlist_stores: string[];
+  /**
+   * La imagen apaisada de la tienda, que no es lo mismo que `cover_url`: IGDB
+   * sirve carátulas 3:4 y la tienda sirve cabeceras panorámicas. Las dos van
+   * juntas con `store_url`, y las dos salen de la misma copia.
+   */
+  store_cover_url: string | null;
+  store_url: string | null;
   playtime_minutes: number;
+  /**
+   * Última partida, en segundos desde la época. Solo lo publica Steam: un
+   * juego que solo esté en GOG lo tiene a `null` aunque se haya jugado, así
+   * que no se puede leer como «nunca jugado».
+   */
+  last_played_at: number | null;
   status: PlayStatus | null;
   rating: number | null;
   notes: string | null;
