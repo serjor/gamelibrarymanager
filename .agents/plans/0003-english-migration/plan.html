@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAN — Migration to English</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e2e4e8;--acc:#0b57d0;--warn:#b3261e;--sub:#f6f7f9}
+@media(prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e6;--mut:#9aa0a6;--line:#2e3138;--acc:#8ab4f8;--warn:#f2857b;--sub:#1e2127}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 ui-sans-serif,system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+h1{font-size:1.5rem;margin:0 0 .3rem;line-height:1.25}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:2.4rem 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.5rem 0 .4rem}
+p,li{margin:.35rem 0}
+ul,ol{padding-left:1.15rem}
+code{background:var(--sub);padding:.1rem .3rem;border-radius:3px;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--sub);border-left:2px solid var(--acc);padding:.7rem .9rem;border-radius:4px;overflow-x:auto;line-height:1.35;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:.42rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--sub);font-weight:600}
+em{color:var(--mut);font-style:normal}
+strong{font-weight:600}
+.m{color:var(--mut);font-size:13px;margin:0 0 1rem}
+.x{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<h1>Migration of the code and the documentation to English</h1>
+<p class="m">gamelibrarymanager · claude/migrate-english-asd-ste100-bt3rux · 2026-08-15 · size: L</p>
+<p class="m">This plan is written after the work, not before it. It records what was done, the decisions that the work made, and the two consequences that reach outside the repository. The plan documents 0001 and 0002 keep the decisions of the product; this one keeps only the decisions of the migration.</p>
+
+<h2>Goal</h2>
+<p>All of the project is in English. The code — comments, doc comments, identifiers, user-facing strings, SQL comments, CSS tokens and class names — reads as English. The documentation is in English and obeys ASD-STE100: short sentences, the active voice, one idea in each sentence and simple words. No behaviour of the application changes, except the language that the user reads and two locale decisions that go with it.</p>
+
+<h2>Status</h2>
+<p><strong>The plan is done: the four phases</strong> (commits <code>186d8b6</code>, <code>a39f13c</code>, <code>3f58870</code>; phase 1 wrote no code). Green: <code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code> (125), <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (70) and <code>bun run build</code>.</p>
+<p><span class="x">Not run in this session:</span> <code>bun run visual</code>. Chromium starts in the container and gives no answer, thus the harness waits. The harness does typecheck — <code>tsconfig.json</code> includes <code>test</code> — and each CSS selector that it uses was compared against <code>src/styles.css</code> and the components; all of them resolve. The check still needs one run on a real desktop. <code>AGENTS.md</code> already lists it as one of the two checks that CI cannot make.</p>
+
+<h2>Scope</h2>
+<h3>In</h3>
+<ul>
+<li>The six crates, <code>src-tauri</code>, the React interface, <code>src/styles.css</code> and the SQL migrations.</li>
+<li>All of the tests: the Rust suites, the inline <code>#[cfg(test)]</code> modules, the frontend tests and the visual harness.</li>
+<li><code>README.md</code>, <code>NOTICE</code>, <code>AGENTS.md</code>, the fourteen conventions of <code>docs/</code> and the job names of <code>.github/workflows/ci.yml</code>.</li>
+<li>File names: source files, test files, fixtures, migrations and documents whose name was in Spanish.</li>
+</ul>
+<h3>Out</h3>
+<ul>
+<li><code>.agents/plans/0001-*</code> and <code>0002-*</code>. They record closed decisions with the alternatives refused, and <code>AGENTS.md</code> says that nobody discusses them again. To translate them would rewrite the record of decisions that this migration did not make.</li>
+<li>The commit history. The old messages stay as they were written.</li>
+<li>The names of the real games in the fixtures. <code>Disco Elysium</code> and <code>The Witcher 3</code> are the names of products, not text of this project.</li>
+<li>Any change of behaviour that the language does not make necessary.</li>
+</ul>
+
+<h2>Current state</h2>
+<p>The project was written in Spanish and had started to move to English without a plan. Six files were already English — <code>connectors/src/epic/</code>, <code>commands/epic.rs</code>, <code>storage/tests/connector_state.rs</code>, <code>docs/connectors/switch-per-connector.md</code>, <code>docs/tauri/scripts-in-a-login-window.md</code> and the migrations <code>0006</code> and <code>0007</code> — and their neighbours were not. Some documents carried an English title and a Spanish body. <code>docs/documentation-guidelines.md</code> made the Spanish a rule: <em>«En español, como el resto del proyecto»</em>.</p>
+
+<h2>Gap</h2>
+<table>
+<tr><th>What existed</th><th>What was necessary</th></tr>
+<tr><td>Spanish prose in ~60 source files</td><td>English prose, and identifiers that agree with it</td></tr>
+<tr><td>Spanish identifiers mixed with English ones (<code>ficha_local</code> beside <code>local_game</code>)</td><td>One language for each name</td></tr>
+<tr><td>Spanish CSS tokens and classes (<code>--fondo</code>, <code>.baldosa</code>) used by the components and by the visual harness</td><td>English names, changed at the same time in the three places</td></tr>
+<tr><td>Spanish user-facing strings, and tests that asserted on them</td><td>English strings, and tests that assert on the new text</td></tr>
+<tr><td>Spanish file names for thirteen conventions and six source files</td><td>Names that say the rule in English</td></tr>
+<tr><td>A documentation rule that demanded Spanish</td><td>A rule that demands English and ASD-STE100</td></tr>
+</table>
+
+<h2>Decisions</h2>
+<table>
+<tr><th>Question</th><th>Decision</th><th>Why / refused</th></tr>
+
+<tr><td>What is "the code" and what is "the tests" in the requested order?</td><td>Phase 2 migrates the source and carries the renames into the tests only where a test would stop to compile. Phase 3 migrates the tests themselves.</td><td>The requested order asks for a validation between the two. A test file that does not compile makes that validation worth nothing, and the failures that stay are then exactly the ones expected: the assertions on hardcoded Spanish text. Refused to leave the tests completely untouched: <code>tsc</code> and <code>cargo</code> would have failed on missing symbols and would have hidden a real regression</td></tr>
+
+<tr><td>Do the inline <code>#[cfg(test)]</code> modules count as code or as tests?</td><td>As tests: phase 2 translated the code around them, phase 3 translated them.</td><td>They are tests, and the rule of the phase must not depend on the file that holds them. Refused to migrate them with their file: the second validation would then have had failures that nobody predicted</td></tr>
+
+<tr><td>Does ASD-STE100 also apply to the code comments?</td><td>Strictly in <code>docs/</code>, <code>README.md</code>, <code>NOTICE</code> and <code>AGENTS.md</code>. In the code, plain and short English in the register that the already-English files used.</td><td>The request names the documentation. The comments that were already English (<code>connectors/src/epic/mod.rs</code>) set a register, and a second register in the same file reads as two authors. Refused to apply STE to the code: it would have rewritten the six files that nobody asked to change</td></tr>
+
+<tr><td>Do the SQL comments of the migrations move?</td><td>Yes, in <code>0001</code> to <code>0005</code>.</td><td><code>0006</code> and <code>0007</code> were already English, thus the project had already accepted the cost. To stop here would leave the schema as the only part in Spanish. <span class="x">Consequence:</span> the sqlx checksum of those five migrations changes, and a database made before this branch fails <code>MIGRATOR.run</code> with a version mismatch. There is no tag and no release, and the tests use an in-memory database</td></tr>
+
+<tr><td>Do the migration files change their name?</td><td>Yes: <code>0004_match_candidate_ficha</code> → <code>0004_match_candidate_record</code>, <code>0005_origen_visible</code> → <code>0005_visible_origin</code>.</td><td>sqlx examines the checksum, not the description, thus the name costs nothing more than the checksum that the comments already changed. Refused to keep the Spanish names: they were the last Spanish in <code>migrations/</code></td></tr>
+
+<tr><td>What language do the sort and the money use?</td><td><code>localeCompare(…, "en")</code> and <code>Intl.NumberFormat("en-GB")</code>.</td><td>The code held these two values as "the language of the application", and the comment said so. The language changed, thus they change with it. <span class="x">Consequence:</span> a price now reads <code>15.99</code> and not <code>15,99</code>. Refused to keep <code>"es"</code>/<code>"es-ES"</code>: an English interface that writes Spanish numbers is the defect that the comment tried to prevent</td></tr>
+
+<tr><td>What does the CSS class <code>.resumen</code> become?</td><td><code>.synopsis</code>.</td><td>The direct translation, <code>.summary</code>, already exists in <code>App.tsx</code> on the count of records, and it has no rule in the sheet. To use the name again would give that paragraph the styles of the game synopsis. Refused also to rename the other class: it would have made two changes where one was sufficient</td></tr>
+
+<tr><td>Which SQL alias replaces <code>puesto</code> in the price query?</td><td><code>ordinal</code>.</td><td><code>rank</code> is the name of a window function of SQLite, and an alias with that name reads as a call. Refused <code>rank</code> and <code>position</code>: the first is confusing and the second is also a keyword of other engines</td></tr>
+
+<tr><td>What happens to the invented text of the fixtures?</td><td>It moves: <code>SECRETO_QUE_APORTA_EL_USUARIO</code> → <code>SECRET_THAT_THE_USER_SUPPLIES</code>, <code>PAGINA_2</code> → <code>PAGE_2</code>, and the three fixture files with a Spanish name.</td><td>They are text of this project, not answers of a store: the recorded answers keep the shape that the store gives, and only the invented values change. Refused to keep them: a test that reads <code>TOKEN_DE_REFRESCO_ROTADO</code> makes the reader change language in the middle of a line</td></tr>
+
+<tr><td>Are the plan documents translated?</td><td>No.</td><td><code>AGENTS.md</code> says that the closed decisions are not discussed again. A translation rewrites them. If the project wants them in English one day, that is a decision of the project and it needs its own plan</td></tr>
+
+<tr><td>Does the documentation rule change?</td><td>Yes: <code>docs/documentation-guidelines.md</code> now demands English and ASD-STE100.</td><td>The rule said Spanish. To translate the documents and leave the rule would make the next document Spanish again, and the migration would start to come undone at the first new convention</td></tr>
+</table>
+
+<h2>Plan</h2>
+
+<h3>Phase 1 — The baseline</h3>
+<p><em>Objective:</em> to know that the suite is green before a change, so that each later failure belongs to the migration.</p>
+<p>The container had no Tauri system dependencies and <code>cargo test</code> stopped at <code>gdk-sys</code>. <code>apt-get update</code> and the four packages of the CI job corrected that.</p>
+<p><strong>Done when:</strong> <code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code>, <code>bunx tsc --noEmit</code>, <code>bun run lint</code> and <code>bun test</code> (70) all pass. They did.</p>
+
+<h3>Phase 2 — The code, with the tests untouched</h3>
+<p><em>Objective:</em> each file that is not a test reads as English.</p>
+<table>
+<tr><th>Area</th><th>Change</th></tr>
+<tr><td><code>crates/domain</code>, <code>storage</code>, <code>connectors</code>, <code>metadata</code>, <code>secrets</code></td><td>Module documentation, doc comments and comments. The identifiers that were Spanish: <code>productos</code> → <code>products</code>, <code>con_esquema</code> → <code>with_scheme</code>, <code>lote</code> → <code>batch</code>, <code>cruces</code> → <code>joins</code>. The <code>thiserror</code> messages, which the user reads</td></tr>
+<tr><td><code>src-tauri</code></td><td><code>sortear_dmabuf_de_webkit</code> → <code>avoid_webkit_dmabuf</code>, <code>TRAMO</code> → <code>BATCH</code>, <code>FUENTES</code> → <code>SOURCES</code>, <code>PROVEEDOR</code> → <code>PROVIDER</code>, <code>ITAD_SONDA</code> → <code>ITAD_PROBE</code>, <code>pedir_codigo</code> → <code>request_code</code>, <code>resolver</code> → <code>resolve</code>. The <code>stage</code> strings of the progress, which the window shows</td></tr>
+<tr><td><code>migrations/</code></td><td>The comments of <code>0001</code> to <code>0005</code>, and two file names</td></tr>
+<tr><td><code>src/styles.css</code></td><td>18 token names, 44 class names, the <code>data-seleccionando</code> attribute, and all of the comments</td></tr>
+<tr><td><code>src/</code></td><td>The components, the interface text, and three file names: <code>estado.ts</code> → <code>status.ts</code>, <code>useSeleccion.ts</code> → <code>useSelection.ts</code>, <code>precios.ts</code> → <code>prices.ts</code></td></tr>
+<tr><td><code>index.html</code>, <code>capabilities/default.json</code></td><td><code>lang="es"</code> → <code>lang="en"</code>, and the <code>description</code> and <code>comment</code> fields</td></tr>
+</table>
+<p><strong>Done when:</strong> <code>cargo fmt</code>, <code>cargo clippy -D warnings</code> and <code>bun run lint</code> pass, and the only failures are tests that assert on hardcoded Spanish text. That is what occurred: <strong>1</strong> Rust test (<code>connector_switch.rs</code>, which looked for <code>"vuelve a conectar"</code>) and <strong>45</strong> frontend tests. <code>tsc</code> failed only in the test files that named the renamed exports.</p>
+
+<h3>Phase 3 — The tests</h3>
+<p><em>Objective:</em> the suite is green again, and it reads as English.</p>
+<table>
+<tr><th>Area</th><th>Change</th></tr>
+<tr><td>20 Rust test files</td><td>Test names, module documentation, comments, <code>expect</code> strings and assertion messages. Three file names: <code>una_sola_consulta.rs</code> → <code>one_query.rs</code>, <code>capacidades.rs</code> → <code>capabilities.rs</code>, <code>fichas_locales.rs</code> → <code>local_records.rs</code></td></tr>
+<tr><td>Inline <code>#[cfg(test)]</code> modules</td><td>The six modules of <code>encrypted_file.rs</code>, <code>library.rs</code>, <code>gog/mod.rs</code>, <code>gog/parse.rs</code>, <code>model.rs</code> and <code>commands/epic.rs</code></td></tr>
+<tr><td>Fixtures</td><td>Three file names and the invented token values inside them</td></tr>
+<tr><td>5 frontend test files</td><td>The descriptions, the comments and the selectors that the new interface text changed. <code>precios.test.ts</code> → <code>prices.test.ts</code></td></tr>
+<tr><td>The visual harness</td><td><code>arnes.ts</code> → <code>harness.ts</code>, <code>mirar.ts</code> → <code>look.ts</code>, the exported names, and the CSS selectors of the sheet that phase 2 renamed</td></tr>
+</table>
+<p><strong>Done when:</strong> the six checks of the baseline pass again. 125 Rust tests and 70 frontend tests, with no failure.</p>
+
+<h3>Phase 4 — The documentation</h3>
+<p><em>Objective:</em> the documentation is in English and obeys ASD-STE100.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>README.md</code>, <code>NOTICE</code></td><td>All of the prose. The architecture table and the third-party record</td></tr>
+<tr><td><code>AGENTS.md</code></td><td>The index, with the new name and the new path of each convention</td></tr>
+<tr><td><code>docs/documentation-guidelines.md</code></td><td>The language rule, and the example that named <code>capacidades.rs</code></td></tr>
+<tr><td>The fourteen conventions</td><td>Prose, code examples and "Real world examples" paths. Thirteen file names</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td>The job name <code>arquitectura</code> → <code>architecture</code>, two step names and the two <code>echo</code> messages</td></tr>
+</table>
+<p><strong>Done when:</strong> no relative link of <code>docs/</code>, <code>AGENTS.md</code> or <code>README.md</code> points at a file that does not exist, and the six checks stay green. A script examined the 131 relative links; the two that it reported are inside a fenced example block of the guidelines, written from <code>docs/tauri/</code> on purpose.</p>
+
+<h2>Data &amp; contracts</h2>
+<p>No table, no column and no command signature changes. What crossed a boundary is text, and these four are the places where a change on one side needs a change on the other:</p>
+<table>
+<tr><th>Contract</th><th>Two sides</th></tr>
+<tr><td>The <code>stage</code> of <code>SyncProgress</code></td><td>Rust writes it (<code>sync.rs</code>, <code>identity.rs</code>, <code>prices.rs</code>) and <code>App.tsx</code> shows it with no translation. The six values moved together</td></tr>
+<tr><td>The <code>thiserror</code> messages</td><td>The user reads them, and <code>connector_switch.rs</code> and <code>sync.rs</code> assert on part of them. Message and assertion moved together</td></tr>
+<tr><td>The CSS class names</td><td><code>styles.css</code>, the components, <code>App.test.tsx</code> and <code>test/visual/look.ts</code>. The four moved together</td></tr>
+<tr><td>The migration checksums</td><td>The comments of <code>0001</code> to <code>0005</code> and the <code>_sqlx_migrations</code> table of a database that already exists. They do <strong>not</strong> move together: see Risks</td></tr>
+</table>
+
+<h2>Risks</h2>
+<table>
+<tr><th>Risk</th><th>What it does</th><th>What was done</th></tr>
+<tr><td><span class="x">A database made before this branch stops opening.</span></td><td>sqlx compares the checksum of each migration with the checksum kept in <code>_sqlx_migrations</code>. The comments changed, thus the checksums changed, thus <code>MIGRATOR.run</code> gives a version mismatch</td><td>Accepted with a reason: no tag, no release, and migrations <code>0006</code> and <code>0007</code> had already set the precedent. A development database from before the branch must be made again</td></tr>
+<tr><td>The visual harness breaks quietly.</td><td>It is not in CI, thus a wrong selector shows only when a person runs it</td><td>It typechecks, and each selector was compared against <code>styles.css</code> and the components. It still needs one run on a desktop with Chromium</td></tr>
+<tr><td>A rename by hand changes the wrong thing.</td><td>A script that replaces words can rewrite a string that is not text of this project</td><td>The mechanical passes ran only on identifiers and on short strings, with a list written for each pass. The prose was translated file by file, and <code>cargo</code> and <code>tsc</code> found each collision that appeared: a binding that hid a function, a keyword used as an SQL alias, and five signatures that a line-based patch had removed</td></tr>
+<tr><td>The price format surprises the user.</td><td><code>15,99</code> becomes <code>15.99</code></td><td>Deliberate, written in Decisions, and the test of <code>prices.test.ts</code> now demands the new format</td></tr>
+</table>
+
+<h2>Verification</h2>
+<pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace                     # 125 tests, 0 failures
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test   # 70 tests, 0 failures
+bun run build</code></pre>
+<p>All of them pass in this branch. Two more, which CI cannot make:</p>
+<pre><code>cargo test -p secrets --test keyring_real -- --ignored   # needs secret-service
+bun run build &amp;&amp; bun run visual                          # needs a Chromium</code></pre>
+<p>The first stays <code>#[ignore]</code>, as before. The second did not run here.</p>
+
+<h2>Unknowns</h2>
+<ul>
+<li>Whether the visual harness passes on a real desktop. The selectors resolve and the file typechecks, but only a run says it.</li>
+<li>Whether <code>en-GB</code> is the currency format that the project wants. <code>en-US</code> writes the same numbers and a different currency symbol position; the decision was made for the language of the interface and nobody has looked at a screen with dollars.</li>
+<li>Whether the plan documents 0001 and 0002 stay in Spanish for ever. This plan does not decide that.</li>
+</ul>
+
+<h2>Do not</h2>
+<ul>
+<li>Do not translate <code>.agents/plans/0001-*</code> or <code>0002-*</code>. They hold closed decisions.</li>
+<li>Do not change the comments of a migration again without a reason. Each change costs the checksum of every database that exists.</li>
+<li>Do not write a new document in Spanish. <code>docs/documentation-guidelines.md</code> now demands English and ASD-STE100.</li>
+<li>Do not rename a CSS class in only one of the four places that use it.</li>
+<li>Do not translate the names of the real games in the fixtures. They are products, not text of this project.</li>
+</ul>
+
+</body>
+</html>

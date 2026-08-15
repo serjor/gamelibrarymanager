@@ -13,6 +13,10 @@ Before you write code, read also:
 - `.agents/plans/0002-rediseno-ui/plan.html` — the redesign of the interface,
   with the same rule. Beside it, `maquetas.html` shows the five alternatives that
   were compared, the four refused included.
+- `.agents/plans/0003-english-migration/plan.html` — the migration of the code
+  and the documentation to English. It records why the project writes in English
+  with ASD-STE100, and the two consequences that reach outside the repository:
+  the checksums of the migrations `0001` to `0005`, and the price format.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
 
