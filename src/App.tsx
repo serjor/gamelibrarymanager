@@ -6,6 +6,7 @@ import {
   type Account,
   type AppInfo,
   type ConnectorState,
+  type IdentityReport,
   type LibraryRow,
   type LibrarySummary,
   type PriceRow,
@@ -136,6 +137,18 @@ export function App() {
     try {
       const result = await action();
       if (label === "sync") setReport(result as SyncReport);
+      // Una pasada que se paró a mitad no lanza error: guarda lo que llevaba y
+      // devuelve el motivo. Si no se dijera aquí, el usuario vería el trabajo a
+      // medias sin una palabra de por qué, que es peor que un error.
+      if (label === "identity") {
+        const { stopped } = result as IdentityReport;
+        if (stopped !== null) {
+          setError(
+            `El emparejamiento se paró: ${stopped}. Lo hecho hasta ahí está ` +
+              "guardado; vuelve a pulsar «Emparejar» para seguir desde donde iba.",
+          );
+        }
+      }
       await refresh();
     } catch (cause) {
       setError(errorMessage(cause));

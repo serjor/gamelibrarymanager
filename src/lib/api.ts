@@ -146,6 +146,11 @@ export interface IdentityReport {
   review: number;
   unknown: number;
   cancelled: boolean;
+  /**
+   * El proveedor cortó y la pasada se detuvo ahí, con el motivo. Lo emparejado
+   * hasta ese punto está guardado: volver a pulsar sigue por donde iba.
+   */
+  stopped: string | null;
 }
 
 /** Única puerta hacia Rust. Nadie más llama a `invoke` directamente. */

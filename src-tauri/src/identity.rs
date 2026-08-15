@@ -29,7 +29,26 @@ pub struct IdentityReport {
     pub unknown: usize,
     /// El usuario paró a mitad. Lo emparejado se queda: es idempotente.
     pub cancelled: bool,
+    /// El proveedor cortó y la pasada se detuvo ahí, con el motivo.
+    ///
+    /// Es un resultado, no un error: lo emparejado hasta ese punto está
+    /// guardado y la siguiente pasada sigue por donde iba. Sube como error solo
+    /// lo que no deja seguir, que es un fallo de la base de datos.
+    pub stopped: Option<String>,
 }
+
+/// Cada cuántos juegos se guarda lo que se lleva emparejado.
+///
+/// Antes se escribía una sola vez, al final. Con mil juegos eso son minutos
+/// —IGDB admite cuatro peticiones por segundo—, y un 429 en el juego trescientos
+/// tiraba la pasada entera: ni un enlace escrito, y a empezar. Veinticinco
+/// juegos son unos diez segundos de trabajo, que es lo que se puede perder
+/// ahora.
+///
+/// Guardar de más no rompe nada: `rebuild_auto` reescribe el mismo conjunto de
+/// enlaces cada vez, así que llamarlo veinte veces deja lo mismo que llamarlo
+/// una.
+const TRAMO: usize = 25;
 
 pub async fn resolve(
     db: &Database,
@@ -48,6 +67,7 @@ pub async fn resolve(
     let mut report = IdentityReport::default();
     let mut links = GameLinkRepository(db).all().await?;
     let total = pending.len();
+    let mut desde_el_ultimo_guardado = 0;
 
     for (indice, entry) in pending.into_iter().enumerate() {
         // Se para entre juegos, nunca a mitad de uno. Lo ya decidido se
@@ -63,7 +83,17 @@ pub async fn resolve(
             total,
         });
 
-        let decision = decide(igdb, credentials, token, &entry).await?;
+        let decision = match decide(igdb, credentials, token, &entry).await {
+            Ok(decision) => decision,
+            // Un corte del proveedor para la pasada aquí mismo, y lo de atrás se
+            // guarda igual. Un fallo de la base de datos sí sube: si no se puede
+            // escribir, no hay nada que salvar.
+            Err(AppError::Metadata(error)) => {
+                report.stopped = Some(error.to_string());
+                break;
+            }
+            Err(otro) => return Err(otro),
+        };
         let ficha_local = links
             .iter()
             .find(|link| link.store_entry_id == entry.id)
@@ -75,7 +105,16 @@ pub async fn resolve(
                 confidence,
             } => {
                 let game_id =
-                    ensure_game(db, igdb, credentials, token, igdb_id, &entry, ficha_local).await?;
+                    match ensure_game(db, igdb, credentials, token, igdb_id, &entry, ficha_local)
+                        .await
+                    {
+                        Ok(game_id) => game_id,
+                        Err(AppError::Metadata(error)) => {
+                            report.stopped = Some(error.to_string());
+                            break;
+                        }
+                        Err(otro) => return Err(otro),
+                    };
                 // La entrada puede traer ya un enlace local: se sustituye, no se
                 // acumula. Con dos propuestas para la misma entrada, el índice
                 // único decidiría por orden de inserción cuál gana.
@@ -103,10 +142,17 @@ pub async fn resolve(
                     .await?;
             }
         }
+
+        desde_el_ultimo_guardado += 1;
+        if desde_el_ultimo_guardado == TRAMO {
+            GameLinkRepository(db).rebuild_auto(&links).await?;
+            desde_el_ultimo_guardado = 0;
+        }
     }
 
-    // Un solo `rebuild_auto` al final: reescribe los enlaces automáticos de una
-    // vez y respeta los manuales, que es la garantía de la fase 2.
+    // Y el último tramo, que casi nunca cae justo en el corte. `rebuild_auto`
+    // reescribe los enlaces automáticos de una vez y respeta los manuales, que
+    // es la garantía de la fase 2.
     GameLinkRepository(db).rebuild_auto(&links).await?;
     GameRepository(db).soft_delete_orphans().await?;
     Ok(report)

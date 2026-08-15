@@ -27,6 +27,8 @@ const state = {
   confirmados: [] as [string, number][],
   /** Cuántas veces se han pedido los precios de verdad. */
   preciosPedidos: 0,
+  /** El motivo por el que el emparejamiento se paró, si se paró. */
+  emparejamientoParado: null as string | null,
 };
 
 // El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
@@ -58,7 +60,13 @@ mock.module("./lib/api", () => ({
     syncNow: () =>
       Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [], skipped: [] }),
     resolveIdentities: () =>
-      Promise.resolve({ linked: 0, review: 0, unknown: 0, cancelled: false }),
+      Promise.resolve({
+        linked: 0,
+        review: 0,
+        unknown: 0,
+        cancelled: false,
+        stopped: state.emparejamientoParado,
+      }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
     connectGog: () => Promise.resolve("id"),
@@ -272,6 +280,20 @@ describe("App", () => {
     state.guardados = [];
     state.confirmados = [];
     state.preciosPedidos = 0;
+    state.emparejamientoParado = null;
+  });
+
+  it("un emparejamiento que se para dice por qué y que lo hecho está guardado", async () => {
+    // Se para, no falla: escribe lo que llevaba y devuelve el motivo. Sin
+    // decirlo, el usuario ve el trabajo a medias sin saber qué ha pasado.
+    state.accounts = [cuentaSteam];
+    state.emparejamientoParado = "límite de peticiones alcanzado";
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Emparejar" }));
+
+    const aviso = await screen.findByRole("alert");
+    expect(aviso.textContent).toContain("límite de peticiones alcanzado");
+    expect(aviso.textContent).toContain("está guardado");
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {

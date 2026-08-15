@@ -220,6 +220,76 @@ async fn reemparejar_no_altera_ningun_enlace_manual() {
     );
 }
 
+/// Un corte de IGDB a mitad no puede tirar la pasada entera.
+///
+/// Es lo que pasaba: los enlaces se escribían solo al final, así que un 429 en
+/// el juego trescientos —cinco minutos de límite de peticiones— dejaba la base
+/// exactamente como estaba. La pasada ahora se para donde le corten, guarda lo
+/// de atrás y dice por qué.
+#[tokio::test]
+async fn un_corte_de_igdb_no_tira_lo_que_ya_se_habia_emparejado() {
+    let db = Database::in_memory().await.expect("base");
+    let steam = cuenta(&db, StoreId::Steam).await;
+    let gog = cuenta(&db, StoreId::Gog).await;
+
+    // «Disco Elysium» va antes que «Doom» por título, que es el orden en que
+    // llegan: la primera se empareja por appid y la segunda corta la pasada.
+    let exacto = entrada(steam, StoreId::Steam, "632470", "Disco Elysium");
+    let que_corta = entrada(gog, StoreId::Gog, "1234", "Doom");
+    StoreEntryRepository(&db)
+        .upsert_many(&[exacto.clone(), que_corta.clone()])
+        .await
+        .expect("volcar entradas");
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .and(body_string_contains("uid = \"632470\""))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/games"))
+        .and(body_string_contains("where id = 115653"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(GAME_115653, "application/json"))
+        .mount(&server)
+        .await;
+    // La búsqueda por título es la que se encuentra el límite.
+    Mock::given(method("POST"))
+        .and(path("/games"))
+        .and(body_string_contains("search"))
+        .respond_with(ResponseTemplate::new(429))
+        .mount(&server)
+        .await;
+
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("un corte del proveedor es un resultado, no un error");
+
+    assert_eq!(report.linked, 1);
+    assert!(
+        report
+            .stopped
+            .as_deref()
+            .is_some_and(|motivo| motivo.contains("límite")),
+        "la pasada tiene que decir por qué se paró: {:?}",
+        report.stopped
+    );
+
+    // Y lo de antes del corte está escrito, que es todo el asunto.
+    let links = GameLinkRepository(&db).all().await.expect("enlaces");
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].store_entry_id, exacto.id);
+}
+
 #[tokio::test]
 async fn un_juego_que_igdb_no_conoce_se_cuenta_aparte_y_no_se_inventa_ficha() {
     let db = Database::in_memory().await.expect("base");
