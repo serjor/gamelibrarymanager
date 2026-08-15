@@ -8,7 +8,6 @@
 //!    cruzado. Aquí ya no hay certeza y decide `domain::matching`.
 
 mod parse;
-mod rate_limit;
 
 use std::time::Duration;
 
@@ -16,8 +15,8 @@ use domain::Candidate;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+use crate::rate_limit::RateLimiter;
 use crate::{MetadataError, Result};
-use rate_limit::RateLimiter;
 
 const API: &str = "https://api.igdb.com/v4";
 const TWITCH_TOKEN: &str = "https://id.twitch.tv/oauth2/token";

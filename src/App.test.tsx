@@ -7,6 +7,7 @@ import type {
   LibraryRow,
   LibrarySummary,
   PlayStatus,
+  PriceRow,
   ReviewItem,
 } from "./lib/api";
 
@@ -15,13 +16,17 @@ const state = {
   accounts: [] as Account[],
   connectors: [] as ConnectorState[],
   hasIgdb: true,
+  hasItad: true,
   summary: { owned: 0, wishlist: 0, games: 0, pending_review: 0 } as LibrarySummary,
   queue: [] as ReviewItem[],
   rows: [] as LibraryRow[],
+  precios: [] as PriceRow[],
   /** Lo que se ha escrito de verdad, para poder contarlo y mirarlo. */
   guardados: [] as [string, PlayStatus | null, number | null, string | null][],
   /** Los emparejamientos que ha llegado a confirmar el lote. */
   confirmados: [] as [string, number][],
+  /** Cuántas veces se han pedido los precios de verdad. */
+  preciosPedidos: 0,
 };
 
 // El bus de eventos de Tauri no existe fuera de la ventana de la aplicación.
@@ -41,6 +46,13 @@ mock.module("./lib/api", () => ({
       return Promise.resolve();
     },
     hasIgdbCredentials: () => Promise.resolve(state.hasIgdb),
+    hasItadCredentials: () => Promise.resolve(state.hasItad),
+    setItadCredentials: () => Promise.resolve(),
+    prices: () => Promise.resolve(state.precios),
+    refreshPrices: () => {
+      state.preciosPedidos += 1;
+      return Promise.resolve({ priced: 0, unknown: 0, cancelled: false });
+    },
     librarySummary: () => Promise.resolve(state.summary),
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () =>
@@ -144,6 +156,33 @@ const PARA_HOY = [
   fila({ title: "Outer Wilds", sort_title: "outer wilds" }),
 ];
 
+/**
+ * Tres deseados: uno rebajado a su mínimo histórico, uno con una rebaja
+ * cualquiera y uno que no vende nadie. Son los tres casos de la pantalla.
+ */
+const DESEADOS = [
+  fila({ title: "Blasphemous", sort_title: "blasphemous", owned_stores: [], wishlist_stores: ["gog"] }),
+  fila({ title: "Silksong", sort_title: "silksong", owned_stores: [], wishlist_stores: ["steam"] }),
+  fila({ title: "Tunic", sort_title: "tunic", owned_stores: [], wishlist_stores: ["steam"] }),
+];
+
+function precio(game_id: string, overrides: Partial<PriceRow> = {}): PriceRow {
+  return {
+    game_id,
+    shop: "GOG",
+    amount: 1599,
+    regular: 3999,
+    cut: 60,
+    currency: "EUR",
+    shops: 2,
+    low_all_time: 899,
+    low_year: 1349,
+    itad_slug: "un-juego",
+    captured_at: 1_755_000_000,
+    ...overrides,
+  };
+}
+
 const marcaDe = (titulo: string) => screen.getByLabelText(`Seleccionar ${titulo}`) as HTMLInputElement;
 
 /**
@@ -225,11 +264,14 @@ describe("App", () => {
     state.accounts = [];
     state.connectors = [];
     state.hasIgdb = true;
+    state.hasItad = true;
     state.summary = { owned: 0, wishlist: 0, games: 0, pending_review: 0 };
     state.queue = [];
     state.rows = [];
+    state.precios = [];
     state.guardados = [];
     state.confirmados = [];
+    state.preciosPedidos = 0;
   });
 
   it("sin cuentas conectadas lleva al asistente de Steam", async () => {
@@ -652,6 +694,109 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog")).toBeDefined();
     expect(fichaAbierta()).toBe("Outer Wilds");
+  });
+
+  it("los deseados salen ordenados por descuento, con el mínimo histórico al lado", async () => {
+    // Es el «done when» de la fase 8: un −60 % no significa nada por su cuenta,
+    // y ordenar por título convierte la lista en buenas intenciones.
+    state.accounts = [cuentaSteam];
+    state.rows = DESEADOS;
+    state.precios = [
+      precio(DESEADOS[0]!.game_id, { cut: 40, amount: 2399 }),
+      precio(DESEADOS[1]!.game_id, { cut: 75, amount: 899, shop: "Steam" }),
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    const titulos = () =>
+      screen.getAllByText(/./, { selector: ".deseado-titulo" }).map((e) => e.textContent);
+    // Lo más rebajado primero, y lo que no tiene precio al final: eso no es
+    // «barato», es que no hay dato.
+    expect(titulos()).toEqual(["Silksong", "Blasphemous", "Tunic"]);
+
+    const silksong = screen.getByText("Silksong").closest("tr");
+    expect(silksong?.textContent).toContain("8,99");
+    expect(silksong?.textContent).toContain("−75%");
+    expect(silksong?.textContent).toContain("Steam");
+    // Está en su mínimo histórico, que es la única pregunta que se hace quien
+    // mira esta pantalla.
+    expect(silksong?.textContent).toContain("en su mínimo");
+
+    const blasphemous = screen.getByText("Blasphemous").closest("tr");
+    expect(blasphemous?.textContent).not.toContain("en su mínimo");
+    expect(screen.getByText("Tunic").closest("tr")?.textContent).toContain("sin precio");
+  });
+
+  it("un juego en propiedad no se cuela en los deseados", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = [...DESEADOS, fila({ title: "Hades", sort_title: "hades" })];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    expect(screen.queryByText("Hades")).toBeNull();
+  });
+
+  it("sin clave de ITAD la lista sigue, y desde ella se llega al asistente", async () => {
+    // El mismo trato que IGDB: sin la clave hay menos que enseñar, no menos que
+    // funcionar.
+    state.accounts = [cuentaSteam];
+    state.hasItad = false;
+    state.rows = DESEADOS;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    expect(screen.getByText("Silksong")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Actualizar precios" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Configurar ITAD" }));
+    expect(await screen.findByText("Precios: IsThereAnyDeal")).toBeDefined();
+  });
+
+  it("sin ningún deseado todavía se puede configurar ITAD", async () => {
+    // La clave se guarda antes de tener deseados, no después: esconder el
+    // enlace hasta que hubiera lista dejaba sin ninguna forma de configurarla a
+    // quien acababa de instalar la aplicación.
+    state.accounts = [cuentaSteam];
+    state.hasItad = false;
+    state.rows = [];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    expect(screen.getByText(/No hay ningún juego en tu lista de deseados/)).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Configurar ITAD" }));
+    expect(await screen.findByText("Precios: IsThereAnyDeal")).toBeDefined();
+  });
+
+  it("con deseados sin ficha explica por qué la pantalla sale vacía", async () => {
+    // El caso que desconcierta: la cabecera dice «84 deseados» porque cuenta
+    // copias, y esta pantalla enseña fichas. Sin explicación, parece un fallo.
+    state.accounts = [cuentaSteam];
+    state.summary = { owned: 0, wishlist: 84, games: 0, pending_review: 84 };
+    state.rows = [];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    expect(screen.getByText(/84 copias deseadas/)).toBeDefined();
+    expect(screen.getByText(/Pulsa «Emparejar»/)).toBeDefined();
+  });
+
+  it("sin deseados no se ofrece actualizar unos precios que no existen", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = [];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+
+    expect(screen.queryByRole("button", { name: "Actualizar precios" })).toBeNull();
+  });
+
+  it("actualizar precios pide los precios y no sincroniza nada", async () => {
+    state.accounts = [cuentaSteam];
+    state.rows = DESEADOS;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Deseados/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar precios" }));
+
+    await waitFor(() => expect(state.preciosPedidos).toBe(1));
   });
 
   it("lo que gana con holgura viene ya elegido, y lo que empata no", async () => {

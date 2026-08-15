@@ -39,6 +39,12 @@
   --estado-terminado: #1c6b4f;
   --estado-abandonado: #98413a;
 
+  /* Un precio en su mínimo histórico. Token propio y no `--estado-terminado`
+     aunque los dos sean verdes: los de arriba dicen qué es un juego para ti, y
+     este dice algo de lo que cuesta hoy. Compartir el color haría que la misma
+     tinta significase dos cosas en la misma pantalla. */
+  --rebaja: #157a52;
+
   /* Tipografía. Pila del sistema: la CSP no declara `font-src`, así que una
      fuente enlazada no cargaría y una empaquetada obligaría a tocarla. */
   --fuente: system-ui, sans-serif;
@@ -83,6 +89,8 @@
     --estado-jugando: #79c0dd;
     --estado-terminado: #6fc3a0;
     --estado-abandonado: #e0928a;
+
+    --rebaja: #5fd3a5;
   }
 }
 
@@ -832,8 +840,88 @@ button.link {
   padding: 0;
 }
 
+/* Los deseados, ordenados por descuento.
+   En columnas por lo mismo que la biblioteca: lo que se compara de cuarenta
+   juegos son las cifras, y en vertical no se comparan.
+   Su rango empieza en 58rem, que es lo que suman las cinco columnas fijas más
+   lo mínimo que necesita el título. Por debajo se desplaza dentro de su caja,
+   sin arrastrar la página. */
+.deseados-viewport {
+  overflow-x: auto;
+}
+
+.deseados-tabla {
+  width: 100%;
+  max-width: 96rem;
+  min-width: 58rem;
+  border-collapse: collapse;
+  font-size: var(--t-m);
+  table-layout: fixed;
+}
+
+.deseados-tabla th {
+  border-bottom: 1px solid var(--borde);
+  text-align: left;
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texto-atenuado);
+}
+
+/* Arriba, como en la revisión: la celda del juego lleva dos líneas y las de
+   cifras una, y centradas quedarían flotando a media altura de la fila. */
+.deseados-tabla td {
+  vertical-align: top;
+  padding: var(--e-3);
+  border-bottom: 1px solid var(--borde);
+}
+
+/* Cada dato con su matiz debajo: la tienda bajo el precio, el precio sin
+   rebaja bajo el descuento. En la misma línea no caben en 7rem y el bloque
+   deja de leerse como una cifra. */
+.deseados-tabla .hint {
+  display: block;
+  font-size: var(--t-xs);
+}
+
+.deseado-titulo {
+  display: block;
+  /* Un título largo parte donde le toque en vez de estirar su columna y
+     llevarse por delante el ancho de las demás. */
+  overflow-wrap: anywhere;
+}
+
+.deseados-barra {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--e-3);
+}
+
+.deseados-barra p {
+  margin: 0;
+}
+
+.descuento {
+  font-weight: 600;
+}
+
+/* Que el precio de hoy iguale al mínimo histórico es la única pregunta que de
+   verdad se hace quien mira esta pantalla, así que es lo único que se pinta de
+   color aquí. */
+.minimo {
+  display: block;
+  color: var(--rebaja);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
 /* «Hoy»: una propuesta y estanterías con su motivo. */
 .hoy,
+.deseados,
 .revision-pantalla {
   flex: 1;
   min-height: 0;

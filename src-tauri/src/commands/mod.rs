@@ -11,10 +11,12 @@ use domain::{
     ScoredCandidate, StoreAccount, StoreAccountId, StoreEntryId, StoreId, UserState,
 };
 use metadata::igdb::{IgdbCredentials, IgdbToken};
+use metadata::itad::ItadCredentials;
 use serde::Serialize;
 use storage::repositories::{
     ConnectorStateRepository, GameLinkRepository, GameRepository, LibraryRepository, LibraryRow,
-    MatchCandidateRepository, StoreAccountRepository, StoreEntryRepository, UserStateRepository,
+    MatchCandidateRepository, PriceRepository, PriceRow, StoreAccountRepository,
+    StoreEntryRepository, UserStateRepository,
 };
 use tauri::{AppHandle, Emitter, State};
 use time::OffsetDateTime;
@@ -22,7 +24,8 @@ use uuid::Uuid;
 
 use crate::error::AppError;
 use crate::identity::{self, IdentityReport};
-use crate::state::{AppState, IGDB_CREDENTIALS, IGDB_TOKEN, credential_key};
+use crate::prices::{self, PriceReport};
+use crate::state::{AppState, IGDB_CREDENTIALS, IGDB_TOKEN, ITAD_CREDENTIALS, credential_key};
 use crate::sync::{self, ProgressSink, SyncProgress, SyncReport};
 
 #[derive(Serialize)]
@@ -261,6 +264,85 @@ pub async fn set_igdb_credentials(
 #[tauri::command]
 pub async fn has_igdb_credentials(state: State<'_, AppState>) -> Result<bool, AppError> {
     Ok(state.secrets().await?.get(IGDB_CREDENTIALS)?.is_some())
+}
+
+/// Un juego que ITAD conoce seguro. Sirve para gastar una consulta en probar la
+/// clave antes de guardarla, igual que la de Steam se prueba contra su API.
+const ITAD_SONDA: &str = "620";
+
+/// Guarda la clave de ITAD y el país del usuario, comprobándolos antes.
+///
+/// El país no es un adorno: ITAD devuelve las tiendas y la moneda de ese
+/// mercado, así que pedir precios sin decir dónde vives da el precio de otro
+/// sitio.
+#[tauri::command]
+pub async fn set_itad_credentials(
+    state: State<'_, AppState>,
+    key: String,
+    country: String,
+) -> Result<(), AppError> {
+    let country = country.trim().to_uppercase();
+    if country.len() != 2 || !country.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Err(AppError::Message(
+            "el país tiene que ser un código de dos letras, como ES o DE".to_owned(),
+        ));
+    }
+
+    let credentials = ItadCredentials {
+        key: key.trim().to_owned(),
+        country,
+    };
+    state
+        .itad
+        .lookup_by_steam_app_id(&credentials, ITAD_SONDA)
+        .await?;
+
+    state
+        .secrets()
+        .await?
+        .set(ITAD_CREDENTIALS, &serde_json::to_string(&credentials)?)?;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn has_itad_credentials(state: State<'_, AppState>) -> Result<bool, AppError> {
+    Ok(state.secrets().await?.get(ITAD_CREDENTIALS)?.is_some())
+}
+
+/// Pone precio a la lista de deseados.
+///
+/// Botón propio y no un paso de la sincronización: preguntar a un tercero
+/// cuánto cuesta algo no puede dejar sin sincronizar las tiendas del usuario.
+#[tauri::command]
+pub async fn refresh_prices(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<PriceReport, AppError> {
+    let credentials = itad_credentials(&state).await?;
+    state.begin_operation();
+    let progress = WindowProgress {
+        app: app.clone(),
+        state: &state,
+    };
+
+    let report = prices::refresh(&state.db, &state.itad, &credentials, &progress).await;
+    state.end_operation();
+    report
+}
+
+/// El mejor precio de cada deseado, en una consulta.
+#[tauri::command]
+pub async fn prices(state: State<'_, AppState>) -> Result<Vec<PriceRow>, AppError> {
+    Ok(PriceRepository(&state.db).all().await?)
+}
+
+async fn itad_credentials(state: &AppState) -> Result<ItadCredentials, AppError> {
+    let raw = state
+        .secrets()
+        .await?
+        .get(ITAD_CREDENTIALS)?
+        .ok_or(AppError::MissingItadCredentials)?;
+    Ok(serde_json::from_str(&raw)?)
 }
 
 /// Empareja lo que haya llegado de las tiendas con las fichas de IGDB.

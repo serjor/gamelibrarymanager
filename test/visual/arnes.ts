@@ -32,6 +32,7 @@ import type {
   ConnectorState,
   LibraryRow,
   LibrarySummary,
+  PriceRow,
   ReviewItem,
 } from "../../src/lib/api";
 
@@ -49,9 +50,11 @@ export interface Respuestas {
   list_accounts: Account[];
   connector_states: ConnectorState[];
   has_igdb_credentials: boolean;
+  has_itad_credentials: boolean;
   library_summary: LibrarySummary;
   review_queue: ReviewItem[];
   library: LibraryRow[];
+  prices: PriceRow[];
 }
 
 /**
@@ -155,6 +158,50 @@ export function colaDeEjemplo(): ReviewItem[] {
   ];
 }
 
+/**
+ * Deseados con los casos incómodos de esa pantalla: un título larguísimo, un
+ * juego que ya se tiene en otra tienda, uno en su mínimo histórico, uno que
+ * nunca se rebajó y uno que no vende nadie.
+ */
+export function deseadosDeEjemplo(): { library: LibraryRow[]; prices: PriceRow[] } {
+  const library = [
+    juego({ title: "Hollow Knight: Silksong", owned_stores: [], wishlist_stores: ["steam"] }),
+    juego({ title: "Blasphemous II", owned_stores: [], wishlist_stores: ["gog", "steam"] }),
+    juego({ title: "Baldur's Gate 3", owned_stores: ["gog"], wishlist_stores: ["steam"] }),
+    juego({
+      title: "Un juego deseado con un título larguísimo que no cabe de ninguna manera en su columna",
+      owned_stores: [],
+      wishlist_stores: ["epic"],
+    }),
+    juego({ title: "Un juego que no vende nadie", owned_stores: [], wishlist_stores: ["gog"] }),
+  ];
+
+  const precio = (row: LibraryRow, overrides: Partial<PriceRow>): PriceRow => ({
+    game_id: row.game_id,
+    shop: "GOG",
+    amount: 1599,
+    regular: 3999,
+    cut: 60,
+    currency: "EUR",
+    shops: 4,
+    low_all_time: 899,
+    low_year: 1349,
+    itad_slug: "un-juego",
+    captured_at: 1_755_000_000,
+    ...overrides,
+  });
+
+  return {
+    library,
+    prices: [
+      precio(library[0]!, { amount: 899, cut: 75, shop: "Steam" }),
+      precio(library[1]!, { amount: 2399, cut: 40 }),
+      precio(library[2]!, { amount: 5999, regular: 5999, cut: 0, low_all_time: null, low_year: null, shops: 1 }),
+      precio(library[3]!, { amount: 199, cut: 95, shop: "GreenManGaming" }),
+    ],
+  };
+}
+
 function respuestasPorDefecto(library: LibraryRow[]): Respuestas {
   return {
     app_info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true },
@@ -166,9 +213,16 @@ function respuestasPorDefecto(library: LibraryRow[]): Respuestas {
     // problema solo aparece cuando pasa algo.
     connector_states: [],
     has_igdb_credentials: true,
-    library_summary: { owned: library.length, wishlist: 0, games: library.length, pending_review: 0 },
+    has_itad_credentials: true,
+    library_summary: {
+      owned: library.length,
+      wishlist: library.filter((row) => row.wishlist_stores.length > 0).length,
+      games: library.length,
+      pending_review: 0,
+    },
     review_queue: [],
     library,
+    prices: [],
   };
 }
 

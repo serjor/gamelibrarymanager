@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use connectors::{EpicConnector, GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
-use metadata::IgdbClient;
+use metadata::{IgdbClient, ItadClient};
 use secrets::{Backend, EncryptedFileStore, KeyringStore, SecretStore};
 use std::path::PathBuf;
 use storage::Database;
@@ -20,10 +20,14 @@ pub const SERVICE: &str = "com.serjor.gamelibrarymanager";
 /// usuario y viven donde vive todo lo demás: en el almacén, nunca en SQLite.
 pub const IGDB_CREDENTIALS: &str = "igdb:credentials";
 pub const IGDB_TOKEN: &str = "igdb:token";
+/// La clave de ITAD y el país con el que se piden los precios. El país viaja
+/// con la clave porque sin él los precios son los de otro mercado.
+pub const ITAD_CREDENTIALS: &str = "itad:credentials";
 
 pub struct AppState {
     pub db: Database,
     pub igdb: IgdbClient,
+    pub itad: ItadClient,
     pub connectors: HashMap<StoreId, Arc<dyn StoreConnector>>,
     /// El almacén puede no existir todavía: sin keyring hace falta que el
     /// usuario escriba una contraseña antes de poder guardar nada.
@@ -44,6 +48,7 @@ impl AppState {
             .unwrap_or_default();
 
         let http_for_igdb = http.clone();
+        let http_for_itad = http.clone();
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
         connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http.clone())));
         connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http.clone())));
@@ -61,6 +66,7 @@ impl AppState {
         Self {
             db,
             igdb: IgdbClient::new(http_for_igdb),
+            itad: ItadClient::new(http_for_itad),
             connectors,
             secrets: RwLock::new(secrets),
             backend,

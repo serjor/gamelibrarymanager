@@ -1,6 +1,10 @@
-//! IGDB corta a 4 peticiones por segundo y devuelve 429. Con una biblioteca de
-//! mil juegos eso no es un detalle: es la diferencia entre sincronizar y que se
-//! caiga a la mitad.
+//! Every provider cuts the requests it takes and answers 429 over the line.
+//! With a library of a thousand games that is not a detail: it is the difference
+//! between finishing a pass and stopping halfway.
+//!
+//! One limiter for every provider, with the window each one publishes. IGDB
+//! allows 4 requests per second, ITAD allows 1000 every five minutes, and the
+//! rule that keeps both honest is the same one.
 
 use std::collections::VecDeque;
 use std::time::Duration;

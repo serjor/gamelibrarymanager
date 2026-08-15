@@ -132,6 +132,9 @@ fn las_paginas_de_una_copia_y_de_una_ficha_estan_permitidas() {
         "https://store.steampowered.com/app/292030",
         "https://www.gog.com/game/the_witcher_2",
         "https://www.igdb.com/games/the-witcher-3-wild-hunt",
+        // La de ITAD lleva dos tramos de ruta detrás del slug, y `*` no cruza
+        // barras: por eso su patrón es el único con `**`.
+        "https://isthereanydeal.com/game/disco-elysium/info/",
     ];
 
     let patrones: Vec<glob::Pattern> = patrones_permitidos()

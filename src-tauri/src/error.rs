@@ -19,6 +19,8 @@ pub enum AppError {
     Metadata(#[from] metadata::MetadataError),
     #[error("faltan las credenciales de IGDB: sin ellas no hay metadatos ni fichas unificadas")]
     MissingIgdbCredentials,
+    #[error("falta la clave de ITAD: sin ella no hay precios de los deseados")]
+    MissingItadCredentials,
     #[error("dato interno ilegible: {0}")]
     Serde(#[from] serde_json::Error),
 }

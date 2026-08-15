@@ -102,6 +102,38 @@ export interface LibraryRow {
   notes: string | null;
 }
 
+/**
+ * El precio de un deseado: la oferta más barata de ahora mismo, y hasta dónde
+ * ha llegado a bajar.
+ *
+ * Los importes son céntimos. Se formatean al pintarlos y no antes: un precio es
+ * un recuento, y en coma flotante 19,99 deja de valer 19,99 en cuanto se opera
+ * con él.
+ */
+export interface PriceRow {
+  game_id: string;
+  /** La tienda que lo vende más barato, con el nombre que le da ITAD. */
+  shop: string;
+  amount: number;
+  regular: number;
+  /** Descuento en porcentaje, tal y como lo calcula ITAD. */
+  cut: number;
+  currency: string;
+  /** Cuántas tiendas lo venden ahora mismo. */
+  shops: number;
+  low_all_time: number | null;
+  low_year: number | null;
+  /** Con qué nombre publica ITAD la página del juego. */
+  itad_slug: string | null;
+  captured_at: number;
+}
+
+export interface PriceReport {
+  priced: number;
+  unknown: number;
+  cancelled: boolean;
+}
+
 export interface SyncProgress {
   store: string;
   stage: string;
@@ -138,6 +170,12 @@ export const api = {
   hasIgdbCredentials: () => invoke<boolean>("has_igdb_credentials"),
   setIgdbCredentials: (clientId: string, clientSecret: string) =>
     invoke<void>("set_igdb_credentials", { clientId, clientSecret }),
+  hasItadCredentials: () => invoke<boolean>("has_itad_credentials"),
+  /** La clave de ITAD y el país: sin país, los precios son los de otro sitio. */
+  setItadCredentials: (key: string, country: string) =>
+    invoke<void>("set_itad_credentials", { key, country }),
+  refreshPrices: () => invoke<PriceReport>("refresh_prices"),
+  prices: () => invoke<PriceRow[]>("prices"),
   resolveIdentities: () => invoke<IdentityReport>("resolve_identities"),
   reviewQueue: () => invoke<ReviewItem[]>("review_queue"),
   reviewConfirm: (storeEntryId: string, igdbId: number) =>

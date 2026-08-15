@@ -41,6 +41,23 @@ impl GameRepository<'_> {
         Ok(())
     }
 
+    /// Anota con qué identificador conoce el proveedor de precios esta ficha.
+    ///
+    /// Va aparte de `upsert` y no dentro de `Game` a propósito: enriquecer una
+    /// ficha con metadatos de IGDB reescribe su fila entera, y si el
+    /// identificador viajara ahí, cada emparejamiento lo borraría sin que nadie
+    /// lo notase hasta la siguiente consulta de precios.
+    pub async fn set_itad(&self, id: GameId, itad_id: &str, slug: &str) -> Result<()> {
+        sqlx::query("UPDATE game SET itad_id = ?, itad_slug = ?, updated_at = ? WHERE id = ?")
+            .bind(itad_id)
+            .bind(slug)
+            .bind(OffsetDateTime::now_utc())
+            .bind(game_id_to_text(id))
+            .execute(self.0.pool())
+            .await?;
+        Ok(())
+    }
+
     pub async fn find(&self, id: GameId) -> Result<Option<Game>> {
         sqlx::query(
             "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres

@@ -8,6 +8,7 @@ import {
   type ConnectorState,
   type LibraryRow,
   type LibrarySummary,
+  type PriceRow,
   type ReviewItem,
   type SyncProgress,
   type SyncReport,
@@ -16,10 +17,12 @@ import { SteamSetup } from "./features/onboarding/SteamSetup";
 import { GogSetup } from "./features/onboarding/GogSetup";
 import { EpicSetup } from "./features/onboarding/EpicSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
+import { ItadSetup } from "./features/onboarding/ItadSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library, type Vista } from "./features/library/Library";
 import { Today } from "./features/today/Today";
+import { Wishlist } from "./features/wishlist/Wishlist";
 
 /** Las tiendas que se saben leer, con el nombre que se enseña de cada una. */
 const TIENDAS = [
@@ -39,20 +42,22 @@ export function App() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
   const [hasIgdb, setHasIgdb] = useState(false);
+  const [hasItad, setHasItad] = useState(false);
   const [summary, setSummary] = useState<LibrarySummary | null>(null);
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [rows, setRows] = useState<LibraryRow[]>([]);
+  const [precios, setPrecios] = useState<PriceRow[]>([]);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   // Arranca en la biblioteca y no en «Hoy»: si la recomendación falla, no
   // conviene que sea lo primero que ves cada día.
-  const [tab, setTab] = useState<"library" | "today" | "review">("library");
+  const [tab, setTab] = useState<"library" | "today" | "wishlist" | "review">("library");
   // El modo de vista vive aquí y no dentro de la biblioteca porque cambiar de
   // pestaña la desmonta: si lo guardara ella, volver de «Por revisar» te
   // devolvería siempre a la tabla aunque estuvieras mirando las portadas.
   const [vista, setVista] = useState<Vista>("tabla");
   // Asistente abierto por encima de la biblioteca. Ninguno bloquea la
   // aplicación: se entra a ellos cuando el usuario quiere.
-  const [setup, setSetup] = useState<Tienda | "igdb" | null>(null);
+  const [setup, setSetup] = useState<Tienda | "igdb" | "itad" | null>(null);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -66,22 +71,34 @@ export function App() {
       setInfo(nextInfo);
       if (!nextInfo.unlocked) return;
 
-      const [nextAccounts, nextConnectors, nextIgdb, nextSummary, nextQueue, nextRows] =
-        await Promise.all([
-          api.listAccounts(),
-          api.connectorStates(),
-          api.hasIgdbCredentials(),
-          api.librarySummary(),
-          api.reviewQueue(),
-          api.library(),
-        ]);
+      const [
+        nextAccounts,
+        nextConnectors,
+        nextIgdb,
+        nextItad,
+        nextSummary,
+        nextQueue,
+        nextRows,
+        nextPrecios,
+      ] = await Promise.all([
+        api.listAccounts(),
+        api.connectorStates(),
+        api.hasIgdbCredentials(),
+        api.hasItadCredentials(),
+        api.librarySummary(),
+        api.reviewQueue(),
+        api.library(),
+        api.prices(),
+      ]);
       if (!alive()) return;
       setAccounts(nextAccounts);
       setConnectors(nextConnectors);
       setHasIgdb(nextIgdb);
+      setHasItad(nextItad);
       setSummary(nextSummary);
       setQueue(nextQueue);
       setRows(nextRows);
+      setPrecios(nextPrecios);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -158,6 +175,7 @@ export function App() {
         {setup === "gog" && <GogSetup onConnected={cerrarSetup} />}
         {setup === "epic" && <EpicSetup onConnected={cerrarSetup} />}
         {setup === "igdb" && <IgdbSetup onConnected={cerrarSetup} />}
+        {setup === "itad" && <ItadSetup onConnected={cerrarSetup} />}
         <button className="link" onClick={() => setSetup(null)}>
           Volver
         </button>
@@ -193,6 +211,11 @@ export function App() {
   const conProblema = connectors.filter(
     (conector) => !conector.enabled || conector.last_error !== null,
   );
+
+  // Fichas y no copias: el resumen cuenta lo que dicen las tiendas —el mismo
+  // juego deseado en dos cuenta dos veces— y la pestaña tiene que decir lo
+  // mismo que la pantalla que abre.
+  const deseados = rows.filter((row) => row.wishlist_stores.length > 0).length;
 
   return (
     <main>
@@ -315,6 +338,12 @@ export function App() {
           Hoy
         </button>
         <button
+          className={tab === "wishlist" ? "tab active" : "tab"}
+          onClick={() => setTab("wishlist")}
+        >
+          Deseados{deseados > 0 && ` (${deseados})`}
+        </button>
+        <button
           className={tab === "review" ? "tab active" : "tab"}
           onClick={() => setTab("review")}
         >
@@ -326,6 +355,17 @@ export function App() {
         <Library rows={rows} vista={vista} onVista={setVista} onSaved={refresh} />
       )}
       {tab === "today" && <Today rows={rows} onSaved={refresh} />}
+      {tab === "wishlist" && (
+        <Wishlist
+          rows={rows}
+          precios={precios}
+          copias={summary?.wishlist ?? 0}
+          hasItad={hasItad}
+          busy={busy !== null}
+          onRefresh={() => void run("prices", api.refreshPrices)}
+          onSetup={() => setSetup("itad")}
+        />
+      )}
       {tab === "review" && <ReviewQueue items={queue} onResolved={refresh} />}
     </main>
   );

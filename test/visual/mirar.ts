@@ -11,7 +11,20 @@
  *
  *     bun run build && bun run visual
  */
-import { colaDeEjemplo, conLaApp } from "./arnes";
+import { bibliotecaDeEjemplo, colaDeEjemplo, conLaApp, deseadosDeEjemplo } from "./arnes";
+
+/**
+ * Una aplicación con material en las cuatro pantallas a la vez: juegos en
+ * propiedad para la biblioteca y «Hoy», deseados con precio, y cola de
+ * revisión. Sin esto, una pantalla vacía pasa las comprobaciones sin haber
+ * pintado nada.
+ */
+const DESEADOS = deseadosDeEjemplo();
+const TODO = {
+  library: [...bibliotecaDeEjemplo(), ...DESEADOS.library],
+  prices: DESEADOS.prices,
+  review_queue: colaDeEjemplo(),
+};
 
 let fallos = 0;
 
@@ -38,7 +51,7 @@ const ANCHOS = [1920, 1600, 1400, 1200, 1000, 900, 800, 700, 620];
  */
 console.log("\nUna sola barra de desplazamiento");
 for (const ancho of [1920, 1400, 1000]) {
-  for (const pantalla of ["Biblioteca", "Hoy", "Por revisar"] as const) {
+  for (const pantalla of ["Biblioteca", "Hoy", "Deseados", "Por revisar"] as const) {
     const r = await conLaApp(
       async (pagina) => {
         if (pantalla !== "Biblioteca") {
@@ -48,9 +61,10 @@ for (const ancho of [1920, 1400, 1000]) {
         return pagina.evaluate(() => {
           const raiz = document.documentElement;
           const marco = document.querySelector("main")!;
-          // Quien de verdad se desplaza: la lista, «Hoy» o la cola.
-          const region =
-            document.querySelector(".tabla-viewport, .pared-viewport, .hoy, .revision-pantalla")!;
+          // Quien de verdad se desplaza: la lista, «Hoy», los deseados o la cola.
+          const region = document.querySelector(
+            ".tabla-viewport, .pared-viewport, .hoy, .deseados, .revision-pantalla",
+          )!;
           const caja = region.getBoundingClientRect();
           return {
             paginaSeDesplaza: raiz.scrollHeight > raiz.clientHeight + 1,
@@ -63,7 +77,7 @@ for (const ancho of [1920, 1400, 1000]) {
           };
         });
       },
-      { ancho, alto: 900, respuestas: { review_queue: colaDeEjemplo() } },
+      { ancho, alto: 900, respuestas: TODO },
     );
 
     const donde = `${ancho} px · ${pantalla}`;
@@ -329,6 +343,53 @@ for (const ancho of ANCHOS) {
   comprobar(`${ancho} px · la página no se va de lado`, !r.deLado);
 }
 
+/**
+ * Los deseados. Las cinco columnas de cifras son de ancho fijo y dentro va
+ * dinero formateado, que mide distinto en cada moneda, más un rótulo debajo:
+ * lo que no cabe en su celda se mete encima de la de al lado.
+ */
+console.log("\nDeseados");
+for (const ancho of ANCHOS) {
+  const r = await conLaApp(
+    async (pagina) => {
+      await pagina.getByRole("button", { name: /^Deseados/ }).click();
+      await pagina.locator(".deseados-tabla tbody tr").first().waitFor();
+      return pagina.evaluate(() => {
+        const izquierdas = (fila: Element) =>
+          [...fila.children].map((c) => Math.round(c.getBoundingClientRect().left));
+        const cabecera = document.querySelector(".deseados-tabla thead tr");
+        const primera = document.querySelector(".deseados-tabla tbody tr");
+        const desbordan = [...document.querySelectorAll(".deseados-tabla td")].filter((celda) => {
+          const caja = celda.getBoundingClientRect();
+          return [...celda.querySelectorAll("*")].some(
+            (dentro) => dentro.getBoundingClientRect().right > caja.right + 0.5,
+          );
+        }).length;
+        return {
+          cuadra:
+            cabecera !== null &&
+            primera !== null &&
+            JSON.stringify(izquierdas(cabecera)) === JSON.stringify(izquierdas(primera)),
+          desbordan,
+          // Lo más rebajado arriba: es el orden que hace útil la pantalla, y se
+          // mira en el DOM pintado y no en la función que lo ordena.
+          primerTitulo: document.querySelector(".deseado-titulo")?.textContent ?? "",
+          deLado: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      });
+    },
+    { ancho, respuestas: TODO },
+  );
+
+  comprobar(`${ancho} px · la cabecera cuadra con las celdas`, r.cuadra);
+  comprobar(`${ancho} px · ninguna celda se sale de su columna`, r.desbordan === 0);
+  comprobar(
+    `${ancho} px · manda el descuento (${r.primerTitulo})`,
+    r.primerTitulo.startsWith("Un juego deseado con un título"),
+  );
+  comprobar(`${ancho} px · la página no se va de lado`, !r.deLado);
+}
+
 console.log("\nCola de revisión");
 for (const ancho of ANCHOS) {
   const r = await conLaApp(
@@ -381,6 +442,40 @@ for (const ancho of ANCHOS) {
   comprobar(`${ancho} px · ninguna celda se sale de su columna`, r.desbordan === 0);
   comprobar(`${ancho} px · ningún candidato se sale de su hueco`, r.seSalen === 0);
   comprobar(`${ancho} px · la página no se va de lado`, !r.deLado);
+}
+
+/**
+ * El único color propio de la pantalla de deseados, medido en los dos temas.
+ * Un verde que se lee bien sobre el fondo claro se apaga sobre el oscuro, y
+ * ahí precisamente es donde marca el dato que más se busca.
+ */
+console.log("\nContraste de «en su mínimo»");
+for (const tema of ["light", "dark"] as const) {
+  const razon = await conLaApp(
+    async (pagina) => {
+      await pagina.getByRole("button", { name: /^Deseados/ }).click();
+      await pagina.locator(".minimo").first().waitFor();
+      return pagina.evaluate(() => {
+        const numeros = (s: string) => (s.match(/\d+/g) ?? []).map(Number);
+        const luz = (c: number[]) => {
+          const canal = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * canal(c[0] ?? 0) + 0.7152 * canal(c[1] ?? 0) + 0.0722 * canal(c[2] ?? 0);
+        };
+        const marca = document.querySelector(".minimo")!;
+        const [alto, bajo] = [
+          luz(numeros(getComputedStyle(marca).color)),
+          luz(numeros(getComputedStyle(document.body).backgroundColor)),
+        ].sort((a, b) => b - a) as [number, number];
+        return (alto + 0.05) / (bajo + 0.05);
+      });
+    },
+    { tema, respuestas: TODO },
+  );
+
+  comprobar(`${tema} · «en su mínimo» ${razon.toFixed(2)}:1`, razon >= 4.5);
 }
 
 console.log("\nContraste del texto sobre su fondo");

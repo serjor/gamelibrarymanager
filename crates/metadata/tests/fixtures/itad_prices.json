@@ -1,0 +1,49 @@
+[
+  {
+    "id": "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c",
+    "historyLow": {
+      "all": { "amount": 8.99, "amountInt": 899, "currency": "EUR" },
+      "y1": { "amount": 13.49, "amountInt": 1349, "currency": "EUR" },
+      "m3": { "amount": 17.99, "amountInt": 1799, "currency": "EUR" }
+    },
+    "deals": [
+      {
+        "shop": { "id": 61, "name": "Steam" },
+        "price": { "amount": 17.99, "amountInt": 1799, "currency": "EUR" },
+        "regular": { "amount": 39.99, "amountInt": 3999, "currency": "EUR" },
+        "cut": 55,
+        "voucher": null,
+        "storeLow": { "amount": 9.99, "amountInt": 999, "currency": "EUR" },
+        "flag": null,
+        "drm": [{ "id": 6, "name": "Steam" }],
+        "platforms": [{ "id": 1, "name": "Windows" }],
+        "timestamp": "2026-08-14T10:00:00+02:00",
+        "expiry": null,
+        "url": "https://store.steampowered.com/app/632470/"
+      },
+      {
+        "shop": { "id": 35, "name": "GOG" },
+        "price": { "amount": 15.99, "amountInt": 1599, "currency": "EUR" },
+        "regular": { "amount": 39.99, "amountInt": 3999, "currency": "EUR" },
+        "cut": 60,
+        "voucher": null,
+        "storeLow": { "amount": 9.99, "amountInt": 999, "currency": "EUR" },
+        "flag": null,
+        "drm": [],
+        "platforms": [{ "id": 1, "name": "Windows" }],
+        "timestamp": "2026-08-14T10:00:00+02:00",
+        "expiry": "2026-08-21T10:00:00+02:00",
+        "url": "https://www.gog.com/game/disco_elysium"
+      }
+    ]
+  },
+  {
+    "id": "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d3a",
+    "historyLow": {
+      "all": null,
+      "y1": null,
+      "m3": null
+    },
+    "deals": []
+  }
+]

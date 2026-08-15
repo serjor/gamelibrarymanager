@@ -1,6 +1,7 @@
 mod commands;
 mod error;
 mod identity;
+mod prices;
 mod state;
 mod sync;
 
@@ -8,6 +9,7 @@ mod sync;
 /// existe para poder probar el caso de uso completo sin arrancar Tauri.
 pub mod testing {
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
+    pub use crate::prices::{PriceReport, refresh as refresh_prices};
     pub use crate::state::credential_key;
     pub use crate::sync::{Silent, SyncReport, sync_account, sync_all, sync_stores};
 }
@@ -42,6 +44,10 @@ pub fn run() {
             commands::library_summary,
             commands::set_igdb_credentials,
             commands::has_igdb_credentials,
+            commands::set_itad_credentials,
+            commands::has_itad_credentials,
+            commands::refresh_prices,
+            commands::prices,
             commands::resolve_identities,
             commands::review_queue,
             commands::review_confirm,
