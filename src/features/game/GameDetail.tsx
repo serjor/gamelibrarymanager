@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/api";
+import { ESTADOS, ETIQUETA_ESTADO } from "../../lib/estado";
 
-const STATUSES: { value: PlayStatus; label: string }[] = [
-  { value: "backlog", label: "Pendiente" },
-  { value: "playing", label: "Jugando" },
-  { value: "finished", label: "Terminado" },
-  { value: "abandoned", label: "Abandonado" },
-];
+/**
+ * Acoplada al lado de la tabla, o superpuesta sobre las portadas.
+ *
+ * No son dos fichas: es la misma con dos maneras de enseñarse. Lo que cambia es
+ * el envoltorio y el arte; el formulario, el guardado y la validación son los
+ * mismos objetos en el mismo sitio.
+ */
+export type Presentacion = "inspector" | "sheet";
 
 function horas(minutos: number): string {
   if (minutos === 0) return "sin jugar";
@@ -22,13 +25,19 @@ function horas(minutos: number): string {
  * El estado del formulario se inicializa una vez y no se sincroniza con las
  * props: quien lo llama pasa `key={row.game_id}`, así que cambiar de juego
  * remonta el panel y no hace falta ningún efecto que copie props a estado.
+ *
+ * Solo hay una llamada a `api.setUserState` en todo el fichero, y eso es la
+ * comprobación de que las dos presentaciones guardan por el mismo camino: no
+ * hay un segundo sitio donde una pueda empezar a validar distinto que la otra.
  */
 export function GameDetail({
   row,
+  variant,
   onClose,
   onSaved,
 }: {
   row: LibraryRow;
+  variant: Presentacion;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -37,6 +46,18 @@ export function GameDetail({
   const [notes, setNotes] = useState(row.notes ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hoja = useRef<HTMLDialogElement | null>(null);
+
+  // Modal de verdad y no un `div` con `role="dialog"`: atrapar el foco, cerrar
+  // con Escape y devolver el foco a donde estaba lo hace ya el navegador, y
+  // hecho a mano son cien líneas que se equivocan en los casos raros.
+  useEffect(() => {
+    hoja.current?.showModal();
+  }, []);
+
+  // Cerrar por el camino del navegador cuando hay diálogo, que es lo que
+  // devuelve el foco a la baldosa desde la que se abrió.
+  const cerrar = () => (hoja.current === null ? onClose() : hoja.current.close());
 
   const save = async () => {
     setBusy(true);
@@ -51,11 +72,11 @@ export function GameDetail({
     }
   };
 
-  return (
-    <aside className="detail">
+  const ficha = (
+    <>
       <header>
-        <h2>{row.title}</h2>
-        <button className="link" onClick={onClose} aria-label="Cerrar ficha">
+        <h2 id="ficha-titulo">{row.title}</h2>
+        <button className="link" onClick={cerrar} aria-label="Cerrar ficha">
           cerrar
         </button>
       </header>
@@ -72,6 +93,15 @@ export function GameDetail({
         {row.wishlist_stores.length > 0 && ` · Deseado en: ${row.wishlist_stores.join(", ")}`}
       </p>
 
+      {/* El resumen es de IGDB, así que falta justo en las fichas que nacieron
+          del título de la tienda. Decirlo vale más que dejar un hueco mudo: es
+          la misma promesa que hace el aviso de la cabecera. */}
+      {row.summary ? (
+        <p className="resumen">{row.summary}</p>
+      ) : (
+        <p className="hint">Sin resumen: la ficha se creó con el título de la tienda.</p>
+      )}
+
       <label htmlFor="status">Estado</label>
       <select
         id="status"
@@ -79,9 +109,9 @@ export function GameDetail({
         onChange={(e) => setStatus((e.target.value || null) as PlayStatus | null)}
       >
         <option value="">Sin marcar</option>
-        {STATUSES.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+        {ESTADOS.map((valor) => (
+          <option key={valor} value={valor}>
+            {ETIQUETA_ESTADO[valor]}
           </option>
         ))}
       </select>
@@ -104,6 +134,37 @@ export function GameDetail({
       <button onClick={() => void save()} disabled={busy}>
         {busy ? "Guardando…" : "Guardar"}
       </button>
-    </aside>
+    </>
+  );
+
+  if (variant === "inspector") {
+    return <aside className="detail ficha">{ficha}</aside>;
+  }
+
+  return (
+    <dialog
+      className="hoja"
+      ref={hoja}
+      aria-labelledby="ficha-titulo"
+      onClose={onClose}
+      // El velo lo pinta el propio diálogo, así que un clic fuera de la caja
+      // llega aquí con el diálogo de destino y no hay que medir coordenadas.
+      onClick={(evento) => {
+        if (evento.target === hoja.current) cerrar();
+      }}
+    >
+      <div className="hoja-caja">
+        {/* Apaisada y de la tienda, que es lo que la hoja tiene y el inspector
+            no: la cabecera de Steam o el logo de GOG, recortados a la misma
+            caja para que la ficha empiece siempre a la misma altura.
+            Decorativa: el título va justo debajo. */}
+        {row.store_cover_url ? (
+          <img className="hoja-arte" src={row.store_cover_url} alt="" />
+        ) : (
+          <div className="hoja-arte hoja-arte-vacia" aria-hidden="true" />
+        )}
+        <div className="hoja-cuerpo ficha">{ficha}</div>
+      </div>
+    </dialog>
   );
 }

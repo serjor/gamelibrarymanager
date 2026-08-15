@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAN — Rediseño de la interfaz</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e2e4e8;--acc:#0b57d0;--warn:#b3261e;--sub:#f6f7f9}
+@media(prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e6;--mut:#9aa0a6;--line:#2e3138;--acc:#8ab4f8;--warn:#f2857b;--sub:#1e2127}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 ui-sans-serif,system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+h1{font-size:1.5rem;margin:0 0 .3rem;line-height:1.25}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:2.4rem 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.5rem 0 .4rem}
+p,li{margin:.35rem 0}
+ul,ol{padding-left:1.15rem}
+code{background:var(--sub);padding:.1rem .3rem;border-radius:3px;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--sub);border-left:2px solid var(--acc);padding:.7rem .9rem;border-radius:4px;overflow-x:auto;line-height:1.35;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:.42rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--sub);font-weight:600}
+em{color:var(--mut);font-style:normal}
+strong{font-weight:600}
+.m{color:var(--mut);font-size:13px;margin:0 0 1rem}
+.x{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<h1>Rediseño de la interfaz — tabla, pared y «Hoy»</h1>
+<p class="m">gamelibrarymanager · claude/video-game-manager-ui-ux-9ik7om · 2026-08-15 · tamaño: L</p>
+<p class="m">Las cinco alternativas que se compararon, navegables y con datos de ejemplo, están en <code>maquetas.html</code>, al lado de este fichero. Las cuatro descartadas siguen ahí a propósito: una alternativa que solo se describe no se puede juzgar.</p>
+
+<h2>Goal</h2>
+<p>La aplicación tiene un sistema de diseño propio en lugar de 324 líneas de CSS sin tokens. La biblioteca es una pantalla con dos presentaciones sobre el mismo estado —tabla densa y pared de portadas—, la ficha es un único componente que se acopla como inspector o se abre como hoja, la cola de revisión se resuelve comparando en lote, y una pestaña «Hoy» propone a qué jugar. Nada de esto exige una migración de base de datos.</p>
+
+<h2>Estado</h2>
+<p><strong>El plan está hecho: las siete fases</strong> (commits <code>4d58623</code>, <code>75b41c8</code>, <code>063821e</code>, <code>668a401</code>, <code>d608d31</code>, <code>9a67268</code>, y la 7 en el commit que trae este párrafo). En verde: <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (52), <code>bun run build &amp;&amp; bun run visual</code> (162 comprobaciones de maquetación) y —por primera vez, en la máquina del usuario y no en el contenedor— <code>cargo fmt</code>, <code>cargo clippy --all-targets --workspace</code> y <code>cargo test --workspace</code> (69 tests, 1 ignorado). Y también <code>bun run tauri dev</code>, que era la comprobación que faltaba: la ventana abre y el webview carga la interfaz. No lo hacía, pero por nada de este plan —WebKitGTK 2.52 se cerraba en la inicialización de GDK contra Wayland con el driver de NVIDIA, antes de ejecutar una sola línea de interfaz—; está arreglado aparte, en <code>src-tauri/src/main.rs</code>, con su convención en <code>docs/tauri/</code>.</p>
+
+<p>Y con la ventana ya abierta salió lo primero que solo se ve usando la aplicación: <strong>se desplazaban dos cosas a la vez</strong>. La lista medía <code>70vh</code> dentro de una página que también se desplazaba, así que había dos barras y la de fuera tenía cuarenta píxeles de recorrido; y <code>main</code>, capado a 80rem, dejaba 320 px muertos a cada lado de un 1920 en los que la rueda no movía nada. La altura se reparte ahora desde <code>html</code> y el tope de ancho lo pone cada pieza —la tabla, la cola, el destacado, los formularios— en vez del marco. Queda como tercera convención en <code>docs/ui/</code>, y el arnés lo comprueba en las tres pantallas.</p>
+
+<p>Pendiente del criterio del usuario, con la aplicación abierta y su biblioteca de verdad. Nada de esto es un fallo conocido; son juicios que no se pueden hacer sin mirar:</p>
+<table>
+<tr><th>Qué mirar</th><th>Dónde se cambia</th></tr>
+<tr><td>Alto de fila de la tabla, hoy 33 px: ¿cómodo o apretado?</td><td><code>LibraryTable.tsx</code> <code>ALTO_FILA</code> + <code>.tabla td</code></td></tr>
+<tr><td>Anchos de columna con títulos reales. El título nunca baja de 245 px, pero eso se decidió con títulos inventados</td><td><code>LibraryTable.tsx</code> <code>COLUMNAS</code></td></tr>
+<tr><td>Tamaño de baldosa, hoy 126×168</td><td><code>LibraryWall.tsx</code> <code>ANCHO</code> / <code>ALTO_PORTADA</code></td></tr>
+<tr><td>La casilla de selección de la pared solo sale al pasar por encima o al enfocar. Discreta con el arte, quizá demasiado</td><td><code>.pared-marca</code> en <code>styles.css</code></td></tr>
+<tr><td>El lote escribe secuencialmente, una llamada por juego. Con cuatro es instantáneo; con trescientos son trescientas idas y vueltas</td><td><code>BulkBar.tsx</code>; un comando en lote sería <code>src-tauri</code>, y <strong>no está en este plan</strong></td></tr>
+<tr><td>El ancho al que la ficha deja de acoplarse y pasa a hoja, hoy 82rem. Está medido —es la suma de lo que necesita cada pieza— pero se nota en una ventana de 1280, que es donde justo cambia</td><td><code>Library.tsx</code> <code>CABE_EL_INSPECTOR</code></td></tr>
+<tr><td>El tope de la tabla, hoy 96rem. Sale de que 96 + 1 de hueco + 20 de inspector + 3 de relleno son los 120rem de un 1920 maximizado, así que abrir una ficha no mueve ninguna columna. El precio es que con títulos cortos queda mucho aire entre el título y el año</td><td><code>.tabla</code> en <code>styles.css</code></td></tr>
+<tr><td>Alto de la banda de arte de la hoja, hoy 15rem, y ancho de la hoja, hoy 34rem</td><td><code>.hoja-arte</code> / <code>.hoja-caja</code> en <code>styles.css</code></td></tr>
+<tr><td>El resumen en el inspector se queda en siete líneas y se desplaza dentro. En la hoja va entero</td><td><code>.detail .resumen</code> en <code>styles.css</code></td></tr>
+<tr><td>La preselección de la cola. Con ciento cincuenta pendientes ahorra ciento cincuenta clics, pero el botón del lote sale armado nada más abrir la pestaña, y eso hay que verlo con una cola de verdad</td><td><code>preseleccion</code> en <code>ReviewQueue.tsx</code></td></tr>
+<tr><td>Una fila de la cola con cinco candidatos mide bastante alto: las tarjetas van en columna dentro de su celda. Se ganó comparabilidad y se perdió densidad</td><td><code>.revision .candidates</code> en <code>styles.css</code>, y los anchos de <code>colgroup</code> en <code>ReviewQueue.tsx</code></td></tr>
+<tr><td>Los cortes de «Hoy»: seis meses para «hace mucho que no lo tocas» y doce juegos por estantería. Salieron de razonarlos, no de mirarlos con una biblioteca de cuatrocientos</td><td><code>SEIS_MESES</code> y <code>POR_ESTANTE</code> en <code>shelves.ts</code></td></tr>
+<tr><td>Que la propuesta del día rote solo una vez al día. Es deliberado —una recomendación que cambia al repintar es una tragaperras— pero puede saber a poco</td><td><code>delDia</code> en <code>shelves.ts</code></td></tr>
+</table>
+
+<p>Y lo que ni la pared ni la hoja han visto nunca: <strong>arte real</strong>. Los CDN de Steam e IGDB estaban bloqueados en aquel entorno, así que la vista de portadas está juzgada entera con rectángulos de color, y la banda apaisada de la hoja también: el arnés visual la mide con un SVG de 460×215 servido desde la propia página. Es donde más probable es que algo cante al abrirla con carátulas de verdad.</p>
+
+<p>Estas cosas pasaron distinto de como las cuenta el resto de este documento, y mandan estas:</p>
+<ul>
+<li><code>LibraryGrid.tsx</code> se borró en la fase 3, y la 4 escribió <code>LibraryWall.tsx</code> nuevo en vez de renombrarlo.</li>
+<li>De <code>useVirtualGrid</code> se reaprovecha la <strong>aritmética</strong>, no la forma de pintar: la tabla usa filas espaciadoras y la pared <code>transform</code>. Dentro de una tabla, mover el <code>tbody</code> saca las celdas de su columna.</li>
+<li>Hay tres ficheros que el plan no nombraba: <code>src/lib/estado.ts</code> (etiquetas de estado en un solo sitio), <code>src/features/library/useSeleccion.ts</code> (el rango con mayúsculas, compartido por las dos vistas) y <code>sort.test.ts</code>.</li>
+<li>La fase 2 encontró y arregló una patología anterior al plan: cinco de las seis subconsultas de la biblioteca arrancaban por <code>store_entry</code>. Los <code>CROSS JOIN</code> que lo arreglan <strong>son necesarios</strong> y los vigila un test; quitarlos no rompe ningún resultado, solo multiplica por ochenta lo que tarda.</li>
+<li>La fase 5 tuvo que ensanchar <code>main</code> de 72rem a 80rem. Con 72 el inspector <strong>no cabe nunca</strong> —la tabla necesita 56rem, el inspector 20 y el hueco 1, y a <code>main</code> le quedaban 69— así que la ficha acoplada habría nacido muerta. El 72 era heredado, igual que los 900 px de la ventana; el 80 es la suma, y el arnés visual la comprueba a 1312, 1400 y 1600.</li>
+<li>El resumen sale en las <strong>dos</strong> presentaciones, no solo en la hoja. Lo que la hoja tiene y el inspector no es el arte apaisado, que es lo que justificaba tener dos; esconder además el texto habría dejado sin resumen a quien mira la biblioteca en tabla.</li>
+<li>La ficha usa ya <code>ESTADOS</code> y <code>ETIQUETA_ESTADO</code> de <code>src/lib/estado.ts</code>. Era el último sitio con su propia copia de la lista, que es justo lo que ese fichero decía haber quitado.</li>
+<li>La fase 5 arregló de paso dos cosas que se veían y no eran suyas: la celda de la casilla recortaba —el navegador pintaba unos puntos suspensivos al lado de cada casilla de la tabla— y la fila abierta se recuadraba celda a celda en vez de como una fila. Las dos son de la fase 3, y la primera la vigila ahora una comprobación del arnés.</li>
+<li>Se borró el CSS muerto que dejó la fase 4 al no renombrar <code>LibraryGrid.tsx</code>: <code>.grid</code>, <code>.grid-viewport</code>, <code>.card</code> y <code>.card-title</code> no los usaba nadie.</li>
+<li>La fase 6 sí tocó <code>src-tauri</code>, pero solo un comentario: el de <code>review_confirm_many</code> decía que cada par lo había elegido el usuario mirándolo, y con la preselección eso ya no es del todo cierto. Lo que sigue siendo cierto —nada se escribe sin confirmar, y los empates llegan sin elegir— está ahora escrito ahí.</li>
+<li>El estado de la cola guarda solo lo que el usuario ha tocado, no la selección entera. Así la preselección se deriva de la cola en cada render y no hace falta ningún efecto que la copie a estado cada vez que la cola se recarga.</li>
+<li>La estantería de <strong>«cortos»</strong> no existe, y no puede existir: la duración de un juego no está en SQLite ni la publica ninguna de las dos tiendas. Habría que inventarla a partir de las horas del usuario, que es otra cosa. En su lugar va <strong>«sin estrenar»</strong>, que sale de un dato que sí hay y responde a la misma pregunta —qué de lo mío no he tocado—.</li>
+<li>El destacado no se repite en las estanterías. Verlo dos veces en la misma pantalla hace pensar que son dos juegos; si por quitarlo una estantería se queda vacía, no se pinta, que es lo que ya hace con cualquier otra vacía.</li>
+<li>«Hoy» recibe <code>ahora</code> por parámetro en vez de mirar el reloj dentro de las reglas. Una regla que corta por «hace seis meses» y lee la hora por su cuenta no se puede probar sin viajar en el tiempo.</li>
+</ul>
+
+<h2>Scope</h2>
+<h3>In</h3>
+<ul>
+<li>Sistema de diseño: tokens de color para claro y oscuro, escala tipográfica, escala de espaciado, estados de foco visibles, y las primitivas que consumen el resto de features.</li>
+<li>Comportamiento por rango: cada vista declara en qué anchos funciona y qué hace al salirse de ellos. Los puntos de ruptura se miden, no se heredan de la configuración.</li>
+<li>Biblioteca con dos modos de vista sobre un estado compartido: <strong>tabla</strong> (ordenable, selección múltiple, edición en lote) y <strong>pared</strong> de portadas.</li>
+<li>Ficha unificada: un componente, dos presentaciones (inspector acoplado en tabla, hoja superpuesta con imagen apaisada desde la pared y desde «Hoy»).</li>
+<li>Cola de revisión rediseñada como tabla comparable con confirmación en lote.</li>
+<li>Pestaña «Hoy»: una recomendación destacada y estanterías temáticas.</li>
+<li>Exponer en <code>LibraryRow</code> cuatro campos que ya están en SQLite y no llegan al frontend: <code>summary</code>, portada de tienda, <code>store_url</code> y última partida.</li>
+<li>Reescribir los 13 tests actuales conservando su intención, y ampliarlos para lo que se estrena.</li>
+<li>Un documento de convención en <code>docs/ui/</code>, siguiendo <code>docs/documentation-guidelines.md</code>.</li>
+</ul>
+<h3>Out</h3>
+<ul class="x">
+<li>Las alternativas <strong>C (tablero de backlog)</strong> y <strong>D (terminal)</strong>. Quedan en Decisions con su motivo; no se reabren.</li>
+<li>Cualquier migración de base de datos. La última partida se lee con <code>json_extract</code> sobre <code>store_entry.raw</code>.</li>
+<li><code>crates/connectors</code>, <code>crates/domain</code>, <code>crates/metadata</code>: no se tocan. El umbral de emparejamiento y la lógica de la cola se quedan como están.</li>
+<li>Escribir <code>user_state.started_at</code> / <code>finished_at</code>. Eran de C; sin tablero no hay quién los rellene.</li>
+<li>Fases 7 (Epic) y 8 (precios con ITAD).</li>
+<li>Rehacer el flujo de los asistentes de conexión. Reciben el sistema de diseño y nada más: su lógica y sus textos no cambian.</li>
+<li>Internacionalización. El proyecto es en español.</li>
+</ul>
+
+<h2>Current state</h2>
+<table>
+<tr><th>Concern</th><th>Where</th><th>Today</th></tr>
+<tr><td>Hoja de estilos entera</td><td><code>src/styles.css:1-324</code></td><td>Un solo <code>--line</code> como token. Sin paleta, sin escala tipográfica, sin escala de espaciado. Colores literales sueltos (<code>#b3261e</code>, <code>#f2857b</code>) y <code>Canvas</code> para tapar en claro y oscuro</td></tr>
+<tr><td>Pantallas</td><td><code>src/App.tsx:241-260</code></td><td>Dos pestañas, <code>tab: "library" | "review"</code>, en un <code>useState</code></td></tr>
+<tr><td>Estado de la biblioteca</td><td><code>src/features/library/Library.tsx:9-18</code></td><td><code>filters</code> y <code>selected</code> (un solo juego) viven aquí. No hay orden ni selección múltiple</td></tr>
+<tr><td>Filtrado</td><td><code>src/features/library/filters.ts:29-40</code></td><td>Función pura sobre <code>LibraryRow[]</code>: búsqueda sin acentos, tienda, género, estado. Reutilizable tal cual</td></tr>
+<tr><td>Virtualización</td><td><code>src/features/library/useVirtualGrid.ts:29-77</code></td><td>Rejilla de altura fija, escrita a mano. Calcula columnas dividiendo el ancho; supone celdas, no filas</td></tr>
+<tr><td>Ficha</td><td><code>src/features/game/GameDetail.tsx:26-108</code></td><td><code>&lt;aside class="detail"&gt;</code> con estado local sin sincronizar (se remonta con <code>key</code>). Guarda con <code>api.setUserState</code></td></tr>
+<tr><td>Cola de revisión</td><td><code>src/features/review/ReviewQueue.tsx:74-137</code></td><td>Lista vertical; cada entrada con sus candidatos en tarjetas. Ya soporta lote con <code>reviewConfirmMany</code></td></tr>
+<tr><td>Consulta de biblioteca</td><td><code>crates/storage/src/repositories/library.rs:35-53</code></td><td>Una sola consulta con subconsultas correlacionadas. No selecciona <code>g.summary</code>, ni nada de <code>store_entry</code> salvo agregados</td></tr>
+<tr><td>Última partida</td><td><code>crates/connectors/src/steam/parse.rs:83</code></td><td><code>rtime_last_played</code> ya se guarda dentro de <code>store_entry.raw</code> (JSON). Nadie lo lee</td></tr>
+<tr><td>Última partida en GOG</td><td><code>crates/connectors/src/gog/parse.rs:174</code></td><td>No existe: GOG no la publica. <code>raw</code> lleva id, título, carátula y enlace</td></tr>
+<tr><td>Portada de tienda</td><td><code>migrations/0005_origen_visible.up.sql</code></td><td><code>store_entry.cover_url</code> y <code>store_url</code> poblados por las dos tiendas. Solo los usa la cola de revisión</td></tr>
+<tr><td>CSP</td><td><code>src-tauri/tauri.conf.json:24</code></td><td><code>img-src</code> permite IGDB, <code>cdn.cloudflare.steamstatic.com</code> y <code>*.gog-statics.com</code>. <strong>No hay <code>font-src</code></strong>: cae en <code>default-src 'self'</code></td></tr>
+<tr><td>Ventana</td><td><code>src-tauri/tauri.conf.json:17-18</code></td><td>1200×800 por defecto, mínimo 900×600. Lo escribió entero <code>e79f394</code> al montar el andamio y el plan 0001 no menciona ninguna dimensión: <strong>es un valor heredado, no un requisito</strong>. En escritorio la ventana se maximiza y se redimensiona a voluntad</td></tr>
+<tr><td>Tests de interfaz</td><td><code>src/App.test.tsx:59-268</code></td><td>13 tests que afirman sobre textos y nombres accesibles literales: <code>"Sincronizar"</code>, <code>/Por revisar \(1\)/</code>, <code>"steam · gog"</code>, <code>"Ver Limbo en IGDB"</code></td></tr>
+<tr><td>Dependencias de UI</td><td><code>package.json:14-19</code></td><td>Cuatro: React, ReactDOM y dos de Tauri. Ninguna de estilos, iconos, tabla o DnD</td></tr>
+</table>
+
+<h2>Gap</h2>
+<ul>
+<li><strong>Los colores dejan de estar sueltos</strong> — ahora: literales repartidos por <code>styles.css</code> y un único token; después: paleta completa en tokens con su variante oscura, y ningún componente declara un color literal; mueve: <code>src/styles.css</code>.</li>
+<li><strong>La biblioteca tiene orden y selección múltiple</strong> — ahora: <code>selected: string | null</code>; después: <code>sort</code> y <code>selected: Set&lt;string&gt;</code> en el mismo sitio, compartidos por los dos modos de vista; mueve: <code>src/features/library/Library.tsx</code>.</li>
+<li><strong>Se puede virtualizar una tabla</strong> — ahora: <code>useVirtualGrid</code> calcula columnas a partir del ancho; después: el mismo cálculo aritmético admite una sola columna sin caso especial; mueve: <code>src/features/library/useVirtualGrid.ts</code>.</li>
+<li><strong>La ficha se pinta de dos maneras con una sola lógica</strong> — ahora: <code>&lt;aside&gt;</code> fijo; después: el formulario y el guardado se quedan donde están y la presentación se decide fuera; mueve: <code>src/features/game/GameDetail.tsx</code>.</li>
+<li><strong>El frontend recibe lo que ya está guardado</strong> — ahora: 12 campos en <code>LibraryRow</code>; después: 16, con <code>summary</code>, <code>store_cover_url</code>, <code>store_url</code> y <code>last_played_at</code>; mueve: <code>crates/storage/src/repositories/library.rs</code>, <code>src/lib/api.ts</code>.</li>
+<li><strong>Hay una tercera pantalla</strong> — ahora: <code>"library" | "review"</code>; después: <code>"library" | "today" | "review"</code>, con la biblioteca de inicio; mueve: <code>src/App.tsx</code>.</li>
+</ul>
+
+<p>El reparto de estado es la decisión que sostiene todo lo demás, y es lo que separa a «Hoy» de un tercer modo de vista:</p>
+
+<pre>
+ App.tsx  tab: library | today | review
+   │
+   ├─ library ── filters + sort + selection ──┬─ vista tabla   ─┐
+   │                (un solo estado)          └─ vista pared   ─┤
+   │                                                            ├─► GameDetail
+   ├─ today ───── cortes propios, ignora filters ────────────────┤   (un componente,
+   │                                                            │    dos presentaciones)
+   └─ review ──── cola, estado propio ──────────────────────────┘
+</pre>
+
+<h2>Decisions</h2>
+<table>
+<tr><th>Pregunta</th><th>Decisión</th><th>Por qué / rechazado</th></tr>
+<tr><td>¿Cuál de las cinco alternativas?</td><td>B (tabla) como esqueleto, A (pared) como modo de vista, E («Hoy») como pantalla aparte.</td><td>B es la más barata y la única que escala a los cientos de pendientes que traerá Epic; A da el valor emocional sin coste de datos nuevo. Rechazadas <strong>C</strong> (arrastrar y soltar accesible escrito a mano, más <code>started_at</code>/<code>finished_at</code> que hoy no se escriben) y <strong>D</strong> (una rejilla de texto no la lee un lector de pantalla como lee botones, y tira la suite entera de tests)</td></tr>
+<tr><td>¿«Hoy» es un tercer modo de vista?</td><td>No: pestaña propia, y la de inicio es la biblioteca.</td><td>A y B comparten contrato —filtras y las dos enseñan lo filtrado—; E propone sus propios cortes. Como vista habría que inventar qué hace «género = RPG» sobre estanterías curadas. Rechazado además abrir en «Hoy»: si la recomendación falla, no conviene que sea lo primero que ves cada día</td></tr>
+<tr><td>¿Una ficha por vista?</td><td>Un componente con dos presentaciones.</td><td>Un solo formulario, un solo guardado, una sola validación. Rechazado el tratamiento único: el inspector desde la pared desaprovecha la imagen, y la hoja a sangre desde la tabla tapa la fila que estabas mirando y rompe el <code>↑↓</code></td></tr>
+<tr><td>¿Cómo se obtiene la última partida?</td><td><code>json_extract(e.raw, '$.rtime_last_played')</code> en la consulta que ya existe.</td><td>El dato lleva guardado desde la fase 3 (<code>steam/parse.rs:83</code>) y SQLite trae JSON1 de serie. Rechazada la columna materializada con migración y relleno: cuesta una migración, un <code>down</code> y un relleno para un dato que se recalcula en cada sincronización</td></tr>
+<tr><td>¿Qué se hace con los 13 tests?</td><td>Reescribir conservando la intención, y ampliar.</td><td>Cada test cubre una decisión de producto (sin cuentas → asistente; sin IGDB → aviso que no bloquea; empates agrupados). Rechazado el arreglo mínimo de selectores: dejaría sin red todo lo que se estrena, que es justo lo que más se puede romper</td></tr>
+<tr><td>¿Se pueden añadir dependencias?</td><td>Solo si escribirla a mano cuesta más que mantenerla, y justificándolo aquí.</td><td>Coherente con la decisión del plan 0001 y con <code>useVirtualGrid.ts:21-28</code>. Con C fuera, la candidata realista (DnD accesible) desaparece: <strong>este plan no prevé ninguna alta</strong></td></tr>
+<tr><td>¿Tipografía propia?</td><td>No: pila del sistema.</td><td><code>font-src</code> no está en la CSP (<code>tauri.conf.json:24</code>), así que una fuente web no carga y una empaquetada obliga a tocar la CSP y a meter binarios en el repo. La personalidad la dan escala, peso y espaciado</td></tr>
+<tr><td>¿Contra qué ancho se diseña?</td><td>Contra un rango, no contra un suelo. Cada vista declara dónde deja de funcionar y qué hace entonces; el <code>minWidth</code> de la configuración se elige <em>después</em>, a partir de lo que digan las vistas.</td><td>Los 900 px de <code>tauri.conf.json:17-18</code> no los decidió nadie: los escribió el andamiaje en <code>e79f394</code> y el plan 0001 ni menciona las dimensiones de la ventana. Rechazado tomarlos como suelo de diseño: en escritorio el usuario maximiza y redimensiona a voluntad, y con móvil y tableta en el horizonte un punto de ruptura heredado es justo lo que obliga a rehacer en vez de extender</td></tr>
+</table>
+
+<h2>Plan</h2>
+
+<h3>Fase 1 — Sistema de diseño</h3>
+<p><em>Objetivo:</em> existe una paleta en tokens y ningún componente declara un color literal.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/styles.css</code></td><td>Tokens de color (fondo, superficie, borde, texto, texto atenuado, acento, y los semánticos de estado de juego), escala tipográfica, escala de espaciado, radios y foco visible. Variante oscura con <code>prefers-color-scheme</code>. Se conserva <code>color-scheme: light dark</code></td></tr>
+<tr><td><code>src/styles.css</code></td><td>Sustituir <code>#b3261e</code>/<code>#f2857b</code> de <code>[role="alert"]</code> y el <code>Canvas</code> de <code>.sticky</code> por tokens</td></tr>
+</table>
+<p><strong>Done when:</strong> <code>grep -nE '#[0-9a-fA-F]{3,6}' src/styles.css</code> solo devuelve líneas dentro del bloque de definición de tokens. La aplicación sigue arrancando y se ve igual de mal que antes: esta fase no cambia ninguna maqueta.</p>
+
+<h3>Fase 2 — Los datos que ya existen y no llegan</h3>
+<p><em>Objetivo:</em> <code>LibraryRow</code> lleva los cuatro campos que las vistas nuevas necesitan.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>crates/storage/src/repositories/library.rs</code></td><td>Añadir <code>g.summary</code> al <code>SELECT</code>; tres subconsultas correlacionadas más, con el mismo patrón que las de <code>owned_stores</code>: portada de tienda, enlace de tienda y máximo de <code>json_extract(e.raw, '$.rtime_last_played')</code>. Cuatro campos nuevos en <code>LibraryRow</code> y en <code>hydrate</code></td></tr>
+<tr><td><code>src/lib/api.ts</code></td><td>Los mismos cuatro campos en la interfaz <code>LibraryRow</code></td></tr>
+<tr><td><code>crates/storage/tests/library.rs</code></td><td>Test: un juego con copia en Steam y en GOG resuelve última partida desde la de Steam y deja <code>null</code> cuando solo hay GOG</td></tr>
+</table>
+<pre><code>pub struct LibraryRow {
+    // …los 12 de hoy…
+    pub summary: Option&lt;String&gt;,
+    pub store_cover_url: Option&lt;String&gt;,   // apaisada: header de Steam, logo de GOG
+    pub store_url: Option&lt;String&gt;,
+    pub last_played_at: Option&lt;i64&gt;,       // epoch; None si ninguna copia lo publica
+}</code></pre>
+<p><strong>Done when:</strong> <code>cargo test --workspace</code> pasa, incluido <code>crates/storage/tests/una_sola_consulta.rs</code>: esta fase <strong>no</strong> puede aumentar el número de consultas, solo el tamaño de una.</p>
+
+<h3>Fase 3 — Biblioteca en tabla</h3>
+<p><em>Objetivo:</em> se puede ordenar por cualquier columna, seleccionar muchos juegos y cambiarles el estado de una vez.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/features/library/Library.tsx</code></td><td>Estado nuevo: <code>sort: {campo, sentido}</code> y <code>selected: Set&lt;string&gt;</code>. Sustituye a <code>selected: string | null</code></td></tr>
+<tr><td><code>src/features/library/sort.ts</code> <em>(nuevo)</em></td><td>Ordenación pura sobre <code>LibraryRow[]</code>, del mismo estilo que <code>filters.ts</code>: nulos al final siempre, y <code>sort_title</code> como desempate</td></tr>
+<tr><td><code>src/features/library/LibraryTable.tsx</code> <em>(nuevo)</em></td><td>Tabla virtualizada. Cabeceras ordenables, casilla por fila, <code>⇧+clic</code> para rango. Semántica de tabla real, no <code>div</code>s con <code>role</code></td></tr>
+<tr><td><code>src/features/library/useVirtualGrid.ts</code></td><td>Admitir una sola columna sin caso especial, para reusarlo en filas</td></tr>
+<tr><td><code>src/features/library/BulkBar.tsx</code> <em>(nuevo)</em></td><td>Barra que aparece con la selección: cambiar estado, poner nota, deseleccionar. Llama a <code>api.setUserState</code> por juego</td></tr>
+</table>
+<p><strong>Done when:</strong> ordenar por horas y por última partida da el orden esperado con nulos al final; seleccionar cuatro y aplicar «abandonado» los deja en cuatro llamadas; <code>bun test</code> cubre la ordenación y el rango con <code>⇧</code>.</p>
+
+<h3>Fase 4 — La pared como segundo modo de vista</h3>
+<p><em>Objetivo:</em> el mismo estado se ve como portadas sin que cambie ningún filtro.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/features/library/LibraryWall.tsx</code></td><td>Renombrado y reescritura de <code>LibraryGrid.tsx</code>: baldosas 3:4 con rótulo, indicador de estado, y la selección compartida con la tabla</td></tr>
+<tr><td><code>src/styles.css</code></td><td>Filas de rejilla con altura explícita (<code>grid-auto-rows</code>) y columnas de ancho fijo. <strong>No</strong> usar <code>aspect-ratio</code> sobre el item de rejilla</td></tr>
+<tr><td><code>src/features/library/Library.tsx</code></td><td>Conmutador de vista. La vista elegida se recuerda mientras dure la sesión</td></tr>
+</table>
+<p><strong>Done when:</strong> filtrar en tabla y cambiar a pared enseña exactamente el mismo conjunto; arrastrando el borde de la ventana de maximizada a lo más estrecho que permita, ninguna baldosa se solapa con la de la fila siguiente en ningún punto del recorrido.</p>
+
+<h3>Fase 5 — La ficha, un componente con dos presentaciones</h3>
+<p><em>Objetivo:</em> una sola lógica de formulario, dos maneras de enseñarla.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/features/game/GameDetail.tsx</code></td><td>Prop <code>variant: "inspector" | "sheet"</code>. El estado local, el guardado y el remontaje por <code>key</code> se quedan como están (<code>GameDetail.tsx:17-25</code>: la razón sigue siendo válida)</td></tr>
+<tr><td><code>src/features/game/GameDetail.tsx</code></td><td><code>sheet</code> usa <code>store_cover_url</code> de cabecera y <code>summary</code> de cuerpo; los dos con su hueco cuando faltan, que es el caso sin IGDB</td></tr>
+<tr><td><code>src/features/library/Library.tsx</code></td><td><code>inspector</code> desde la tabla, <code>sheet</code> desde la pared. <code>↑↓</code> cambia de juego sin cerrar el inspector</td></tr>
+</table>
+<p><strong>Done when:</strong> guardar desde las dos presentaciones recorre el mismo camino (un solo <code>api.setUserState</code> en el fichero); un juego sin portada de tienda y sin resumen abre la hoja sin huecos rotos.</p>
+
+<h3>Fase 6 — Revisión comparable</h3>
+<p><em>Objetivo:</em> los pendientes se comparan en una tabla y se confirman en lote.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/features/review/ReviewQueue.tsx</code></td><td>Filas en tabla: entrada de tienda, tienda, candidato elegido, año, puntuación y el resto de candidatos. Se conservan la agrupación de empates y <code>reviewConfirmMany</code>, que ya existen y funcionan</td></tr>
+<tr><td><code>src/features/review/ReviewQueue.tsx</code></td><td>Preselección del mejor candidato cuando no hay empate; en los empates no se preselecciona nada, que es la razón de que la cola exista (<code>ReviewQueue.tsx:12-26</code>)</td></tr>
+</table>
+<p><strong>Done when:</strong> los tests de empates y de lote siguen pasando reescritos; sigue existiendo la salida «ninguno: crear ficha con el título de la tienda» por entrada.</p>
+
+<h3>Fase 7 — «Hoy», tests y documentación</h3>
+<p><em>Objetivo:</em> la tercera pestaña, la suite al día y la convención escrita.</p>
+<table>
+<tr><th>Fichero</th><th>Cambio</th></tr>
+<tr><td><code>src/App.tsx</code></td><td><code>tab</code> pasa a <code>"library" | "today" | "review"</code>, con <code>"library"</code> de inicio</td></tr>
+<tr><td><code>src/features/today/Today.tsx</code> <em>(nuevo)</em></td><td>Una recomendación destacada más estanterías con su motivo: sin tocar desde…, empezados y sin terminar, en dos tiendas, cortos. Cortes propios, calculados sobre <code>rows</code>; no lee <code>filters</code></td></tr>
+<tr><td><code>src/features/today/shelves.ts</code> <em>(nuevo)</em></td><td>Las reglas de cada estantería, puras y probables, al estilo de <code>filters.ts</code>. Una estantería vacía no se pinta</td></tr>
+<tr><td><code>src/App.test.tsx</code></td><td>Los 13 reescritos conservando su intención, más los nuevos: ordenación, selección múltiple, cambio de vista, presentaciones de la ficha, estanterías vacías</td></tr>
+<tr><td><code>docs/ui/</code> + <code>AGENTS.md</code></td><td>Una convención por fichero, con ✅ y ❌ y rutas reales. Candidatas: los tokens como única fuente de color, y el estado compartido entre modos de vista. Alta en el índice de <code>AGENTS.md</code></td></tr>
+</table>
+<p><strong>Done when:</strong> con la biblioteca vacía «Hoy» no revienta ni enseña estanterías vacías; ninguno de los 13 comportamientos originales se ha perdido; CI en verde.</p>
+
+<h2>Data &amp; contracts</h2>
+<table>
+<tr><th>Cambio</th><th>Up</th><th>Down</th><th>Relleno</th></tr>
+<tr><td>Esquema SQLite</td><td colspan="3">Ninguno. No hay migración en este plan</td></tr>
+<tr><td><code>LibraryRow</code>: cuatro campos nuevos</td><td>Aditivo, serde los serializa solos</td><td>Quitarlos del <code>SELECT</code> y del struct</td><td>No aplica: se calculan en cada lectura</td></tr>
+<tr><td>Última partida</td><td><code>json_extract</code> sobre <code>store_entry.raw</code>, que ya está poblado desde la fase 3</td><td>Quitar la subconsulta</td><td>Ninguno. Cada sincronización reescribe <code>raw</code></td></tr>
+</table>
+<p>El único consumidor de <code>LibraryRow</code> es <code>src/lib/api.ts</code>, en el mismo binario: no hay ventana de compatibilidad que respetar ni clientes que no se actualicen.</p>
+
+<h2>Risks</h2>
+<table>
+<tr><th>Riesgo</th><th>Impacto</th><th>Mitigación</th><th>Vuelta atrás</th></tr>
+<tr><td>La última partida solo la publica Steam (<code>gog/parse.rs:174</code>)</td><td>Columna vacía y estantería «sin tocar desde…» coja para quien solo tenga GOG</td><td>Nulos al final al ordenar; decirlo en la interfaz en vez de fingir un dato</td><td>Ocultar la columna y la estantería</td></tr>
+<tr><td><code>json_extract</code> sobre <code>raw</code> en cada fila</td><td>La consulta de la biblioteca se hace más lenta con miles de copias</td><td>Medir en la fase 2 con <code>una_sola_consulta.rs</code>, que ya existe; el coste es de <em>una</em> consulta más grande, no de N consultas</td><td>Si no da, columna materializada y migración: es la alternativa que se rechazó y sigue disponible</td></tr>
+<tr><td><code>aspect-ratio</code> en un item de rejilla</td><td>Las portadas se solapan con la fila siguiente: la fila se dimensiona con el contenido en flujo, que es cero si el rótulo va <code>position:absolute</code></td><td>Altura de fila explícita con <code>grid-auto-rows</code> y columnas de ancho fijo (fase 4)</td><td>N/A: es una regla, no un interruptor</td></tr>
+<tr><td>Reescribir los 13 tests</td><td>Perder cobertura sin enterarse</td><td>Reescribir de uno en uno, dejando en el mensaje del commit qué comportamiento cubre cada uno</td><td>Los originales están en el historial</td></tr>
+<tr><td>Diseñar contra un ancho fijo en vez de contra un rango</td><td>Es lo que convierte la futura versión de móvil y tableta en una reescritura en lugar de una extensión</td><td>Cada vista declara en qué rango funciona y qué hace al salirse, medido y no supuesto. El inspector pasa a hoja cuando la tabla deja de caber a su lado, con la presentación que ya trae la fase 5</td><td>N/A: es una regla, no un interruptor</td></tr>
+</table>
+
+<h2>Verification</h2>
+<ul>
+<li>Las mismas comprobaciones que ejecuta CI, todas en verde antes de dar una fase por cerrada.</li>
+<li>Manual, redimensionando: filtrar en tabla → cambiar a pared → el conjunto no cambia; seleccionar cuatro → aplicar estado → la tabla lo refleja; abrir ficha desde tabla y desde pared → guardar en las dos. Todo el recorrido se repite con la ventana maximizada y arrastrando el borde hasta el mínimo, buscando el ancho en el que cada vista se rompe.</li>
+<li>Manual, sin IGDB configurado: la pared, la ficha y «Hoy» se sostienen sin portada y sin resumen. Es el caso que el aviso de <code>App.tsx:191-199</code> promete que funciona.</li>
+</ul>
+<pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run tauri dev            # tiene que abrir la ventana</code></pre>
+
+<h2>Unknowns</h2>
+<table>
+<tr><th>Incógnita</th><th>Cómo resolverla</th><th>Plan B</th></tr>
+<tr><td>Qué imagen luce mejor de cabecera en la hoja: el <code>header.jpg</code> de Steam (apaisado) o el logo de GOG (apaisado con otra proporción)</td><td>Mirarlo con una biblioteca real en la fase 5; las dos ya se sirven en la cola de revisión (<code>ReviewQueue.tsx:79</code>)</td><td><strong>Aplicado el plan B</strong>: la fase 5 se cerró sin arte real, así que las dos se recortan a la misma caja (<code>.hoja-arte</code>, 15rem de alto y <code>object-fit: cover</code>), como ya hace <code>.origen img</code>. Sigue sin mirarse con carátulas de verdad</td></tr>
+<tr><td>Cuántas estanterías de «Hoy» sobreviven con una biblioteca pequeña</td><td>Probar con 20 juegos en la fase 7</td><td><strong>Resuelto sin umbral</strong>: con ocho juegos sobreviven dos o tres, y con cero no sobrevive ninguna sin que la pantalla se rompa. La regla que bastó es la más simple —una estantería vacía no se devuelve—, así que no hay mínimo que ajustar</td></tr>
+<tr><td>Qué forma toma la tabla en una pantalla estrecha</td><td>De las tres superficies es la única que no sobrevive a un teléfono: la pared y «Hoy» son rejilla y filas y escalan solas, pero nueve columnas en 390 px no son un punto de ruptura, son otra forma. Se decide cuando llegue la versión de móvil y tableta, no aquí</td><td>Por debajo de su rango, la biblioteca se queda solo en modo pared, que sí escala. Queda anotado como bifurcación conocida para no descubrirla entonces</td></tr>
+<tr><td>Qué <code>minWidth</code> debe quedar en <code>tauri.conf.json</code></td><td>Con las siete fases cerradas, medir el ancho al que cada vista deja de funcionar de verdad y poner ese, o quitarlo</td><td>Dejar el 900 heredado, sabiendo ya que es arbitrario y no un requisito</td></tr>
+</table>
+
+<h2>Do not</h2>
+<ul class="x">
+<li>No añadir ninguna migración. Si parece que hace falta una, es señal de que se ha colado algo del alcance de C o E-con-columna.</li>
+<li>No tocar <code>crates/connectors</code>, <code>crates/domain</code> ni <code>crates/metadata</code>.</li>
+<li>No cambiar el umbral de emparejamiento ni la lógica de agrupación de empates: el motivo está escrito en <code>ReviewQueue.tsx:12-26</code>.</li>
+<li>No instalar Tailwind, ni librería de componentes, iconos, tabla o DnD. Este plan no prevé ninguna alta en <code>package.json</code>.</li>
+<li>No borrar ningún test para que CI pase. Cada uno se reescribe conservando lo que comprobaba.</li>
+<li>No convertir «Hoy» en un modo de vista de la biblioteca ni hacerlo leer <code>filters</code>.</li>
+<li>No enlazar tipografías externas: <code>font-src</code> no está en la CSP.</li>
+<li>No tomar los 900 px de <code>tauri.conf.json</code> como suelo de diseño, ni escribir ese número en ninguna media query. Los puntos de ruptura salen de medir dónde se rompe cada vista, no de la configuración de la ventana.</li>
+<li>No editar <code>.agents/plans/0001-game-library-manager/plan.html</code>.</li>
+</ul>
+
+</body>
+</html>
