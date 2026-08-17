@@ -57,6 +57,7 @@ Before you write code, read also:
 | [What the webview needs from the environment goes in `main.rs`](docs/tauri/prepare-the-webview-before-gtk-starts.md) | Before GTK starts, behind a platform `cfg` and with respect for what the environment already gives. In the development script it corrects only the machine of the programmer. |
 | [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | You read the page of a store only where it gives the code, with no logic inside the script and with no command given to it. |
 | [A long pass saves as it goes, and a provider that cuts it off is a result](docs/tauri/long-passes-save-in-batches.md) | Write in batches, stop where the provider stops you and lose nothing from before, and say why. A failure of the database does go up. |
+| [A long operation takes a guard, and the guard clears the cancel flag](docs/tauri/one-long-operation-at-a-time.md) | One long operation at a time, and the second one is told that the application is busy. A command that goes away leaves no cancel behind, because the guard and not the command clears the flag. |
 
 ### `docs/ui/` — the interface
 

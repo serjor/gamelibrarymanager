@@ -171,19 +171,19 @@ impl ProgressSink for WindowProgress<'_> {
 /// window continues to answer while it runs.
 #[tauri::command]
 pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<SyncReport, AppError> {
-    state.begin_operation();
+    // The guard lives to the end of the command, and it is what clears the
+    // cancel flag when the command goes away.
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
     };
-    let report = sync::sync_all(&state, &progress).await;
-    state.end_operation();
-    report
+    sync::sync_all(&state, &progress).await
 }
 
-/// This applies both to the synchronisation and to the matching: the two are
-/// long, the two stop at the next safe point, and they never run at the same
-/// time.
+/// This applies to the three long operations: all of them stop at the next safe
+/// point, and only one of them runs, thus this cancel reaches the operation that
+/// the user sees.
 #[tauri::command]
 pub fn cancel_operation(state: State<'_, AppState>) {
     state.cancel_operation();
@@ -322,16 +322,14 @@ pub async fn refresh_prices(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<PriceReport, AppError> {
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let credentials = itad_credentials(&state).await?;
-    state.begin_operation();
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
     };
 
-    let report = prices::refresh(&state.db, &state.itad, &credentials, &progress).await;
-    state.end_operation();
-    report
+    prices::refresh(&state.db, &state.itad, &credentials, &progress).await
 }
 
 /// The best price of each wished-for game, in one query.
@@ -360,7 +358,7 @@ pub async fn resolve_identities(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<IdentityReport, AppError> {
-    state.begin_operation();
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
@@ -369,7 +367,7 @@ pub async fn resolve_identities(
     // The matching is slow because of the limit of 4 requests each second of
     // IGDB, thus it reports each game and does not leave the window quiet for
     // several minutes.
-    let report = match igdb_session(&state).await {
+    match igdb_session(&state).await {
         Ok((credentials, token)) => {
             identity::resolve(&state.db, &state.igdb, &credentials, &token, &progress).await
         }
@@ -377,10 +375,7 @@ pub async fn resolve_identities(
             identity::resolve_local(&state.db, &progress).await
         }
         Err(other) => Err(other),
-    };
-
-    state.end_operation();
-    report
+    }
 }
 
 /// The Twitch token lasts approximately sixty days: it is kept and renewed only

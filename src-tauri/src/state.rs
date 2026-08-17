@@ -79,9 +79,44 @@ pub struct AppState {
     pub backend: Backend,
     secrets_path: PathBuf,
     /// The cancel flag of the long operation in progress. There is only one
-    /// because a synchronisation and a match never run at the same time: each of
-    /// the two buttons disables the other while one operation runs.
+    /// because there is only one operation: `operation` is what makes that true.
     cancel_flag: AtomicBool,
+    /// The right to run a long operation. The three long commands —
+    /// the synchronisation, the prices and the matching — take it before they
+    /// start, and a command that does not get it stops immediately.
+    ///
+    /// Before, nothing prevented two operations. They shared the cancel flag,
+    /// thus the second one cleared the flag of the first, and the first one to
+    /// end cleared the flag under the other: a cancel arrived at the wrong
+    /// operation, or at none.
+    ///
+    /// It is a `tokio::sync::Mutex` and not a `std` one because the guard
+    /// crosses an `await`, and it is never waited on: `try_lock` says at once
+    /// whether the right is free.
+    operation: tokio::sync::Mutex<()>,
+}
+
+/// The right to run one long operation, while it runs.
+///
+/// The flag is cleared in `Drop`, and the command does not clear it. That is
+/// the whole point: a command whose future is dropped — the webview goes away,
+/// the window closes — never reaches its last line, thus a command that clears
+/// the flag itself leaves a cancel set for ever, and the next operation stops
+/// at its first safe point with nobody who asked for it.
+pub struct OperationGuard<'a> {
+    cancel_flag: &'a AtomicBool,
+    /// It is held and not read: what it does is to keep the right taken until
+    /// this guard goes away.
+    _right: tokio::sync::MutexGuard<'a, ()>,
+}
+
+impl Drop for OperationGuard<'_> {
+    fn drop(&mut self) {
+        // First the flag, and then the right: the fields go away after this
+        // body, thus the next operation cannot take the right and find the
+        // cancel of the operation before it.
+        self.cancel_flag.store(false, Ordering::Relaxed);
+    }
 }
 
 impl AppState {
@@ -113,6 +148,7 @@ impl AppState {
             backend,
             secrets_path,
             cancel_flag: AtomicBool::new(false),
+            operation: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -132,16 +168,24 @@ impl AppState {
             .ok_or(secrets::SecretsError::Unavailable)
     }
 
-    pub fn begin_operation(&self) {
+    /// Takes the right to run a long operation, if it is free.
+    ///
+    /// `None` says that another operation runs, and the command that asked
+    /// gives `AppError::Busy` to the user. It never waits: to hold a second
+    /// synchronisation in a queue would give the user a button that answers
+    /// minutes later, which reads as an application that stopped.
+    pub fn try_begin(&self) -> Option<OperationGuard<'_>> {
+        let right = self.operation.try_lock().ok()?;
+        // The cancel of the operation before is not the cancel of this one.
         self.cancel_flag.store(false, Ordering::Relaxed);
+        Some(OperationGuard {
+            cancel_flag: &self.cancel_flag,
+            _right: right,
+        })
     }
 
     pub fn cancel_operation(&self) {
         self.cancel_flag.store(true, Ordering::Relaxed);
-    }
-
-    pub fn end_operation(&self) {
-        self.cancel_flag.store(false, Ordering::Relaxed);
     }
 
     pub fn operation_cancelled(&self) -> bool {
