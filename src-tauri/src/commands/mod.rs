@@ -225,21 +225,34 @@ pub async fn set_user_state(
 
 #[derive(Serialize)]
 pub struct LibrarySummary {
-    pub owned: usize,
-    pub wishlist: usize,
-    pub games: usize,
-    pub pending_review: usize,
+    pub owned: i64,
+    pub wishlist: i64,
+    pub games: i64,
+    pub pending_review: i64,
+}
+
+/// Four numbers, four counts.
+///
+/// Before, each number was the length of a list: the four lists together were
+/// every row of `store_entry` and of `game`, with every `raw` JSON parsed, and
+/// all of it was thrown away after the `len()`. The database counts, which is
+/// what a database is for.
+///
+/// It takes a `Database` and not the state so that a test reaches it with no
+/// Tauri, in the same way as `sync`, `prices` and `identity`.
+pub async fn summary(db: &storage::Database) -> Result<LibrarySummary, AppError> {
+    let entries = StoreEntryRepository(db);
+    Ok(LibrarySummary {
+        owned: entries.count_active(EntryKind::Owned).await?,
+        wishlist: entries.count_active(EntryKind::Wishlist).await?,
+        games: GameRepository(db).count_all().await?,
+        pending_review: GameLinkRepository(db).unlinked_entry_count().await?,
+    })
 }
 
 #[tauri::command]
 pub async fn library_summary(state: State<'_, AppState>) -> Result<LibrarySummary, AppError> {
-    let entries = StoreEntryRepository(&state.db);
-    Ok(LibrarySummary {
-        owned: entries.active(EntryKind::Owned).await?.len(),
-        wishlist: entries.active(EntryKind::Wishlist).await?.len(),
-        games: GameRepository(&state.db).all().await?.len(),
-        pending_review: entries.unlinked().await?.len(),
-    })
+    summary(&state.db).await
 }
 
 /// Keeps the IGDB credentials of the user and examines them before: if the

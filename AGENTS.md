@@ -48,6 +48,7 @@ Before you write code, read also:
 | --- | --- |
 | [To add metadata to a record writes its row again; it does not make a new one](docs/storage/enrich-records-in-place.md) | `user_state` is attached to the `game_id`: to use it again is what prevents the loss of what the user wrote. |
 | [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to two tables: an offer that ended cannot continue to look like an offer. |
+| [A delete that compares against a list of the provider uses a temporary table](docs/storage/compare-against-a-temporary-table.md) | Never a `NOT IN` with thousands of placeholders, and never a comparison divided into batches: each batch would delete what is in the other batches. |
 
 ### `docs/tauri/` — the application shell
 

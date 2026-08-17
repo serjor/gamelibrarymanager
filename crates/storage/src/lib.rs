@@ -4,11 +4,13 @@
 mod mapping;
 pub mod repositories;
 
+use sqlx::Row;
 use sqlx::SqlitePool;
 use sqlx::migrate::Migrator;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use std::path::Path;
 use std::str::FromStr;
+use std::time::Duration;
 
 static MIGRATOR: Migrator = sqlx::migrate!("../../migrations");
 
@@ -31,11 +33,27 @@ pub struct Database {
 
 impl Database {
     /// Opens — or creates — the database of the user and migrates it.
+    ///
+    /// Three settings that only the file database gets:
+    ///
+    /// - `journal_mode=WAL`: a write no longer copies the pages that it changes
+    ///   into a journal beside the file and waits for the disc two times.
+    /// - `synchronous=NORMAL`: with WAL this is the value that SQLite itself
+    ///   recommends. The application loses at most the last transactions if the
+    ///   machine loses power, and it never gets a corrupt file.
+    /// - `busy_timeout`: a lock that is held waits five seconds instead of
+    ///   giving an error at once.
+    ///
+    /// `in_memory()` does not get them: WAL needs a file, and there the journal
+    /// means nothing.
     pub async fn open(path: &Path) -> Result<Self> {
         let options = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true)
-            .foreign_keys(true);
+            .foreign_keys(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal)
+            .busy_timeout(Duration::from_secs(5));
         Self::connect(options).await
     }
 
@@ -72,6 +90,18 @@ impl Database {
     pub async fn undo_all(&self) -> Result<()> {
         MIGRATOR.undo(&self.pool, 0).await?;
         Ok(())
+    }
+
+    /// The journal that this database uses: `wal` for a file, `memory` for the
+    /// database of the tests.
+    ///
+    /// It exists for the tests. The SQL of the project lives in this crate, thus
+    /// a test that wants to know cannot ask SQLite by itself.
+    pub async fn journal_mode(&self) -> Result<String> {
+        let row = sqlx::query("PRAGMA journal_mode")
+            .fetch_one(&self.pool)
+            .await?;
+        Ok(row.get(0))
     }
 
     pub(crate) fn pool(&self) -> &SqlitePool {

@@ -9,6 +9,7 @@ mod sync;
 /// it exists so that you can test the complete use case without you start
 /// Tauri.
 pub mod testing {
+    pub use crate::commands::{LibrarySummary, summary};
     pub use crate::error::AppError;
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
