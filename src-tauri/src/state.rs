@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use connectors::{EpicConnector, GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
@@ -14,6 +15,47 @@ use storage::Database;
 use tokio::sync::RwLock;
 
 pub const SERVICE: &str = "com.serjor.gamelibrarymanager";
+
+/// The time that the application waits for a provider before it stops.
+///
+/// `reqwest` puts no limit of its own. A store that accepts the connection and
+/// then says nothing holds the synchronisation for ever, and the cancel flag
+/// does not reach it: the synchronisation reads that flag between accounts,
+/// never inside a request. Thirty seconds is much more than the five providers
+/// need — they answer in less than one — and it is a time that a person can
+/// wait.
+///
+/// The login windows of GOG and of Epic do not use this client. They wait on a
+/// channel, and this limit does not apply to them.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// The part of the limit that belongs to the connection alone. A host that does
+/// not answer at all must fail before the complete time.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The client that the three connectors, IGDB and ITAD share.
+pub fn http_client() -> reqwest::Client {
+    http_client_with(REQUEST_TIMEOUT)
+}
+
+/// The same client with a different limit. The tests use it: a test that waits
+/// thirty seconds is a test that nobody runs.
+///
+/// There is one builder and not two, thus a test cannot prove a limit that the
+/// application does not apply.
+pub fn http_client_with(timeout: Duration) -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(concat!("gamelibrarymanager/", env!("CARGO_PKG_VERSION")))
+        .timeout(timeout)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .build()
+        // Before, this line gave `Client::default()` when the builder failed.
+        // That fallback did nothing: `default()` builds the same client with no
+        // limit, and it panics in the same conditions. And a client with no
+        // limit is exactly what this constant exists to prevent, thus the
+        // failure is now said out loud.
+        .expect("the HTTP client must build: without it there is no provider")
+}
 
 /// The keys under which the secrets that do not belong to a store account live.
 /// IGDB prohibits a secret inside the binary, thus these secrets belong to the
@@ -44,10 +86,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(db: Database, secrets_path: PathBuf) -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent(concat!("gamelibrarymanager/", env!("CARGO_PKG_VERSION")))
-            .build()
-            .unwrap_or_default();
+        let http = http_client();
 
         let http_for_igdb = http.clone();
         let http_for_itad = http.clone();

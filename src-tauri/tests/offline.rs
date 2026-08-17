@@ -1,12 +1,17 @@
+//! What the application does when the network does not help.
+//!
 //! The two "done when" of phase 5 that are not about the interface: nobody
 //! overwrites what the user writes, and with no network the library is still
-//! there.
+//! there. And a third one, from plan `0004`: a store that answers nothing is
+//! also a store that does not help, and it must not hold the synchronisation.
+use std::time::Duration;
+
 use connectors::SteamConnector;
 use domain::{
     EntryKind, Game, GameId, GameLink, LinkMethod, PlayStatus, StoreAccount, StoreAccountId,
     StoreId, UserState,
 };
-use gamelibrarymanager_lib::testing::{SyncReport, credential_key, sync_account};
+use gamelibrarymanager_lib::testing::{SyncReport, credential_key, http_client_with, sync_account};
 use secrets::{EncryptedFileStore, SecretStore};
 use storage::Database;
 use storage::repositories::{
@@ -213,4 +218,57 @@ async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fai
         .expect("the library with no network");
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].title, "Disco Elysium");
+}
+
+/// A store that accepts the connection and then says nothing must not hold the
+/// synchronisation for ever.
+///
+/// A store that is down gives an error immediately, and the test above proves
+/// that. A store that answers nothing is worse: `reqwest` puts no limit of its
+/// own, and the cancel flag does not reach inside a request.
+///
+/// The client of this test carries a short limit and not the thirty seconds of
+/// the application, because a test that waits half a minute is a test that
+/// nobody runs. It comes out of the same builder as the client of the
+/// application, thus this test cannot pass while the application builds a
+/// client with no limit.
+///
+/// It measures no time, as the conventions of `docs/testing/` say. It asserts
+/// the error: with no limit the request waits for the answer that the server
+/// holds, the synchronisation succeeds, and `expect_err` fails.
+#[tokio::test]
+async fn a_store_that_answers_nothing_does_not_hold_the_synchronisation() {
+    let dir = tempfile::tempdir().expect("temporal");
+    let (db, secrets, account) = escenario(dir.path()).await;
+
+    // The library of the account is the first request of the synchronisation,
+    // and it is the request that never arrives.
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/IPlayerService/GetOwnedGames/v1/"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_raw(OWNED, "application/json")
+                .set_delay(Duration::from_secs(10)),
+        )
+        .mount(&server)
+        .await;
+
+    let connector = SteamConnector::new(http_client_with(Duration::from_millis(250)))
+        .with_bases(server.uri(), server.uri());
+
+    let error = sync_account(
+        &db,
+        &secrets,
+        &connector,
+        &account,
+        &mut SyncReport::default(),
+    )
+    .await
+    .expect_err("a store that answers nothing must give an error");
+
+    assert!(
+        error.to_string().contains("could not contact"),
+        "the error must say that the store did not answer: {error}"
+    );
 }

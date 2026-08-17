@@ -11,7 +11,7 @@ mod sync;
 pub mod testing {
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
-    pub use crate::state::credential_key;
+    pub use crate::state::{credential_key, http_client, http_client_with};
     pub use crate::sync::{Silent, SyncReport, sync_account, sync_all, sync_stores};
 }
 
