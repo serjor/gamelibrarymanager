@@ -17,6 +17,11 @@ Before you write code, read also:
   and the documentation to English. It records why the project writes in English
   with ASD-STE100, and the two consequences that reach outside the repository:
   the checksums of the migrations `0001` to `0005`, and the price format.
+- `.agents/plans/0004-hardening-and-release/plan.html` — the eight phases that
+  put a limit where there is none, add the two operations that a local-first
+  application must have — to disconnect a store and to take the data out — and
+  give the repository a way to publish. Each phase closes alone and gives a
+  version of its own.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
 
