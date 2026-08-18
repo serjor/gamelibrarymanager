@@ -9,7 +9,7 @@ mod sync;
 /// it exists so that you can test the complete use case without you start
 /// Tauri.
 pub mod testing {
-    pub use crate::commands::{LibrarySummary, summary};
+    pub use crate::commands::{LibrarySummary, StateUpdate, save_states, summary};
     pub use crate::error::AppError;
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
@@ -61,6 +61,7 @@ pub fn run() {
             commands::cancel_operation,
             commands::library,
             commands::set_user_state,
+            commands::set_user_state_many,
         ])
         .run(tauri::generate_context!())
         .expect("error while the application started");

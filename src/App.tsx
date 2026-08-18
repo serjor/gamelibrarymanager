@@ -107,6 +107,22 @@ export function App() {
 
   const refresh = useCallback(() => load(() => true), [load]);
 
+  /**
+   * The rows that a save gave back replace those same games, and nothing else
+   * is asked for.
+   *
+   * A save changes one record. Before, the answer was `refresh()`: eight
+   * commands, all of the library, all of the review queue and all of the
+   * prices, and the list jumped back to the top. `refresh()` stays where it
+   * belongs — the synchronisation, the matching and the prices do change the
+   * queue and the summary — and a save no longer goes through it.
+   */
+  const patchRows = useCallback((saved: LibraryRow[]) => {
+    if (saved.length === 0) return;
+    const byId = new Map(saved.map((row) => [row.game_id, row]));
+    setRows((previous) => previous.map((row) => byId.get(row.game_id) ?? row));
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     // The rule marks every setState that an effect can reach. Here the load is
@@ -369,9 +385,9 @@ export function App() {
       </nav>
 
       {tab === "library" && (
-        <Library rows={rows} view={view} onView={setView} onSaved={refresh} />
+        <Library rows={rows} view={view} onView={setView} onSaved={patchRows} />
       )}
-      {tab === "today" && <Today rows={rows} onSaved={refresh} />}
+      {tab === "today" && <Today rows={rows} onSaved={patchRows} />}
       {tab === "wishlist" && (
         <Wishlist
           rows={rows}

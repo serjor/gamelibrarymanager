@@ -45,7 +45,7 @@ export function Library({
   rows: LibraryRow[];
   view: View;
   onView: (view: View) => void;
-  onSaved: () => void;
+  onSaved: (rows: LibraryRow[]) => void;
 }) {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);

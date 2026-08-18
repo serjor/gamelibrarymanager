@@ -40,7 +40,8 @@ export function GameDetail({
   row: LibraryRow;
   variant: Presentation;
   onClose: () => void;
-  onSaved: () => void;
+  /** The row that the save gave back, so that nobody asks for the library. */
+  onSaved: (rows: LibraryRow[]) => void;
 }) {
   const [status, setStatus] = useState<PlayStatus | null>(row.status);
   const [rating, setRating] = useState<number | null>(row.rating);
@@ -65,8 +66,8 @@ export function GameDetail({
     setBusy(true);
     setError(null);
     try {
-      await api.setUserState(row.game_id, status, rating, notes.trim() || null);
-      onSaved();
+      const saved = await api.setUserState(row.game_id, status, rating, notes.trim() || null);
+      onSaved([saved]);
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {

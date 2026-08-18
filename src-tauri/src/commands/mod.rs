@@ -13,7 +13,7 @@ use domain::{
 };
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use metadata::itad::ItadCredentials;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use storage::repositories::{
     ConnectorStateRepository, GameLinkRepository, GameRepository, LibraryRepository, LibraryRow,
     MatchCandidateRepository, PriceRepository, PriceRow, StoreAccountRepository,
@@ -196,7 +196,25 @@ pub async fn library(state: State<'_, AppState>) -> Result<Vec<LibraryRow>, AppE
     Ok(LibraryRepository(&state.db).all().await?)
 }
 
+/// One save that the interface asks for.
+///
+/// The command that saves one takes the same four fields apart, because that is
+/// what an `invoke` with named arguments gives; the batch takes a list of these.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateUpdate {
+    pub game_id: String,
+    pub status: Option<PlayStatus>,
+    pub rating: Option<u8>,
+    pub notes: Option<String>,
+}
+
 /// The only data that the user writes. No later synchronisation touches it.
+///
+/// It gives back the row that it wrote, and that is the whole point: before,
+/// the interface answered a save with a complete refresh — all of the library,
+/// all of the review queue and all of the prices, eight commands — to see one
+/// status change on one row.
 #[tauri::command]
 pub async fn set_user_state(
     state: State<'_, AppState>,
@@ -204,23 +222,77 @@ pub async fn set_user_state(
     status: Option<PlayStatus>,
     rating: Option<u8>,
     notes: Option<String>,
-) -> Result<(), AppError> {
-    let game_id = Uuid::parse_str(&game_id)
-        .map(GameId::from_uuid)
-        .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
+) -> Result<LibraryRow, AppError> {
+    let update = StateUpdate {
+        game_id,
+        status,
+        rating,
+        notes,
+    };
+    save_states(&state.db, &[update])
+        .await?
+        .pop()
+        .ok_or_else(|| AppError::Message("that game is no longer in the library".to_owned()))
+}
 
-    let previous = UserStateRepository(&state.db).find(game_id).await?;
-    UserStateRepository(&state.db)
-        .save(&UserState {
+/// The same save over more than one game, in one call and in one transaction.
+///
+/// The bulk bar marked thirty games with thirty commands, one after another,
+/// and then asked for the library again. Here it is one command, and the answer
+/// is exactly the rows that changed.
+#[tauri::command]
+pub async fn set_user_state_many(
+    state: State<'_, AppState>,
+    updates: Vec<StateUpdate>,
+) -> Result<Vec<LibraryRow>, AppError> {
+    save_states(&state.db, &updates).await
+}
+
+/// The body that "save one" and "save many" share. Because it is the same body,
+/// the batch takes no short cut against the one-at-a-time path: the same dates
+/// are kept, the same transaction writes, and the rows come back from the same
+/// query as the list.
+///
+/// It takes a `Database` and not the state so that a test reaches it with no
+/// Tauri, in the same way as `summary`.
+pub async fn save_states(
+    db: &storage::Database,
+    updates: &[StateUpdate],
+) -> Result<Vec<LibraryRow>, AppError> {
+    let states = UserStateRepository(db);
+    let mut wanted = Vec::with_capacity(updates.len());
+
+    for update in updates {
+        let game_id = Uuid::parse_str(&update.game_id)
+            .map(GameId::from_uuid)
+            .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
+
+        // The two dates are not in the form, thus a save that does not know
+        // them must give them back unchanged: the row is written again
+        // complete, and without this a change of status would clear them.
+        let previous = states.find(game_id).await?;
+        wanted.push(UserState {
             game_id,
-            status,
-            rating,
-            notes,
+            status: update.status,
+            rating: update.rating,
+            notes: update.notes.clone(),
             started_at: previous.as_ref().and_then(|p| p.started_at),
             finished_at: previous.as_ref().and_then(|p| p.finished_at),
-        })
-        .await?;
-    Ok(())
+        });
+    }
+
+    states.save_many(&wanted).await?;
+
+    // A record that the library no longer shows gives no row. It is not an
+    // error here: the caller that saves one game turns the absence into one.
+    let library = LibraryRepository(db);
+    let mut rows = Vec::with_capacity(wanted.len());
+    for state in &wanted {
+        if let Some(row) = library.one(state.game_id).await? {
+            rows.push(row);
+        }
+    }
+    Ok(rows)
 }
 
 #[derive(Serialize)]

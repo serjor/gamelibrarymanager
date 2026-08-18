@@ -16,7 +16,13 @@ import { featured, shelves } from "./shelves";
  * The game record always opens as a sheet: there is no list beside it to keep in
  * view here, and what you look at is the art.
  */
-export function Today({ rows, onSaved }: { rows: LibraryRow[]; onSaved: () => void }) {
+export function Today({
+  rows,
+  onSaved,
+}: {
+  rows: LibraryRow[];
+  onSaved: (rows: LibraryRow[]) => void;
+}) {
   const [opened, setOpened] = useState<string | null>(null);
   // Held at the mount: the shelves divide at "six months ago", and a clock that
   // moves in the middle of a render would make two calculations of the same
