@@ -241,6 +241,22 @@ button.link {
   gap: var(--e-3);
 }
 
+.exports {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+}
+
+.tabs .exports {
+  margin-left: auto;
+}
+
+.export-path {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .candidates {
   list-style: none;
   padding: 0;

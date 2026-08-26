@@ -5,6 +5,7 @@
 // `#[tauri::command]` generates, and a `pub use` of the function alone does not
 // bring it.
 pub mod epic;
+pub mod export;
 pub mod gog;
 
 use domain::{

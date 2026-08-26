@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { save } from "@tauri-apps/plugin-dialog";
 import {
   api,
   errorMessage,
   type Account,
   type AppInfo,
   type ConnectorState,
+  type ExportFormat,
   type IdentityReport,
   type LibraryRow,
   type LibrarySummary,
@@ -62,6 +64,7 @@ export function App() {
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [exportedPath, setExportedPath] = useState<string | null>(null);
 
   // `alive` prevents a load in progress from writing state on a component that
   // is already removed, which is the usual race of this pattern.
@@ -181,6 +184,24 @@ export function App() {
       return;
     }
     void run("disconnect", () => api.disconnectAccount(account.store, account.account_ref));
+  };
+
+  const exportLibrary = async (format: ExportFormat) => {
+    setBusy(`export-${format}`);
+    setError(null);
+    try {
+      const path = await save({
+        defaultPath: `game-library.${format}`,
+        filters: [{ name: `${format.toUpperCase()} files`, extensions: [format] }],
+      });
+      if (path === null) return;
+      await api.exportLibrary(path, format);
+      setExportedPath(path);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (!info) {
@@ -397,7 +418,25 @@ export function App() {
         >
           To review{queue.length > 0 && ` (${queue.length})`}
         </button>
+        <span className="exports">
+          <button
+            className="link"
+            disabled={busy !== null}
+            onClick={() => void exportLibrary("json")}
+          >
+            {busy === "export-json" ? "Exporting JSON…" : "Export JSON"}
+          </button>
+          <button
+            className="link"
+            disabled={busy !== null}
+            onClick={() => void exportLibrary("csv")}
+          >
+            {busy === "export-csv" ? "Exporting CSV…" : "Export CSV"}
+          </button>
+        </span>
       </nav>
+
+      {exportedPath && <p className="hint export-path">Written to {exportedPath}</p>}
 
       {tab === "library" && (
         <Library rows={rows} view={view} onView={setView} onSaved={patchRows} />

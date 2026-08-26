@@ -10,7 +10,8 @@ mod sync;
 /// Tauri.
 pub mod testing {
     pub use crate::commands::{
-        LibrarySummary, StateUpdate, disconnect_account_for, save_states, summary,
+        LibrarySummary, StateUpdate, disconnect_account_for, export::ExportFormat,
+        export::export_library_for, save_states, summary,
     };
     pub use crate::error::AppError;
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
@@ -29,6 +30,7 @@ use tauri::Manager;
 /// lives in the domain and adapter crates, never here.
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
@@ -46,6 +48,7 @@ pub fn run() {
             commands::epic::connect_epic,
             commands::list_accounts,
             commands::disconnect_account,
+            commands::export::export_library,
             commands::connector_states,
             commands::set_connector_enabled,
             commands::sync_now,

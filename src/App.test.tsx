@@ -34,6 +34,8 @@ const state = {
   priceRequests: 0,
   /** The reason that the matching stopped, if it stopped. */
   matchingStopped: null as string | null,
+  exportPath: null as string | null,
+  exports: [] as [string, "json" | "csv"][],
 };
 
 /**
@@ -61,6 +63,10 @@ mock.module("@tauri-apps/api/event", () => ({
   listen: () => Promise.resolve(() => {}),
 }));
 
+mock.module("@tauri-apps/plugin-dialog", () => ({
+  save: () => Promise.resolve(state.exportPath),
+}));
+
 mock.module("./lib/api", () => ({
   api: {
     appInfo: () => Promise.resolve(state.info),
@@ -69,6 +75,10 @@ mock.module("./lib/api", () => ({
       state.accounts = state.accounts.filter(
         (account) => account.store !== store || account.account_ref !== accountRef,
       );
+      return Promise.resolve();
+    },
+    exportLibrary: (path: string, format: "json" | "csv") => {
+      state.exports.push([path, format]);
       return Promise.resolve();
     },
     connectorStates: () => Promise.resolve(state.connectors),
@@ -324,6 +334,8 @@ describe("App", () => {
     state.confirmed = [];
     state.priceRequests = 0;
     state.matchingStopped = null;
+    state.exportPath = null;
+    state.exports = [];
   });
 
   it("a matching that stops says why and that the work is kept", async () => {
@@ -431,6 +443,17 @@ describe("App", () => {
     } finally {
       window.confirm = confirm;
     }
+  });
+
+  it("exports JSON to the path chosen in the save dialog", async () => {
+    state.accounts = [steamAccount];
+    state.exportPath = "/tmp/game-library.json";
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Export JSON" }));
+
+    await waitFor(() => expect(state.exports).toEqual([["/tmp/game-library.json", "json"]]));
+    expect(screen.getByText("Written to /tmp/game-library.json")).toBeDefined();
   });
 
   it("a store that operates correctly appears in no place", async () => {

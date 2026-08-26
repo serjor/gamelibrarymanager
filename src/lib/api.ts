@@ -71,6 +71,7 @@ export interface ReviewItem {
 }
 
 export type PlayStatus = "backlog" | "playing" | "finished" | "abandoned";
+export type ExportFormat = "json" | "csv";
 
 export interface LibraryRow {
   game_id: string;
@@ -178,6 +179,8 @@ export const api = {
   /** Disconnects the account and removes its credential. Its records stay. */
   disconnectAccount: (store: string, accountRef: string) =>
     invoke<void>("disconnect_account", { store, accountRef }),
+  exportLibrary: (path: string, format: ExportFormat) =>
+    invoke<void>("export_library", { path, format }),
   connectorStates: () => invoke<ConnectorState[]>("connector_states"),
   /** Switches a store off, or on again, and does not touch the other stores. */
   setConnectorEnabled: (store: string, enabled: boolean) =>

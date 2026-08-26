@@ -176,3 +176,24 @@ fn no_pattern_opens_a_complete_host() {
         );
     }
 }
+
+#[test]
+fn export_has_permission_to_open_the_save_dialog() {
+    let raw = std::fs::read_to_string(root().join("capabilities/default.json"))
+        .expect("read the capability");
+    let capability: serde_json::Value =
+        serde_json::from_str(&raw).expect("the capability must be valid JSON");
+    let permission = capability["permissions"]
+        .as_array()
+        .expect("permissions is a list")
+        .iter()
+        .find(|permission| permission["identifier"] == "dialog:allow-save")
+        .expect("the export needs the save permission");
+
+    assert!(
+        permission["comment"]
+            .as_str()
+            .is_some_and(|comment| !comment.trim().is_empty()),
+        "the save permission must explain why the application needs it"
+    );
+}
