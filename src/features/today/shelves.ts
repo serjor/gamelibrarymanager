@@ -28,10 +28,13 @@ export interface Featured {
   reason: string;
 }
 
-/** With no copy there is nothing to propose: you cannot play a wished-for game
- *  today. */
+/** A live owned copy is necessary: a wished-for or removed record is not playable. */
+function hasLiveCopy(row: LibraryRow): boolean {
+  return row.owned_stores.length > 0;
+}
+
 function owned(rows: LibraryRow[]): LibraryRow[] {
-  return rows.filter((row) => row.owned_stores.length > 0);
+  return rows.filter(hasLiveCopy);
 }
 
 /** Finished or abandoned is a decision already made, and "Today" does not open

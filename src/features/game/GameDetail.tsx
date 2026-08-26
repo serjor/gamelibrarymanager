@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/api";
 import { STATUSES, STATUS_LABEL } from "../../lib/status";
+import { isNoLongerInStore } from "../library/filters";
 
 /**
  * Beside the table, or on top of the covers.
@@ -90,9 +91,13 @@ export function GameDetail({
       </p>
 
       <p className="hint">
-        {row.owned_stores.length > 0
-          ? `Owned in: ${row.owned_stores.join(", ")}`
-          : "You do not have it in a store"}
+        {isNoLongerInStore(row) ? (
+          <span className="status gone">No longer in a store</span>
+        ) : row.owned_stores.length > 0 ? (
+          `Owned in: ${row.owned_stores.join(", ")}`
+        ) : (
+          "You do not have it in a store"
+        )}
         {row.wishlist_stores.length > 0 && ` · Wished for in: ${row.wishlist_stores.join(", ")}`}
       </p>
 

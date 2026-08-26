@@ -804,12 +804,14 @@ button.link {
   border-radius: var(--radius-s);
   padding: 0 var(--e-1);
   border: 1px solid currentColor;
+  white-space: nowrap;
 }
 
 .status.backlog { color: var(--status-backlog); }
 .status.playing { color: var(--status-playing); }
 .status.finished { color: var(--status-finished); }
 .status.abandoned { color: var(--status-abandoned); }
+.status.gone { color: var(--text-muted); }
 
 /* At the bottom while the selection stays: if you must search for it, nobody
    uses it. */

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { LibraryRow } from "../../lib/api";
-import { applyFilters, collectGenres, collectStores, EMPTY_FILTERS } from "./filters";
+import {
+  applyFilters,
+  collectGenres,
+  collectStores,
+  EMPTY_FILTERS,
+  isNoLongerInStore,
+} from "./filters";
 
 function row(overrides: Partial<LibraryRow>): LibraryRow {
   return {
@@ -45,6 +51,18 @@ describe("the library filters", () => {
     const notMarked = applyFilters(library, { ...EMPTY_FILTERS, status: "unset" });
     expect(notMarked.map((r) => r.title)).toEqual(["Doom", "Doom Eternal"]);
     expect(applyFilters(library, EMPTY_FILTERS)).toHaveLength(3);
+  });
+
+  it("finds a record that has left every store", () => {
+    const gone = row({ title: "Gone", owned_stores: [], wishlist_stores: [] });
+    const wished = row({ title: "Wished", owned_stores: [], wishlist_stores: ["steam"] });
+    const rows = [...library, gone, wished];
+
+    expect(isNoLongerInStore(gone)).toBe(true);
+    expect(isNoLongerInStore(wished)).toBe(false);
+    expect(
+      applyFilters(rows, { ...EMPTY_FILTERS, availability: "gone" }).map((r) => r.title),
+    ).toEqual(["Gone"]);
   });
 
   it("combines a search and a genre", () => {

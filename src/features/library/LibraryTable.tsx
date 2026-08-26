@@ -4,6 +4,7 @@ import { STATUS_LABEL } from "../../lib/status";
 import { useVirtualGrid } from "./useVirtualGrid";
 import { withShift, useSelection } from "./useSelection";
 import type { Sort, SortField } from "./sort";
+import { isNoLongerInStore } from "./filters";
 
 /** A fixed row height: the virtual list is arithmetic, not measurement. */
 const ROW_HEIGHT = 33;
@@ -174,6 +175,8 @@ export function LibraryTable({
                         {store}
                       </span>
                     ))
+                  ) : isNoLongerInStore(row) ? (
+                    <span className="status gone">Not in a store</span>
                   ) : (
                     <span className="hint">wished for</span>
                   )}

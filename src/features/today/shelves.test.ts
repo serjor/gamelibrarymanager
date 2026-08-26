@@ -46,6 +46,21 @@ describe("the shelves of Today", () => {
     expect(featured(wished, NOW)).toBeNull();
   });
 
+  it("a record that left every store is not proposed", () => {
+    const gone = [
+      row({
+        title: "Gone",
+        owned_stores: [],
+        wishlist_stores: [],
+        status: "playing",
+        playtime_minutes: 240,
+        last_played_at: NOW - DAY,
+      }),
+    ];
+    expect(shelves(gone, NOW)).toEqual([]);
+    expect(featured(gone, NOW)).toBeNull();
+  });
+
   it("it gives back only the shelves that have something in them", () => {
     // Nothing started and nothing in two stores: those two do not appear.
     const library = [

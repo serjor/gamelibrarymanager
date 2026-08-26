@@ -67,6 +67,7 @@ Before you write code, read also:
 | [No component declares a colour: all of them come from the tokens](docs/ui/tokens-as-the-only-source-of-colour.md) | The palette and its dark variant are defined one time. No literal values, no `Canvas`, and no colours derived from `currentColor`. |
 | [One state for the two view modes: the views only show](docs/ui/one-state-for-the-two-view-modes.md) | The filter, the sort and the selection live in `Library.tsx`; the table and the wall show what they receive. And a screen that makes its own divisions is not a view mode. |
 | [One region scrolls, and it reaches the edges of the window](docs/ui/one-region-that-scrolls.md) | The height is divided with `flex` and `min-height: 0`; the piece sets the maximum width and the frame does not, or the space at the sides stops answering the wheel. |
+| [A record with no live copy stays visible](docs/ui/record-with-no-live-copy.md) | A record with no owned store and no wishlist store keeps the user's state, and "Today" does not propose it. |
 
 ### `docs/testing/` — the tests
 

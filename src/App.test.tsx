@@ -481,6 +481,24 @@ describe("App", () => {
     expect(rowDom?.textContent).toContain("21 h");
   });
 
+  it("marks a record that left every store and filters it", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({ title: "Gone", owned_stores: [], wishlist_stores: [], status: "playing" }),
+      row({ title: "Wished", owned_stores: [], wishlist_stores: ["steam"] }),
+    ];
+    render(<App />);
+
+    const gone = await screen.findByRole("button", { name: "Gone" });
+    expect(gone.closest("tr")?.textContent).toContain("Not in a store");
+
+    fireEvent.change(screen.getByLabelText("Availability"), {
+      target: { value: "gone" },
+    });
+    expect(screen.getByRole("button", { name: "Gone" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Wished" })).toBeNull();
+  });
+
   it("a click on a column sorts by it, and a second click inverts it", async () => {
     state.accounts = [steamAccount];
     state.rows = FOUR;
