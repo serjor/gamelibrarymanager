@@ -175,6 +175,9 @@ export const api = {
   connectEpic: (clientId: string, clientSecret: string) =>
     invoke<string>("connect_epic", { clientId, clientSecret }),
   listAccounts: () => invoke<Account[]>("list_accounts"),
+  /** Disconnects the account and removes its credential. Its records stay. */
+  disconnectAccount: (store: string, accountRef: string) =>
+    invoke<void>("disconnect_account", { store, accountRef }),
   connectorStates: () => invoke<ConnectorState[]>("connector_states"),
   /** Switches a store off, or on again, and does not touch the other stores. */
   setConnectorEnabled: (store: string, enabled: boolean) =>

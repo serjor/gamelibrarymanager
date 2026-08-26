@@ -65,6 +65,12 @@ mock.module("./lib/api", () => ({
   api: {
     appInfo: () => Promise.resolve(state.info),
     listAccounts: () => Promise.resolve(state.accounts),
+    disconnectAccount: (store: string, accountRef: string) => {
+      state.accounts = state.accounts.filter(
+        (account) => account.store !== store || account.account_ref !== accountRef,
+      );
+      return Promise.resolve();
+    },
     connectorStates: () => Promise.resolve(state.connectors),
     setConnectorEnabled: (store: string, enabled: boolean) => {
       state.connectors = state.connectors.map((connector) =>
@@ -400,6 +406,31 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Connect Steam" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect GOG" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect Epic" })).toBeNull();
+  });
+
+  it("can disconnect one account and says that records and notes stay", async () => {
+    state.accounts = [steamAccount, gogAccount];
+    const messages: string[] = [];
+    const confirm = window.confirm;
+    window.confirm = (message?: string) => {
+      messages.push(message ?? "");
+      return true;
+    };
+
+    try {
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: "Disconnect Steam" }));
+
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Disconnect Steam" })).toBeNull(),
+      );
+      expect(screen.getByRole("button", { name: "Disconnect GOG" })).toBeDefined();
+      expect(messages).toEqual([
+        "Disconnect Steam? The records and your notes stay in the library.",
+      ]);
+    } finally {
+      window.confirm = confirm;
+    }
   });
 
   it("a store that operates correctly appears in no place", async () => {

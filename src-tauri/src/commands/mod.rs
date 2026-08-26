@@ -113,6 +113,48 @@ pub async fn list_accounts(state: State<'_, AppState>) -> Result<Vec<AccountView
         .collect())
 }
 
+/// Disconnects one account and removes its credential.
+///
+/// The database operation is logical: the store entries remain available as
+/// history, and the records and the state written by the user remain available
+/// in the library. The secret is removed only after the database transaction
+/// succeeds, so a failed transaction never leaves a connected account without
+/// its credential.
+#[tauri::command]
+pub async fn disconnect_account(
+    state: State<'_, AppState>,
+    store: StoreId,
+    account_ref: String,
+) -> Result<(), AppError> {
+    let secrets = state.secrets().await?;
+    disconnect_account_for(&state.db, secrets.as_ref(), store, &account_ref).await
+}
+
+/// The disconnect use case without Tauri state. Integration tests use this
+/// entry point to exercise the database and the secret store together.
+pub async fn disconnect_account_for(
+    db: &storage::Database,
+    secrets: &dyn secrets::SecretStore,
+    store: StoreId,
+    account_ref: &str,
+) -> Result<(), AppError> {
+    let account = StoreAccountRepository(db)
+        .active()
+        .await?
+        .into_iter()
+        .find(|account| account.store == store && account.account_ref == account_ref)
+        .ok_or_else(|| {
+            AppError::Message(format!(
+                "there is no connected {} account with that reference",
+                store.as_str()
+            ))
+        })?;
+
+    StoreAccountRepository(db).soft_delete(account.id).await?;
+    secrets.delete(&credential_key(&account))?;
+    Ok(())
+}
+
 #[derive(Serialize)]
 pub struct AccountView {
     pub store: &'static str,

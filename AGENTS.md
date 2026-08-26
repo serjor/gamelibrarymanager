@@ -35,6 +35,7 @@ Before you write code, read also:
 | [Verify the unofficial endpoints before you write the connector](docs/connectors/verify-unofficial-endpoints.md) | Read the live reference implementation, test by hand, and record the result with a date in the module. |
 | [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | You switch a broken store off and the others continue. The reason is kept, and only the user decides to switch a store off. |
 | [An ambiguous identifier is not an identity](docs/connectors/an-ambiguous-identifier-is-not-an-identity.md) | If the store permits two readings of the identifier of the copy, the connector does not select: it gives no identifier and the title decides. |
+| [Disconnecting a store keeps what the user wrote](docs/connectors/disconnecting-a-store-keeps-user-state.md) | Disconnecting marks the account and its copies gone, removes the credential, and keeps the records, links and user state. |
 
 ### `docs/domain/` — the pure rules
 

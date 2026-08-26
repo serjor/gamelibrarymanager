@@ -175,6 +175,14 @@ export function App() {
     }
   };
 
+  const disconnect = (account: Account) => {
+    const name = nameOf(account.store);
+    if (!window.confirm(`Disconnect ${name}? The records and your notes stay in the library.`)) {
+      return;
+    }
+    void run("disconnect", () => api.disconnectAccount(account.store, account.account_ref));
+  };
+
   if (!info) {
     return (
       <main>
@@ -293,7 +301,14 @@ export function App() {
             <strong>{account.store}</strong> · {account.display_name ?? account.account_ref}
             {account.last_sync_at === null
               ? " · not synchronised"
-              : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`}
+              : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`} {" "}
+            <button
+              className="link"
+              disabled={busy !== null}
+              onClick={() => disconnect(account)}
+            >
+              Disconnect {nameOf(account.store)}
+            </button>
           </li>
         ))}
       </ul>

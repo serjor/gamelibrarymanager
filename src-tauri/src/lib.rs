@@ -9,7 +9,9 @@ mod sync;
 /// it exists so that you can test the complete use case without you start
 /// Tauri.
 pub mod testing {
-    pub use crate::commands::{LibrarySummary, StateUpdate, save_states, summary};
+    pub use crate::commands::{
+        LibrarySummary, StateUpdate, disconnect_account_for, save_states, summary,
+    };
     pub use crate::error::AppError;
     pub use crate::identity::{IdentityReport, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
@@ -43,6 +45,7 @@ pub fn run() {
             commands::gog::connect_gog,
             commands::epic::connect_epic,
             commands::list_accounts,
+            commands::disconnect_account,
             commands::connector_states,
             commands::set_connector_enabled,
             commands::sync_now,
