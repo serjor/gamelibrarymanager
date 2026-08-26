@@ -14,8 +14,7 @@
  * session that wrote this, three "defects" seen in screenshots did not exist and
  * one that you could not see did.
  *
- * CI does not run it: it needs a Chromium, and to download one at each `push`
- * costs more than it gives. It is a tool that you run by hand.
+ * CI runs it on Ubuntu after it installs Chromium. You can also run it by hand.
  *
  *     bun run build && bun run visual
  *

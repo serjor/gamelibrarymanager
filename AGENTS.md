@@ -91,24 +91,13 @@ cargo fmt --all --check
 cargo clippy --all-targets --workspace -- -D warnings
 cargo test --workspace
 bunx tsc --noEmit && bun run lint && bun test
+bun run build && bun run visual
 bun run tauri dev            # the window must open
 ```
 
-There are two checks that CI **cannot** make. The first needs a desktop session
+There is one check that CI **cannot** make. It needs a desktop session
 with secret-service:
 
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
-
-The second needs a Chromium, because it measures the real layout — overlaps,
-overflows, the alignment of columns and the contrast — and `bun test` does not
-know that: with happy-dom it measures each container as zero:
-
-```sh
-bun run build && bun run visual
-```
-
-If it finds no browser: `bunx playwright install chromium`, or `CHROMIUM_PATH`
-that points to the browser that you have. How to write a check of that kind is in
-[assert on the structure](docs/testing/assert-on-the-structure.md).
