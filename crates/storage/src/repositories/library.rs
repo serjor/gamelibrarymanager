@@ -3,7 +3,7 @@ use serde::Serialize;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 
-use crate::mapping::{game_id_from_text, status_from_str};
+use crate::mapping::{game_id_from_text, game_id_to_text, status_from_str};
 use crate::{Database, Result};
 
 /// A row of the library: the game record and all of the data to show with it.
@@ -42,13 +42,32 @@ pub struct LibraryRepository<'a>(pub &'a Database);
 
 impl LibraryRepository<'_> {
     pub async fn all(&self) -> Result<Vec<LibraryRow>> {
-        sqlx::query(SQL)
-            .fetch_all(self.0.pool())
-            .await?
-            .iter()
-            .map(hydrate)
-            .collect()
+        rows(self.0, None).await
     }
+
+    /// The row of one game, for the answer of a save.
+    ///
+    /// It gives `None` for a game that the library no longer shows: a record
+    /// with a logical delete is not in `all()` either, and the answer of a save
+    /// must not say something that the list denies.
+    pub async fn one(&self, game_id: GameId) -> Result<Option<LibraryRow>> {
+        Ok(rows(self.0, Some(game_id)).await?.pop())
+    }
+}
+
+/// The two ways to ask go through here, thus they go through the same `SQL`.
+///
+/// A row that a save gives back cannot become different from the row of the
+/// list: there is no second query where one of them could start to build the
+/// badges, the hours or the store link in a different way.
+async fn rows(db: &Database, game_id: Option<GameId>) -> Result<Vec<LibraryRow>> {
+    sqlx::query(SQL)
+        .bind(game_id.map(game_id_to_text))
+        .fetch_all(db.pool())
+        .await?
+        .iter()
+        .map(hydrate)
+        .collect()
 }
 
 /// The query for all of the library.
@@ -108,7 +127,11 @@ const SQL: &str = "SELECT
                  ) AS last_played_at
              FROM game g
              LEFT JOIN user_state us ON us.game_id = g.id
-             WHERE g.deleted_at IS NULL
+             -- The one parameter selects one game, and NULL asks for all of
+             -- them. The `WHERE` is examined before the subqueries of the
+             -- columns, thus one game costs one pass over `game` and the
+             -- subqueries of one row.
+             WHERE g.deleted_at IS NULL AND (?1 IS NULL OR g.id = ?1)
              ORDER BY g.sort_title";
 
 fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
@@ -168,6 +191,9 @@ mod tests {
         let db = Database::in_memory().await.expect("database");
 
         let plan: Vec<String> = sqlx::query(&format!("EXPLAIN QUERY PLAN {SQL}"))
+            // The plan of the query for all of the library, which is the one
+            // that goes through one thousand games: the parameter is NULL.
+            .bind(None::<String>)
             .fetch_all(db.pool())
             .await
             .expect("plan")

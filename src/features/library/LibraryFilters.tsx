@@ -48,6 +48,20 @@ export function LibraryFilters({
       </select>
 
       <select
+        value={filters.availability ?? ""}
+        onChange={(e) =>
+          onChange({
+            ...filters,
+            availability: (e.target.value || null) as Filters["availability"],
+          })
+        }
+        aria-label="Availability"
+      >
+        <option value="">All games</option>
+        <option value="gone">No longer in a store</option>
+      </select>
+
+      <select
         value={filters.status ?? ""}
         onChange={(e) =>
           onChange({ ...filters, status: (e.target.value || null) as Filters["status"] })

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { save } from "@tauri-apps/plugin-dialog";
 import {
   api,
   errorMessage,
   type Account,
   type AppInfo,
   type ConnectorState,
+  type ExportFormat,
   type IdentityReport,
   type LibraryRow,
   type LibrarySummary,
@@ -62,6 +64,7 @@ export function App() {
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [exportedPath, setExportedPath] = useState<string | null>(null);
 
   // `alive` prevents a load in progress from writing state on a component that
   // is already removed, which is the usual race of this pattern.
@@ -106,6 +109,22 @@ export function App() {
   }, []);
 
   const refresh = useCallback(() => load(() => true), [load]);
+
+  /**
+   * The rows that a save gave back replace those same games, and nothing else
+   * is asked for.
+   *
+   * A save changes one record. Before, the answer was `refresh()`: eight
+   * commands, all of the library, all of the review queue and all of the
+   * prices, and the list jumped back to the top. `refresh()` stays where it
+   * belongs — the synchronisation, the matching and the prices do change the
+   * queue and the summary — and a save no longer goes through it.
+   */
+  const patchRows = useCallback((saved: LibraryRow[]) => {
+    if (saved.length === 0) return;
+    const byId = new Map(saved.map((row) => [row.game_id, row]));
+    setRows((previous) => previous.map((row) => byId.get(row.game_id) ?? row));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -156,6 +175,32 @@ export function App() {
     } finally {
       setBusy(null);
       setProgress(null);
+    }
+  };
+
+  const disconnect = (account: Account) => {
+    const name = nameOf(account.store);
+    if (!window.confirm(`Disconnect ${name}? The records and your notes stay in the library.`)) {
+      return;
+    }
+    void run("disconnect", () => api.disconnectAccount(account.store, account.account_ref));
+  };
+
+  const exportLibrary = async (format: ExportFormat) => {
+    setBusy(`export-${format}`);
+    setError(null);
+    try {
+      const path = await save({
+        defaultPath: `game-library.${format}`,
+        filters: [{ name: `${format.toUpperCase()} files`, extensions: [format] }],
+      });
+      if (path === null) return;
+      await api.exportLibrary(path, format);
+      setExportedPath(path);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -277,7 +322,14 @@ export function App() {
             <strong>{account.store}</strong> · {account.display_name ?? account.account_ref}
             {account.last_sync_at === null
               ? " · not synchronised"
-              : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`}
+              : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`} {" "}
+            <button
+              className="link"
+              disabled={busy !== null}
+              onClick={() => disconnect(account)}
+            >
+              Disconnect {nameOf(account.store)}
+            </button>
           </li>
         ))}
       </ul>
@@ -366,12 +418,30 @@ export function App() {
         >
           To review{queue.length > 0 && ` (${queue.length})`}
         </button>
+        <span className="exports">
+          <button
+            className="link"
+            disabled={busy !== null}
+            onClick={() => void exportLibrary("json")}
+          >
+            {busy === "export-json" ? "Exporting JSON…" : "Export JSON"}
+          </button>
+          <button
+            className="link"
+            disabled={busy !== null}
+            onClick={() => void exportLibrary("csv")}
+          >
+            {busy === "export-csv" ? "Exporting CSV…" : "Export CSV"}
+          </button>
+        </span>
       </nav>
 
+      {exportedPath && <p className="hint export-path">Written to {exportedPath}</p>}
+
       {tab === "library" && (
-        <Library rows={rows} view={view} onView={setView} onSaved={refresh} />
+        <Library rows={rows} view={view} onView={setView} onSaved={patchRows} />
       )}
-      {tab === "today" && <Today rows={rows} onSaved={refresh} />}
+      {tab === "today" && <Today rows={rows} onSaved={patchRows} />}
       {tab === "wishlist" && (
         <Wishlist
           rows={rows}

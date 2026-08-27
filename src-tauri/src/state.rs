@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use connectors::{EpicConnector, GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
@@ -14,6 +15,47 @@ use storage::Database;
 use tokio::sync::RwLock;
 
 pub const SERVICE: &str = "com.serjor.gamelibrarymanager";
+
+/// The time that the application waits for a provider before it stops.
+///
+/// `reqwest` puts no limit of its own. A store that accepts the connection and
+/// then says nothing holds the synchronisation for ever, and the cancel flag
+/// does not reach it: the synchronisation reads that flag between accounts,
+/// never inside a request. Thirty seconds is much more than the five providers
+/// need — they answer in less than one — and it is a time that a person can
+/// wait.
+///
+/// The login windows of GOG and of Epic do not use this client. They wait on a
+/// channel, and this limit does not apply to them.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// The part of the limit that belongs to the connection alone. A host that does
+/// not answer at all must fail before the complete time.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The client that the three connectors, IGDB and ITAD share.
+pub fn http_client() -> reqwest::Client {
+    http_client_with(REQUEST_TIMEOUT)
+}
+
+/// The same client with a different limit. The tests use it: a test that waits
+/// thirty seconds is a test that nobody runs.
+///
+/// There is one builder and not two, thus a test cannot prove a limit that the
+/// application does not apply.
+pub fn http_client_with(timeout: Duration) -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(concat!("gamelibrarymanager/", env!("CARGO_PKG_VERSION")))
+        .timeout(timeout)
+        .connect_timeout(CONNECT_TIMEOUT)
+        .build()
+        // Before, this line gave `Client::default()` when the builder failed.
+        // That fallback did nothing: `default()` builds the same client with no
+        // limit, and it panics in the same conditions. And a client with no
+        // limit is exactly what this constant exists to prevent, thus the
+        // failure is now said out loud.
+        .expect("the HTTP client must build: without it there is no provider")
+}
 
 /// The keys under which the secrets that do not belong to a store account live.
 /// IGDB prohibits a secret inside the binary, thus these secrets belong to the
@@ -37,17 +79,49 @@ pub struct AppState {
     pub backend: Backend,
     secrets_path: PathBuf,
     /// The cancel flag of the long operation in progress. There is only one
-    /// because a synchronisation and a match never run at the same time: each of
-    /// the two buttons disables the other while one operation runs.
+    /// because there is only one operation: `operation` is what makes that true.
     cancel_flag: AtomicBool,
+    /// The right to run a long operation. The three long commands —
+    /// the synchronisation, the prices and the matching — take it before they
+    /// start, and a command that does not get it stops immediately.
+    ///
+    /// Before, nothing prevented two operations. They shared the cancel flag,
+    /// thus the second one cleared the flag of the first, and the first one to
+    /// end cleared the flag under the other: a cancel arrived at the wrong
+    /// operation, or at none.
+    ///
+    /// It is a `tokio::sync::Mutex` and not a `std` one because the guard
+    /// crosses an `await`, and it is never waited on: `try_lock` says at once
+    /// whether the right is free.
+    operation: tokio::sync::Mutex<()>,
+}
+
+/// The right to run one long operation, while it runs.
+///
+/// The flag is cleared in `Drop`, and the command does not clear it. That is
+/// the whole point: a command whose future is dropped — the webview goes away,
+/// the window closes — never reaches its last line, thus a command that clears
+/// the flag itself leaves a cancel set for ever, and the next operation stops
+/// at its first safe point with nobody who asked for it.
+pub struct OperationGuard<'a> {
+    cancel_flag: &'a AtomicBool,
+    /// It is held and not read: what it does is to keep the right taken until
+    /// this guard goes away.
+    _right: tokio::sync::MutexGuard<'a, ()>,
+}
+
+impl Drop for OperationGuard<'_> {
+    fn drop(&mut self) {
+        // First the flag, and then the right: the fields go away after this
+        // body, thus the next operation cannot take the right and find the
+        // cancel of the operation before it.
+        self.cancel_flag.store(false, Ordering::Relaxed);
+    }
 }
 
 impl AppState {
     pub fn new(db: Database, secrets_path: PathBuf) -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent(concat!("gamelibrarymanager/", env!("CARGO_PKG_VERSION")))
-            .build()
-            .unwrap_or_default();
+        let http = http_client();
 
         let http_for_igdb = http.clone();
         let http_for_itad = http.clone();
@@ -74,6 +148,7 @@ impl AppState {
             backend,
             secrets_path,
             cancel_flag: AtomicBool::new(false),
+            operation: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -93,16 +168,24 @@ impl AppState {
             .ok_or(secrets::SecretsError::Unavailable)
     }
 
-    pub fn begin_operation(&self) {
+    /// Takes the right to run a long operation, if it is free.
+    ///
+    /// `None` says that another operation runs, and the command that asked
+    /// gives `AppError::Busy` to the user. It never waits: to hold a second
+    /// synchronisation in a queue would give the user a button that answers
+    /// minutes later, which reads as an application that stopped.
+    pub fn try_begin(&self) -> Option<OperationGuard<'_>> {
+        let right = self.operation.try_lock().ok()?;
+        // The cancel of the operation before is not the cancel of this one.
         self.cancel_flag.store(false, Ordering::Relaxed);
+        Some(OperationGuard {
+            cancel_flag: &self.cancel_flag,
+            _right: right,
+        })
     }
 
     pub fn cancel_operation(&self) {
         self.cancel_flag.store(true, Ordering::Relaxed);
-    }
-
-    pub fn end_operation(&self) {
-        self.cancel_flag.store(false, Ordering::Relaxed);
     }
 
     pub fn operation_cancelled(&self) -> bool {

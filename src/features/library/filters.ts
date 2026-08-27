@@ -5,6 +5,7 @@ export interface Filters {
   store: string | null;
   status: PlayStatus | "unset" | null;
   genre: string | null;
+  availability: "gone" | null;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -12,7 +13,13 @@ export const EMPTY_FILTERS: Filters = {
   store: null,
   status: null,
   genre: null,
+  availability: null,
 };
+
+/** A record with no owned copy and no wishlist copy left the stores. */
+export function isNoLongerInStore(row: LibraryRow): boolean {
+  return row.owned_stores.length === 0 && row.wishlist_stores.length === 0;
+}
 
 /** No accents and no capitals: a search for "pokemon" must find "Pokémon". */
 function fold(text: string): string {
@@ -33,6 +40,7 @@ export function applyFilters(rows: LibraryRow[], filters: Filters): LibraryRow[]
     if (needle && !fold(row.title).includes(needle)) return false;
     if (filters.store && !row.owned_stores.includes(filters.store)) return false;
     if (filters.genre && !row.genres.includes(filters.genre)) return false;
+    if (filters.availability === "gone" && !isNoLongerInStore(row)) return false;
     if (filters.status === "unset" && row.status !== null) return false;
     if (filters.status && filters.status !== "unset" && row.status !== filters.status) return false;
     return true;

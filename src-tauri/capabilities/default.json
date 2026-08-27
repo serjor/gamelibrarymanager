@@ -6,6 +6,10 @@
   "permissions": [
     "core:default",
     {
+      "identifier": "dialog:allow-save",
+      "comment": "The export action asks the user where to write a JSON or CSV copy. It receives a path from this dialog and does not choose a directory by itself."
+    },
+    {
       "identifier": "opener:allow-open-url",
       "comment": "`allow-open-url` enables the command but gives scope to no address: without this list, each link fails to open. The pages of the setup screens are listed one by one and `allow-default-urls` is not used, because that would open all of http and https. The patterns are compared with the string exactly as the interface gives it, with no normalisation, thus they must agree character by character with the constants of src/features/onboarding/ (a `https://steamid.io/*` does not apply to `https://steamid.io`). The `capabilities` test makes sure of it.",
       "allow": [

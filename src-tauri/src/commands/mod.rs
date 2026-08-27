@@ -5,6 +5,7 @@
 // `#[tauri::command]` generates, and a `pub use` of the function alone does not
 // bring it.
 pub mod epic;
+pub mod export;
 pub mod gog;
 
 use domain::{
@@ -13,7 +14,7 @@ use domain::{
 };
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use metadata::itad::ItadCredentials;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use storage::repositories::{
     ConnectorStateRepository, GameLinkRepository, GameRepository, LibraryRepository, LibraryRow,
     MatchCandidateRepository, PriceRepository, PriceRow, StoreAccountRepository,
@@ -113,6 +114,48 @@ pub async fn list_accounts(state: State<'_, AppState>) -> Result<Vec<AccountView
         .collect())
 }
 
+/// Disconnects one account and removes its credential.
+///
+/// The database operation is logical: the store entries remain available as
+/// history, and the records and the state written by the user remain available
+/// in the library. The secret is removed only after the database transaction
+/// succeeds, so a failed transaction never leaves a connected account without
+/// its credential.
+#[tauri::command]
+pub async fn disconnect_account(
+    state: State<'_, AppState>,
+    store: StoreId,
+    account_ref: String,
+) -> Result<(), AppError> {
+    let secrets = state.secrets().await?;
+    disconnect_account_for(&state.db, secrets.as_ref(), store, &account_ref).await
+}
+
+/// The disconnect use case without Tauri state. Integration tests use this
+/// entry point to exercise the database and the secret store together.
+pub async fn disconnect_account_for(
+    db: &storage::Database,
+    secrets: &dyn secrets::SecretStore,
+    store: StoreId,
+    account_ref: &str,
+) -> Result<(), AppError> {
+    let account = StoreAccountRepository(db)
+        .active()
+        .await?
+        .into_iter()
+        .find(|account| account.store == store && account.account_ref == account_ref)
+        .ok_or_else(|| {
+            AppError::Message(format!(
+                "there is no connected {} account with that reference",
+                store.as_str()
+            ))
+        })?;
+
+    StoreAccountRepository(db).soft_delete(account.id).await?;
+    secrets.delete(&credential_key(&account))?;
+    Ok(())
+}
+
 #[derive(Serialize)]
 pub struct AccountView {
     pub store: &'static str,
@@ -171,19 +214,19 @@ impl ProgressSink for WindowProgress<'_> {
 /// window continues to answer while it runs.
 #[tauri::command]
 pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<SyncReport, AppError> {
-    state.begin_operation();
+    // The guard lives to the end of the command, and it is what clears the
+    // cancel flag when the command goes away.
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
     };
-    let report = sync::sync_all(&state, &progress).await;
-    state.end_operation();
-    report
+    sync::sync_all(&state, &progress).await
 }
 
-/// This applies both to the synchronisation and to the matching: the two are
-/// long, the two stop at the next safe point, and they never run at the same
-/// time.
+/// This applies to the three long operations: all of them stop at the next safe
+/// point, and only one of them runs, thus this cancel reaches the operation that
+/// the user sees.
 #[tauri::command]
 pub fn cancel_operation(state: State<'_, AppState>) {
     state.cancel_operation();
@@ -196,7 +239,25 @@ pub async fn library(state: State<'_, AppState>) -> Result<Vec<LibraryRow>, AppE
     Ok(LibraryRepository(&state.db).all().await?)
 }
 
+/// One save that the interface asks for.
+///
+/// The command that saves one takes the same four fields apart, because that is
+/// what an `invoke` with named arguments gives; the batch takes a list of these.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StateUpdate {
+    pub game_id: String,
+    pub status: Option<PlayStatus>,
+    pub rating: Option<u8>,
+    pub notes: Option<String>,
+}
+
 /// The only data that the user writes. No later synchronisation touches it.
+///
+/// It gives back the row that it wrote, and that is the whole point: before,
+/// the interface answered a save with a complete refresh — all of the library,
+/// all of the review queue and all of the prices, eight commands — to see one
+/// status change on one row.
 #[tauri::command]
 pub async fn set_user_state(
     state: State<'_, AppState>,
@@ -204,42 +265,109 @@ pub async fn set_user_state(
     status: Option<PlayStatus>,
     rating: Option<u8>,
     notes: Option<String>,
-) -> Result<(), AppError> {
-    let game_id = Uuid::parse_str(&game_id)
-        .map(GameId::from_uuid)
-        .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
+) -> Result<LibraryRow, AppError> {
+    let update = StateUpdate {
+        game_id,
+        status,
+        rating,
+        notes,
+    };
+    save_states(&state.db, &[update])
+        .await?
+        .pop()
+        .ok_or_else(|| AppError::Message("that game is no longer in the library".to_owned()))
+}
 
-    let previous = UserStateRepository(&state.db).find(game_id).await?;
-    UserStateRepository(&state.db)
-        .save(&UserState {
+/// The same save over more than one game, in one call and in one transaction.
+///
+/// The bulk bar marked thirty games with thirty commands, one after another,
+/// and then asked for the library again. Here it is one command, and the answer
+/// is exactly the rows that changed.
+#[tauri::command]
+pub async fn set_user_state_many(
+    state: State<'_, AppState>,
+    updates: Vec<StateUpdate>,
+) -> Result<Vec<LibraryRow>, AppError> {
+    save_states(&state.db, &updates).await
+}
+
+/// The body that "save one" and "save many" share. Because it is the same body,
+/// the batch takes no short cut against the one-at-a-time path: the same dates
+/// are kept, the same transaction writes, and the rows come back from the same
+/// query as the list.
+///
+/// It takes a `Database` and not the state so that a test reaches it with no
+/// Tauri, in the same way as `summary`.
+pub async fn save_states(
+    db: &storage::Database,
+    updates: &[StateUpdate],
+) -> Result<Vec<LibraryRow>, AppError> {
+    let states = UserStateRepository(db);
+    let mut wanted = Vec::with_capacity(updates.len());
+
+    for update in updates {
+        let game_id = Uuid::parse_str(&update.game_id)
+            .map(GameId::from_uuid)
+            .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
+
+        // The two dates are not in the form, thus a save that does not know
+        // them must give them back unchanged: the row is written again
+        // complete, and without this a change of status would clear them.
+        let previous = states.find(game_id).await?;
+        wanted.push(UserState {
             game_id,
-            status,
-            rating,
-            notes,
+            status: update.status,
+            rating: update.rating,
+            notes: update.notes.clone(),
             started_at: previous.as_ref().and_then(|p| p.started_at),
             finished_at: previous.as_ref().and_then(|p| p.finished_at),
-        })
-        .await?;
-    Ok(())
+        });
+    }
+
+    states.save_many(&wanted).await?;
+
+    // A record that the library no longer shows gives no row. It is not an
+    // error here: the caller that saves one game turns the absence into one.
+    let library = LibraryRepository(db);
+    let mut rows = Vec::with_capacity(wanted.len());
+    for state in &wanted {
+        if let Some(row) = library.one(state.game_id).await? {
+            rows.push(row);
+        }
+    }
+    Ok(rows)
 }
 
 #[derive(Serialize)]
 pub struct LibrarySummary {
-    pub owned: usize,
-    pub wishlist: usize,
-    pub games: usize,
-    pub pending_review: usize,
+    pub owned: i64,
+    pub wishlist: i64,
+    pub games: i64,
+    pub pending_review: i64,
+}
+
+/// Four numbers, four counts.
+///
+/// Before, each number was the length of a list: the four lists together were
+/// every row of `store_entry` and of `game`, with every `raw` JSON parsed, and
+/// all of it was thrown away after the `len()`. The database counts, which is
+/// what a database is for.
+///
+/// It takes a `Database` and not the state so that a test reaches it with no
+/// Tauri, in the same way as `sync`, `prices` and `identity`.
+pub async fn summary(db: &storage::Database) -> Result<LibrarySummary, AppError> {
+    let entries = StoreEntryRepository(db);
+    Ok(LibrarySummary {
+        owned: entries.count_active(EntryKind::Owned).await?,
+        wishlist: entries.count_active(EntryKind::Wishlist).await?,
+        games: GameRepository(db).count_all().await?,
+        pending_review: GameLinkRepository(db).unlinked_entry_count().await?,
+    })
 }
 
 #[tauri::command]
 pub async fn library_summary(state: State<'_, AppState>) -> Result<LibrarySummary, AppError> {
-    let entries = StoreEntryRepository(&state.db);
-    Ok(LibrarySummary {
-        owned: entries.active(EntryKind::Owned).await?.len(),
-        wishlist: entries.active(EntryKind::Wishlist).await?.len(),
-        games: GameRepository(&state.db).all().await?.len(),
-        pending_review: entries.unlinked().await?.len(),
-    })
+    summary(&state.db).await
 }
 
 /// Keeps the IGDB credentials of the user and examines them before: if the
@@ -322,16 +450,14 @@ pub async fn refresh_prices(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<PriceReport, AppError> {
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let credentials = itad_credentials(&state).await?;
-    state.begin_operation();
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
     };
 
-    let report = prices::refresh(&state.db, &state.itad, &credentials, &progress).await;
-    state.end_operation();
-    report
+    prices::refresh(&state.db, &state.itad, &credentials, &progress).await
 }
 
 /// The best price of each wished-for game, in one query.
@@ -360,7 +486,7 @@ pub async fn resolve_identities(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<IdentityReport, AppError> {
-    state.begin_operation();
+    let _guard = state.try_begin().ok_or(AppError::Busy)?;
     let progress = WindowProgress {
         app: app.clone(),
         state: &state,
@@ -369,7 +495,7 @@ pub async fn resolve_identities(
     // The matching is slow because of the limit of 4 requests each second of
     // IGDB, thus it reports each game and does not leave the window quiet for
     // several minutes.
-    let report = match igdb_session(&state).await {
+    match igdb_session(&state).await {
         Ok((credentials, token)) => {
             identity::resolve(&state.db, &state.igdb, &credentials, &token, &progress).await
         }
@@ -377,10 +503,7 @@ pub async fn resolve_identities(
             identity::resolve_local(&state.db, &progress).await
         }
         Err(other) => Err(other),
-    };
-
-    state.end_operation();
-    report
+    }
 }
 
 /// The Twitch token lasts approximately sixty days: it is kept and renewed only

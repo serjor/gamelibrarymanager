@@ -71,6 +71,7 @@ export interface ReviewItem {
 }
 
 export type PlayStatus = "backlog" | "playing" | "finished" | "abandoned";
+export type ExportFormat = "json" | "csv";
 
 export interface LibraryRow {
   game_id: string;
@@ -97,6 +98,14 @@ export interface LibraryRow {
    * you cannot read it as "never played".
    */
   last_played_at: number | null;
+  status: PlayStatus | null;
+  rating: number | null;
+  notes: string | null;
+}
+
+/** One save: the same four fields that `setUserState` takes apart. */
+export interface StateUpdate {
+  gameId: string;
   status: PlayStatus | null;
   rating: number | null;
   notes: string | null;
@@ -167,6 +176,11 @@ export const api = {
   connectEpic: (clientId: string, clientSecret: string) =>
     invoke<string>("connect_epic", { clientId, clientSecret }),
   listAccounts: () => invoke<Account[]>("list_accounts"),
+  /** Disconnects the account and removes its credential. Its records stay. */
+  disconnectAccount: (store: string, accountRef: string) =>
+    invoke<void>("disconnect_account", { store, accountRef }),
+  exportLibrary: (path: string, format: ExportFormat) =>
+    invoke<void>("export_library", { path, format }),
   connectorStates: () => invoke<ConnectorState[]>("connector_states"),
   /** Switches a store off, or on again, and does not touch the other stores. */
   setConnectorEnabled: (store: string, enabled: boolean) =>
@@ -195,12 +209,22 @@ export const api = {
   library: () => invoke<LibraryRow[]>("library"),
   /** Stops the operation in progress: a synchronisation or a match. */
   cancelOperation: () => invoke<void>("cancel_operation"),
+  /**
+   * Writes the state of one game and gives back its row already made.
+   *
+   * The row is what removes the refetch: to see one status change, the
+   * interface asked for all of the library, all of the review queue and all of
+   * the prices.
+   */
   setUserState: (
     gameId: string,
     status: PlayStatus | null,
     rating: number | null,
     notes: string | null,
-  ) => invoke<void>("set_user_state", { gameId, status, rating, notes }),
+  ) => invoke<LibraryRow>("set_user_state", { gameId, status, rating, notes }),
+  /** The same save over more than one game, in one call and one transaction. */
+  setUserStateMany: (updates: StateUpdate[]) =>
+    invoke<LibraryRow[]>("set_user_state_many", { updates }),
 };
 
 /** The errors cross the bridge as plain text; they are normalised here. */

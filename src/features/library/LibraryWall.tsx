@@ -2,6 +2,7 @@ import type { LibraryRow } from "../../lib/api";
 import { STATUS_LABEL } from "../../lib/status";
 import { useVirtualGrid } from "./useVirtualGrid";
 import { withShift, useSelection } from "./useSelection";
+import { isNoLongerInStore } from "./filters";
 
 /**
  * The measurements of the tile, in one place and in pixels.
@@ -19,10 +20,11 @@ import { withShift, useSelection } from "./useSelection";
 export const WIDTH = 126;
 export const COVER_HEIGHT = 168;
 /**
- * The cover plus the label. The 56 are measured, not estimated: two lines of
- * title (31), the line of stores (14) and the two spaces of 4 between the three.
+ * The cover plus the label. The 60 are measured, not estimated: two lines of
+ * title (31), the line of stores or the gone marker (18) and the two spaces of
+ * 4 between the three.
  */
-const TILE_HEIGHT = COVER_HEIGHT + 56;
+const TILE_HEIGHT = COVER_HEIGHT + 60;
 const GAP = 12;
 
 /**
@@ -103,9 +105,13 @@ export function LibraryWall({
                     </span>
                   )}
                   <span className="tile-title">{row.title}</span>
-                  <span className="hint">
-                    {row.owned_stores.join(" · ") || "only in the wishlist"}
-                  </span>
+                  {isNoLongerInStore(row) ? (
+                    <span className="status gone">Not in a store</span>
+                  ) : (
+                    <span className="hint">
+                      {row.owned_stores.join(" · ") || "only in the wishlist"}
+                    </span>
+                  )}
                   {/* A person who uses a screen reader does not see the colour
                       of the dot, thus the status also goes in the name. */}
                   {row.status && (

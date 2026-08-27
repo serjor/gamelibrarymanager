@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import type {
   Account,
   AppInfo,
@@ -9,6 +9,7 @@ import type {
   PlayStatus,
   PriceRow,
   ReviewItem,
+  StateUpdate,
 } from "./lib/api";
 
 const state = {
@@ -23,23 +24,63 @@ const state = {
   prices: [] as PriceRow[],
   /** What was really written, so that you can count it and look at it. */
   saved: [] as [string, PlayStatus | null, number | null, string | null][],
+  /** How many commands the writes took: a batch of thirty must be one. */
+  saveCalls: 0,
+  /** How many times all of the library was asked for. A save must not add one. */
+  libraryRequests: 0,
   /** The matches that the batch confirmed. */
   confirmed: [] as [string, number][],
   /** How many times the prices were really requested. */
   priceRequests: 0,
   /** The reason that the matching stopped, if it stopped. */
   matchingStopped: null as string | null,
+  exportPath: null as string | null,
+  exports: [] as [string, "json" | "csv"][],
 };
+
+/**
+ * What Rust does with a save: it writes and gives the rows back already made.
+ *
+ * The rows of `state.rows` are written too, because that is what the database
+ * does: a later `library()` must not deny what the save answered.
+ */
+function write(updates: StateUpdate[]): LibraryRow[] {
+  return updates.map((update) => {
+    const saved: LibraryRow = {
+      ...state.rows.find((row) => row.game_id === update.gameId)!,
+      status: update.status,
+      rating: update.rating,
+      notes: update.notes,
+    };
+    state.saved.push([update.gameId, update.status, update.rating, update.notes]);
+    state.rows = state.rows.map((row) => (row.game_id === update.gameId ? saved : row));
+    return saved;
+  });
+}
 
 // The event bus of Tauri does not exist out of the application window.
 mock.module("@tauri-apps/api/event", () => ({
   listen: () => Promise.resolve(() => {}),
 }));
 
+mock.module("@tauri-apps/plugin-dialog", () => ({
+  save: () => Promise.resolve(state.exportPath),
+}));
+
 mock.module("./lib/api", () => ({
   api: {
     appInfo: () => Promise.resolve(state.info),
     listAccounts: () => Promise.resolve(state.accounts),
+    disconnectAccount: (store: string, accountRef: string) => {
+      state.accounts = state.accounts.filter(
+        (account) => account.store !== store || account.account_ref !== accountRef,
+      );
+      return Promise.resolve();
+    },
+    exportLibrary: (path: string, format: "json" | "csv") => {
+      state.exports.push([path, format]);
+      return Promise.resolve();
+    },
     connectorStates: () => Promise.resolve(state.connectors),
     setConnectorEnabled: (store: string, enabled: boolean) => {
       state.connectors = state.connectors.map((connector) =>
@@ -78,7 +119,10 @@ mock.module("./lib/api", () => ({
       return Promise.resolve(decisions.length);
     },
     reviewWithoutMetadata: () => Promise.resolve(),
-    library: () => Promise.resolve(state.rows),
+    library: () => {
+      state.libraryRequests += 1;
+      return Promise.resolve(state.rows);
+    },
     cancelOperation: () => Promise.resolve(),
     setUserState: (
       gameId: string,
@@ -86,8 +130,12 @@ mock.module("./lib/api", () => ({
       rating: number | null,
       notes: string | null,
     ) => {
-      state.saved.push([gameId, status, rating, notes]);
-      return Promise.resolve();
+      state.saveCalls += 1;
+      return Promise.resolve(write([{ gameId, status, rating, notes }])[0]!);
+    },
+    setUserStateMany: (updates: StateUpdate[]) => {
+      state.saveCalls += 1;
+      return Promise.resolve(write(updates));
     },
   },
   errorMessage: (cause: unknown) => String(cause),
@@ -281,9 +329,13 @@ describe("App", () => {
     state.rows = [];
     state.prices = [];
     state.saved = [];
+    state.saveCalls = 0;
+    state.libraryRequests = 0;
     state.confirmed = [];
     state.priceRequests = 0;
     state.matchingStopped = null;
+    state.exportPath = null;
+    state.exports = [];
   });
 
   it("a matching that stops says why and that the work is kept", async () => {
@@ -368,6 +420,45 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Connect Epic" })).toBeNull();
   });
 
+  it("can disconnect one account and says that records and notes stay", async () => {
+    state.accounts = [steamAccount, gogAccount];
+    const messages: string[] = [];
+    const confirm = window.confirm;
+    window.confirm = (message?: string) => {
+      messages.push(message ?? "");
+      return true;
+    };
+
+    try {
+      render(<App />);
+      const disconnectSteam = await screen.findByRole("button", { name: "Disconnect Steam" });
+      await act(async () => {
+        fireEvent.click(disconnectSteam);
+      });
+
+      await waitFor(() =>
+        expect(screen.queryByRole("button", { name: "Disconnect Steam" })).toBeNull(),
+      );
+      expect(screen.getByRole("button", { name: "Disconnect GOG" })).toBeDefined();
+      expect(messages).toEqual([
+        "Disconnect Steam? The records and your notes stay in the library.",
+      ]);
+    } finally {
+      window.confirm = confirm;
+    }
+  });
+
+  it("exports JSON to the path chosen in the save dialog", async () => {
+    state.accounts = [steamAccount];
+    state.exportPath = "/tmp/game-library.json";
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Export JSON" }));
+
+    await waitFor(() => expect(state.exports).toEqual([["/tmp/game-library.json", "json"]]));
+    expect(screen.getByText("Written to /tmp/game-library.json")).toBeDefined();
+  });
+
   it("a store that operates correctly appears in no place", async () => {
     // The state of the connector is shown only when there is something to say: a
     // permanent list of "all correct" is noise that nobody reads.
@@ -445,6 +536,24 @@ describe("App", () => {
     expect(rowDom?.textContent).toContain("steam");
     expect(rowDom?.textContent).toContain("gog");
     expect(rowDom?.textContent).toContain("21 h");
+  });
+
+  it("marks a record that left every store and filters it", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({ title: "Gone", owned_stores: [], wishlist_stores: [], status: "playing" }),
+      row({ title: "Wished", owned_stores: [], wishlist_stores: ["steam"] }),
+    ];
+    render(<App />);
+
+    const gone = await screen.findByRole("button", { name: "Gone" });
+    expect(gone.closest("tr")?.textContent).toContain("Not in a store");
+
+    fireEvent.change(screen.getByLabelText("Availability"), {
+      target: { value: "gone" },
+    });
+    expect(screen.getByRole("button", { name: "Gone" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Wished" })).toBeNull();
   });
 
   it("a click on a column sorts by it, and a second click inverts it", async () => {
@@ -531,6 +640,7 @@ describe("App", () => {
     state.rows = FOUR;
     render(<App />);
     await screen.findByRole("button", { name: "Celeste" });
+    const asked = state.libraryRequests;
 
     fireEvent.click(checkOf("Celeste"));
     fireEvent.click(checkOf("Prey"), { shiftKey: true });
@@ -538,9 +648,12 @@ describe("App", () => {
     fireEvent.change(screen.getByLabelText("Mark as"), { target: { value: "abandoned" } });
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
-    // One call for each game, and no more: the batch cannot write two times on
-    // the same game and cannot miss one.
+    // One write for each game, and no more: the batch cannot write two times on
+    // the same game and cannot miss one. And all of them in **one** command:
+    // four games were four commands, one after another.
     await waitFor(() => expect(state.saved).toHaveLength(4));
+    expect(state.saveCalls).toBe(1);
+    expect(state.libraryRequests).toBe(asked);
     expect(state.saved.every(([, status]) => status === "abandoned")).toBe(true);
     // The rating and the notes are given back unchanged: `set_user_state` writes
     // all of the row again, and without this a bulk change of status would
@@ -649,14 +762,41 @@ describe("App", () => {
       fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
       expect(screen.queryByRole("dialog") === null ? null : "dialog").toBe(expected);
 
+      const id = state.rows[0]!.game_id;
       fireEvent.change(inTheRecord().getByLabelText("Status"), { target: { value: "finished" } });
       fireEvent.click(inTheRecord().getByRole("button", { name: "Save" }));
       await waitFor(() => expect(state.saved).toHaveLength(1));
 
-      expect(state.saved[0]).toEqual([state.rows[0]!.game_id, "finished", 9, null]);
+      expect(state.saved[0]).toEqual([id, "finished", 9, null]);
       state.saved = [];
       unmount();
     }
+  });
+
+  it("a save changes the row on the screen and does not ask for the library", async () => {
+    // The save answers with its row already made. Before, the interface answered
+    // a status with a complete refresh — all of the library, all of the review
+    // queue and all of the prices — to see one word change on one row.
+    state.accounts = [steamAccount];
+    state.rows = [row({ title: "Celeste", sort_title: "celeste" })];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+    const asked = state.libraryRequests;
+
+    fireEvent.change(inTheRecord().getByLabelText("Status"), { target: { value: "playing" } });
+    fireEvent.click(inTheRecord().getByRole("button", { name: "Save" }));
+
+    // The table shows the new status, thus the row that came back reached the
+    // state and the screen is not waiting for a later load. In the row of the
+    // table and not anywhere: the form of the record also says "Playing", and
+    // that says nothing about the list.
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("row", { name: /Celeste/ })).getByText("Playing"),
+      ).toBeDefined(),
+    );
+    expect(state.saveCalls).toBe(1);
+    expect(state.libraryRequests).toBe(asked);
   });
 
   it('"Today" proposes the game half done and does not repeat it on the shelves', async () => {

@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAN — Hardening and release</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#6b7280;--line:#e2e4e8;--acc:#0b57d0;--warn:#b3261e;--sub:#f6f7f9}
+@media(prefers-color-scheme:dark){:root{--bg:#16181c;--fg:#e6e6e6;--mut:#9aa0a6;--line:#2e3138;--acc:#8ab4f8;--warn:#f2857b;--sub:#1e2127}}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 ui-sans-serif,system-ui,sans-serif;max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+h1{font-size:1.5rem;margin:0 0 .3rem;line-height:1.25}
+h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:2.4rem 0 .6rem;padding-bottom:.35rem;border-bottom:1px solid var(--line)}
+h3{font-size:1rem;margin:1.5rem 0 .4rem}
+p,li{margin:.35rem 0}
+ul,ol{padding-left:1.15rem}
+code{background:var(--sub);padding:.1rem .3rem;border-radius:3px;font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre{background:var(--sub);border-left:2px solid var(--acc);padding:.7rem .9rem;border-radius:4px;overflow-x:auto;line-height:1.35;font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:.6rem 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:.42rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--sub);font-weight:600}
+em{color:var(--mut);font-style:normal}
+strong{font-weight:600}
+.m{color:var(--mut);font-size:13px;margin:0 0 1rem}
+.x{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<h1>Hardening, two missing operations, and a way to publish</h1>
+<p class="m">gamelibrarymanager · main · 2026-08-17 · size: M</p>
+<p class="m">Eight phases. Each one closes alone, each one gives a version of its own, and no phase waits for a later phase. The order goes from the smallest cost to the largest, and the phase that publishes goes last by decision of the user.</p>
+
+<h2>Goal</h2>
+<p>The application stops in the three places where it can stop badly today: a request with no answer, two long operations at the same time, and a delete that compares against a list of thousands. It gains the two operations that a local-first application must have and does not have: to disconnect a store, and to take the data out. And the repository gains a way to publish what it builds.</p>
+
+<h2>Scope</h2>
+<h3>In</h3>
+<ul>
+<li>A timeout on every request that the application makes.</li>
+<li>A guard that permits one long operation at a time, and that clears itself when the command goes away.</li>
+<li>The summary counts with <code>COUNT</code>, the delete of copies uses a temporary table, and the file database uses WAL.</li>
+<li>A save writes one row and gives that row back. The interface stops asking for all of the library after each save.</li>
+<li>A game that left every store says so, and a filter finds it.</li>
+<li>To disconnect a store account, with the credential deleted.</li>
+<li>To export the library, and a copy of the database before a migration.</li>
+<li>A workflow that builds installers from a tag, and the visual check inside CI.</li>
+</ul>
+<h3>Out</h3>
+<ul>
+<li><strong>An updater.</strong> It needs a signature key and an address that gives the manifest. That is a decision about distribution, not about this repository, and it does not belong in a phase that must close alone.</li>
+<li><strong>A wider connection pool.</strong> See the decisions: WAL gives faster writes, and more connections would give parallel reads, but <code>Database::in_memory()</code> gives a different empty database to each connection and all of the tests use it. The pool stays at one.</li>
+<li><strong>A data library in the interface.</strong> Phase 4 removes the refetch of all of the library after a save. It does not bring React Query, and it does not touch the load of the first start.</li>
+<li><strong>The plans <code>0001</code>, <code>0002</code> and <code>0003</code>.</strong> They record closed decisions. Nobody discusses them again.</li>
+<li><strong>Any change in <code>crates/domain</code>.</strong> No phase needs one.</li>
+</ul>
+
+<h2>Current state</h2>
+<table>
+<tr><th>Concern</th><th>Where</th><th>What it does today</th></tr>
+<tr><td>HTTP</td><td><code>src-tauri/src/state.rs:47</code></td><td>One <code>reqwest::Client</code> for the three connectors, IGDB and ITAD, with a user agent and nothing else. <code>reqwest</code> has no timeout by default.</td></tr>
+<tr><td>Long operations</td><td><code>src-tauri/src/state.rs:42</code>, <code>:96</code></td><td>One <code>AtomicBool</code>. <code>begin_operation</code> clears it, <code>end_operation</code> clears it again. Nothing prevents two operations, and the comment says that the buttons of the interface do it.</td></tr>
+<tr><td>Summary</td><td><code>src-tauri/src/commands/mod.rs:235</code></td><td>Four numbers built with <code>active(Owned).len()</code>, <code>active(Wishlist).len()</code>, <code>all().len()</code> and <code>unlinked().len()</code>: every row read, every <code>raw</code> JSON parsed, all of it thrown away.</td></tr>
+<tr><td>A count that nobody uses</td><td><code>crates/storage/src/repositories/game_link.rs:99</code></td><td><code>unlinked_entry_count</code> is a real <code>COUNT(*)</code>. Only a test calls it.</td></tr>
+<tr><td>Delete of copies</td><td><code>crates/storage/src/repositories/store_entry.rs:62</code></td><td><code>soft_delete_missing</code> binds one parameter for each identifier. Five thousand games make a statement with five thousand placeholders.</td></tr>
+<tr><td>SQLite</td><td><code>crates/storage/src/lib.rs:56</code></td><td>One connection, the journal by default, <code>synchronous</code> at FULL, no <code>busy_timeout</code>.</td></tr>
+<tr><td>Save</td><td><code>src-tauri/src/commands/mod.rs:201</code>, <code>src/App.tsx:108</code>, <code>:372</code></td><td><code>set_user_state</code> gives back nothing. The interface answers with <code>refresh()</code>, which is eight commands: all of the library, all of the queue and all of the prices.</td></tr>
+<tr><td>Bulk save</td><td><code>src/features/library/BulkBar.tsx</code></td><td>One <code>setUserState</code> for each selected game, one after another, and then the same complete refresh.</td></tr>
+<tr><td>A game with no copy</td><td><code>crates/storage/src/repositories/library.rs:65</code></td><td>The query asks only for <code>g.deleted_at IS NULL</code>. A game that left every store stays in the list with no badges, and looks like a game that you have.</td></tr>
+<tr><td>Accounts</td><td><code>crates/storage/src/repositories/store_account.rs:15</code></td><td><code>upsert</code>, <code>mark_synced</code> and <code>active</code>. The column <code>deleted_at</code> exists and no code writes it. There is no command to disconnect.</td></tr>
+<tr><td>Export and copy</td><td>—</td><td>Neither exists. <code>Database::open</code> runs the migrator against the file of the user with no copy before.</td></tr>
+<tr><td>CI</td><td><code>.github/workflows/ci.yml:55</code></td><td>The job <code>build</code> compiles on three systems and stops. No bundle, no tag, no artefact. <code>AGENTS.md</code> lists the visual check as one that CI cannot make.</td></tr>
+</table>
+
+<h2>Gap</h2>
+<p>Four kinds of change, and no phase needs a migration: every column that these phases use is already in the schema. The kinds are: a limit where today there is none (timeout, guard, temporary table); a count where today there is a list; a return value where today there is silence (the row that a save wrote, the state of a game with no copy); and two operations plus one workflow that do not exist at all.</p>
+
+<h2>Decisions</h2>
+<table>
+<tr><th>Question</th><th>Decision</th><th>Why, and what was refused</th></tr>
+<tr><td>Where does the phase that publishes go?</td><td>Last.</td><td>The user decided it. The consequence is written down: the phases 1 to 7 close with a tag and with no installer. The workflow of phase 8 takes a tag as an input, thus you can run it against the earlier tags and get their installers later. Refused: to publish first, which was the recommendation because "each phase gives a release" is only true after phase 8.</td></tr>
+<tr><td>What gives each closed phase?</td><td>A minor version and a tag: <code>0.2.0</code> for phase 1, up to <code>0.9.0</code> for phase 8.</td><td>The version goes in <code>Cargo.toml</code>, <code>package.json</code> and <code>tauri.conf.json</code>, which already agree at <code>0.1.0</code>. Refused: one version at the end, which would make the eight phases one release and would disobey the request.</td></tr>
+<tr><td>What happens when the user disconnects a store?</td><td>A logical delete of the account and of its copies. The credential goes out of the store of secrets. <code>game</code> and <code>user_state</code> are not touched.</td><td>It is the same rule as the switch by connector: the data that a store gave stays in the library with the status and the notes of the user. Refused: to delete the copies for real, which loses the history that lets a game come back; and to ask the user each time, which is one more decision for no gain.</td></tr>
+<tr><td>What shape has the export?</td><td>A complete JSON, a CSV with only what the user wrote, and a copy of the database before a migration.</td><td>The JSON is the library; the CSV opens in a spreadsheet and carries the status, the score and the notes, which is the data that only this application has. Refused: only the export, which leaves the migration with no protection; and only the copy, which keeps the data inside the application.</td></tr>
+<tr><td>How does the copy get made with a database that can be open?</td><td><code>VACUUM INTO</code>.</td><td>One statement, and it is correct with WAL and with a live connection. Refused: <code>fs::copy</code> of <code>library.db</code>, which with WAL copies a file that misses the last writes, and which would make phase 7 depend on phase 3.</td></tr>
+<tr><td>How much SQLite change?</td><td><code>journal_mode=WAL</code>, <code>synchronous=NORMAL</code> and <code>busy_timeout</code>, only on the file database. The pool stays at one connection.</td><td>With one connection the commands still go one after another, thus this buys faster writes and not parallel reads. Parallel reads need more connections, and <code>in_memory()</code> gives a different empty database to each connection, thus every test would break. Refused: to widen the pool now, with no measurement that says the interface stops.</td></tr>
+<tr><td>What happens to a game that left every store?</td><td>It stays, with a mark, and a filter finds it. "Today" does not offer it.</td><td>To hide it would hide the notes of the user with it, which is the only data that this application has and the store does not. The interface can find the state with no new SQL: the two lists of stores of <code>LibraryRow</code> are empty at the same time only in this case.</td></tr>
+<tr><td>How does the user select where the export goes?</td><td><code>tauri-plugin-dialog</code>, with <code>dialog:allow-save</code> in the capability.</td><td>A save dialog is what a user of a desktop expects, and the file goes where they want. Refused: to write in the data directory and to open the folder, which needs a permission as well and leaves the file in a place that nobody looks at.</td></tr>
+</table>
+
+<h2>Plan</h2>
+
+<h3>Phase 1 — A request that gets no answer stops (0.2.0)</h3>
+<p>Today a store that accepts the connection and never answers holds the synchronisation for ever, and the cancel button does not reach it: <code>cancelled()</code> is examined between accounts, not inside a request.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>src-tauri/src/state.rs</code></td><td>Take the builder out to <code>pub fn http_client() -&gt; reqwest::Client</code>, with <code>.timeout(30s)</code> and <code>.connect_timeout(10s)</code>. <code>AppState::new</code> calls it.</td></tr>
+<tr><td><code>src-tauri/src/lib.rs</code></td><td>Export <code>http_client</code> in <code>pub mod testing</code>, so that the test uses the same client as the application.</td></tr>
+<tr><td><code>src-tauri/tests/offline.rs</code></td><td>A test with a server that delays the answer more than the timeout. The connector gives a transport error and does not wait.</td></tr>
+</table>
+<p>The login windows of GOG and of Epic wait on a channel and not on this client. The timeout does not touch them.</p>
+<p><strong>Done when:</strong> a provider that does not answer fails in less than 35 seconds, and a test proves it.</p>
+
+<h3>Phase 2 — One long operation at a time (0.3.0)</h3>
+<p>The three long commands — <code>sync_now</code>, <code>refresh_prices</code> and <code>resolve_identities</code> — share one cancel flag. Two at the same time cancel each other, and the first one to end clears the flag under the other. If the webview goes away and the command future is dropped, <code>end_operation</code> never runs.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>src-tauri/src/state.rs</code></td><td>Add <code>operation: tokio::sync::Mutex&lt;()&gt;</code>. <code>try_begin() -&gt; Option&lt;OperationGuard&gt;</code> takes it with <code>try_lock</code> and clears the cancel flag. <code>OperationGuard</code> clears the flag in <code>Drop</code>. Delete <code>begin_operation</code> and <code>end_operation</code>.</td></tr>
+<tr><td><code>src-tauri/src/error.rs</code></td><td><code>AppError::Busy</code>, with a message that a person reads.</td></tr>
+<tr><td><code>src-tauri/src/commands/mod.rs</code></td><td>The three commands take the guard and give <code>Busy</code> when it is not free. The guard lives to the end of the command.</td></tr>
+<tr><td><code>src-tauri/src/lib.rs</code></td><td>Export what the test needs from <code>state</code>.</td></tr>
+<tr><td><code>src/App.tsx</code></td><td>The message of <code>Busy</code> is shown as the other errors. The buttons keep the <code>disabled</code> that they have: this phase adds a guard, it does not move the rule to the interface.</td></tr>
+<tr><td><code>src-tauri/tests/</code> (new)</td><td>A second call while one runs gives <code>Busy</code>. A guard that is dropped leaves the flag clear.</td></tr>
+<tr><td><code>docs/tauri/</code> (new)</td><td>The convention: a long operation takes a guard, and the guard and not the command clears the flag.</td></tr>
+</table>
+<p><strong>Done when:</strong> two long commands at the same time give <code>Busy</code> and not a corrupt flag, and the flag is clear after the command goes away.</p>
+
+<h3>Phase 3 — The storage layer counts, and stops binding thousands of parameters (0.4.0)</h3>
+<p>Three changes with no effect that the user sees, and all of them inside <code>crates/storage</code>.</p>
+<p class="x">The delete must not be divided into batches of placeholders. <code>NOT IN</code> with half of the list deletes everything that is in the other half. The identifiers that the store gave go into a temporary table inside the same transaction, and the <code>UPDATE</code> compares against that table.</p>
+<pre><code>BEGIN;
+CREATE TEMP TABLE seen (app_id TEXT PRIMARY KEY);
+-- the identifiers go in, in batches of 500
+UPDATE store_entry SET deleted_at = ?, updated_at = ?
+ WHERE account_id = ? AND kind = ? AND deleted_at IS NULL
+   AND store_app_id NOT IN (SELECT app_id FROM seen);
+DROP TABLE seen;
+COMMIT;</code></pre>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>crates/storage/src/repositories/store_entry.rs</code></td><td><code>soft_delete_missing</code> uses the temporary table. Add <code>count_active(kind) -&gt; i64</code>.</td></tr>
+<tr><td><code>crates/storage/src/repositories/game.rs</code></td><td>Add <code>count_all() -&gt; i64</code>.</td></tr>
+<tr><td><code>src-tauri/src/commands/mod.rs</code></td><td><code>library_summary</code> calls the three counts and <code>unlinked_entry_count</code>, which already exists. Take the body to a function that takes <code>&amp;Database</code>, as <code>sync</code>, <code>prices</code> and <code>identity</code> already do, so that a test reaches it with no Tauri.</td></tr>
+<tr><td><code>crates/storage/src/lib.rs</code></td><td><code>open</code> adds <code>journal_mode(Wal)</code>, <code>synchronous(Normal)</code> and <code>busy_timeout(5s)</code>. <code>in_memory</code> is not touched.</td></tr>
+<tr><td><code>crates/storage/tests/store_entry.rs</code></td><td>An account with 2,000 copies where 1,500 are still there: exactly 500 get the logical delete, and the 1,500 keep <code>deleted_at IS NULL</code>.</td></tr>
+<tr><td><code>src-tauri/tests/summary.rs</code> (new)</td><td>The summary costs four statements. It counts with the same logger as <code>one_query.rs</code>, thus <strong>it must be alone in its file</strong> for the same reason that file gives.</td></tr>
+<tr><td><code>docs/storage/</code> (new)</td><td>The convention: a delete that compares against a list of the provider uses a temporary table, never a list of placeholders.</td></tr>
+</table>
+<p><strong>Done when:</strong> the summary makes four statements, a library of 2,000 copies deletes the correct 500, and a file database reports <code>wal</code>.</p>
+
+<h3>Phase 4 — A save writes one row, and gives that row back (0.5.0)</h3>
+<p>Today a status written on one game costs eight commands, all of the library, all of the review queue and all of the prices. A bulk save of thirty games costs thirty commands and then the same.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>crates/storage/src/repositories/library.rs</code></td><td>The same <code>SQL</code> constant gains a nullable parameter: <code>AND (?1 IS NULL OR g.id = ?1)</code>. <code>all()</code> gives <code>NULL</code>, the new <code>one(game_id)</code> gives the identifier. One constant, thus the row of a save cannot become different from the row of the list, and the plan test keeps its meaning.</td></tr>
+<tr><td><code>src-tauri/src/commands/mod.rs</code></td><td><code>set_user_state</code> gives back <code>LibraryRow</code>. New <code>set_user_state_many(Vec&lt;...&gt;) -&gt; Vec&lt;LibraryRow&gt;</code>, in one transaction.</td></tr>
+<tr><td><code>src-tauri/src/lib.rs</code></td><td>Register the new command.</td></tr>
+<tr><td><code>src/lib/api.ts</code></td><td>The two signatures. Nobody else calls <code>invoke</code>.</td></tr>
+<tr><td><code>src/App.tsx</code></td><td><code>patchRows(rows)</code> replaces those games in the state. It goes down instead of <code>onSaved</code> where a row comes back. <code>refresh()</code> stays for the synchronisation, the matching and the prices, which do change the queue and the summary.</td></tr>
+<tr><td><code>src/features/game/GameDetail.tsx</code>, <code>src/features/library/BulkBar.tsx</code>, <code>src/features/today/Today.tsx</code></td><td>They use the row that comes back. The bulk bar makes one call and not one for each game.</td></tr>
+<tr><td><code>src/App.test.tsx</code></td><td>A save changes the row on the screen and asks for no library.</td></tr>
+</table>
+<p><strong>Done when:</strong> a save in the inspector makes one command and no refetch, and a bulk save of thirty games makes one command.</p>
+
+<h3>Phase 5 — A game that left every store says so (0.6.0)</h3>
+<p>A game whose copies all received the logical delete keeps its row in <code>game</code>, and the library shows it with no badges beside the games that you have. The two lists of stores of <code>LibraryRow</code> are empty at the same time only in this case, thus the interface knows it with no change in Rust.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>src/features/library/filters.ts</code></td><td>A filter "no longer in a store", and its test in <code>filters.test.ts</code>.</td></tr>
+<tr><td><code>src/features/library/LibraryTable.tsx</code>, <code>LibraryWall.tsx</code>, <code>src/features/game/GameDetail.tsx</code></td><td>The mark, with the tokens of the palette and with no colour of its own.</td></tr>
+<tr><td><code>src/features/today/shelves.ts</code></td><td>They go out of the shelves: to offer a game that you no longer have is incorrect. Its test goes with it.</td></tr>
+<tr><td><code>docs/ui/</code> (new)</td><td>The convention: a record that lost all of its copies keeps the notes of the user and says its state; it does not go away.</td></tr>
+</table>
+<p><strong>Done when:</strong> a game with no live copy carries the mark, the filter finds it, and "Today" does not offer it.</p>
+
+<h3>Phase 6 — To disconnect a store (0.7.0)</h3>
+<p>The column <code>deleted_at</code> of <code>store_account</code> exists and nothing writes it. A user who changes their Steam key, or who wants GOG out, has no path.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>crates/storage/src/repositories/store_account.rs</code></td><td><code>soft_delete(id)</code>: it marks the account and its copies in one transaction. It does not touch <code>game</code>, <code>game_link</code> or <code>user_state</code>.</td></tr>
+<tr><td><code>src-tauri/src/commands/mod.rs</code></td><td><code>disconnect_account(store, account_ref)</code>: the logical delete, and then <code>secrets.delete(&amp;credential_key(..))</code>. The key needs only those two fields.</td></tr>
+<tr><td><code>src-tauri/src/lib.rs</code></td><td>Register the command.</td></tr>
+<tr><td><code>src/lib/api.ts</code>, <code>src/App.tsx</code></td><td>A "Disconnect" button in each row of the account list, with a confirmation that says what stays: the records and the notes.</td></tr>
+<tr><td><code>src-tauri/tests/</code> (new)</td><td>After the disconnection: the account is not in <code>active()</code>, the secret is not in the store, a synchronisation does not ask that store, and <code>user_state</code> is the same.</td></tr>
+<tr><td><code>docs/connectors/</code> (new)</td><td>The convention: to disconnect deletes the credential and keeps what the store gave.</td></tr>
+</table>
+<p>This phase does not need phase 5. Without it, the game stays in the library with no badges, which is what occurs today when a store loses a game.</p>
+<p><strong>Done when:</strong> the disconnection removes the account and the credential, keeps the notes, and the next synchronisation ignores that store.</p>
+
+<h3>Phase 7 — To take the data out, and a copy before a migration (0.8.0)</h3>
+<p>All of the data lives in one SQLite file and the migrator writes on it with no copy before. There is no way to take the library out of the application.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>crates/storage/src/lib.rs</code></td><td><code>open</code> asks the migrator whether there are migrations to apply. If there are, and the file exists, <code>VACUUM INTO 'library.db.bak-&lt;version&gt;'</code> before <code>migrate()</code>. It keeps the last three copies.</td></tr>
+<tr><td><code>src-tauri/src/commands/export.rs</code> (new)</td><td><code>export_library(path, format)</code>. JSON: the rows of <code>LibraryRepository::all()</code>, the accounts and the state of the connectors. CSV: <code>game_id</code>, title, status, score, notes. No new SQL: the export uses the repositories that exist.</td></tr>
+<tr><td><code>src-tauri/Cargo.toml</code>, <code>src-tauri/capabilities/default.json</code>, <code>package.json</code></td><td><code>tauri-plugin-dialog</code> and the permission <code>dialog:allow-save</code>, with the reason in the <code>comment</code>, as the capability file already does with each permission.</td></tr>
+<tr><td><code>src-tauri/tests/capabilities.rs</code></td><td>It already guards the list of permitted addresses. Extend it so that the new permission does not go away without anybody seeing it.</td></tr>
+<tr><td><code>src/lib/api.ts</code>, <code>src/App.tsx</code></td><td>Two buttons, and the path of the file that was written.</td></tr>
+<tr><td><code>crates/storage/tests/</code></td><td>A database with an old schema leaves a copy beside it, and the copy opens.</td></tr>
+<tr><td><code>docs/storage/</code> (new)</td><td>The convention: a copy of the database is made with <code>VACUUM INTO</code> and never with a copy of the file.</td></tr>
+</table>
+<p><strong>Done when:</strong> the export writes the two files where the user said, and a database with migrations to apply leaves a copy that opens.</p>
+
+<h3>Phase 8 — To publish, and the visual check inside CI (0.9.0)</h3>
+<p>CI compiles on three systems and gives no artefact. And <code>AGENTS.md</code> says that CI cannot make the visual check; that is true for the keyring and it is not true for this one, because <code>ubuntu-latest</code> installs a Chromium.</p>
+<table>
+<tr><th>File</th><th>Change</th></tr>
+<tr><td><code>.github/workflows/release.yml</code> (new)</td><td>On a tag <code>v*</code>, and also with <code>workflow_dispatch</code> that takes a tag: <code>tauri-apps/tauri-action</code> on the three systems, and a <strong>draft</strong> release. It is a draft because to publish is a decision of a person. The input of a tag is what lets the tags of the phases 1 to 7 get their installers later.</td></tr>
+<tr><td><code>.github/workflows/ci.yml</code></td><td>A job <code>visual</code>: <code>bun install</code>, <code>bunx playwright install --with-deps chromium</code>, <code>bun run build</code>, <code>bun run visual</code>.</td></tr>
+<tr><td><code>AGENTS.md</code>, <code>README.md</code></td><td>The two checks that CI cannot make become one: only the real keyring.</td></tr>
+</table>
+<p><strong>Done when:</strong> a tag gives installers for the three systems in a draft release, and CI fails when the layout breaks.</p>
+
+<h2>Data and contracts</h2>
+<p>No migration. Every column that these phases use is in the schema: <code>store_account.deleted_at</code> since <code>0001</code>, and nothing else is new.</p>
+<table>
+<tr><th>Contract</th><th>Before</th><th>After</th><th>Phase</th></tr>
+<tr><td><code>set_user_state</code></td><td>gives nothing</td><td>gives <code>LibraryRow</code></td><td>4</td></tr>
+<tr><td><code>set_user_state_many</code></td><td>—</td><td>gives <code>Vec&lt;LibraryRow&gt;</code></td><td>4</td></tr>
+<tr><td><code>disconnect_account</code></td><td>—</td><td>new</td><td>6</td></tr>
+<tr><td><code>export_library</code></td><td>—</td><td>new</td><td>7</td></tr>
+<tr><td><code>AppError</code></td><td>nine variants</td><td>ten, with <code>Busy</code></td><td>2</td></tr>
+</table>
+<p><code>LibraryRow</code> does not change shape in any phase. The visual harness builds rows of that type and needs no change.</p>
+
+<h2>Risks</h2>
+<table>
+<tr><th>Risk</th><th>Impact</th><th>What prevents it</th><th>Rollback</th></tr>
+<tr><td>The delete divided into batches of placeholders</td><td>It deletes the library of an account</td><td>The temporary table, and the test with 2,000 copies. The plan forbids the division of the <code>NOT IN</code>.</td><td>Revert the phase; the delete is logical and <code>deleted_at</code> goes back to <code>NULL</code> at the next synchronisation.</td></tr>
+<tr><td>WAL makes two files beside the database</td><td>A user who copies <code>library.db</code> by hand copies less than they think</td><td>The copy of phase 7 uses <code>VACUUM INTO</code>, which is correct with WAL.</td><td>Take the pragma out; SQLite goes back to the journal at the next open.</td></tr>
+<tr><td>A timeout that is too short</td><td>A slow provider fails where before it finished</td><td>30 seconds against providers that answer in less than one. The test proves the stop, not the number.</td><td>Change one constant.</td></tr>
+<tr><td>The guard blocks a command that did not end</td><td>The user cannot synchronise until the application restarts</td><td>The guard clears in <code>Drop</code>, thus a command that goes away frees it.</td><td>Revert the phase.</td></tr>
+<tr><td>The disconnection deletes a credential</td><td>The user must connect the store again</td><td>A confirmation that says exactly what goes and what stays.</td><td>None: connect the store again. It is said before.</td></tr>
+</table>
+
+<h2>Verification</h2>
+<p>Each phase closes with all of these green, which are the checks of <code>AGENTS.md</code>:</p>
+<pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev            # the window must open</code></pre>
+<p>And by hand, in the phase that changes it: phase 4, a save that does not make the list jump; phase 6, a disconnection with the notes still there after it; phase 7, the two files opened outside the application; phase 8, an installer downloaded and started.</p>
+
+<h2>Do not</h2>
+<ul>
+<li>Do not put two phases in one commit, and do not move work from a later phase to an earlier one. Each phase gives a version.</li>
+<li>Do not divide <code>soft_delete_missing</code> into batches of placeholders. See phase 3.</li>
+<li>Do not widen the connection pool, and do not touch <code>Database::in_memory()</code>.</li>
+<li>Do not write SQL outside <code>crates/storage</code>.</li>
+<li>Do not give <code>crates/domain</code> a network or a database dependency. The <code>architecture</code> job of CI fails if you do.</li>
+<li>Do not add an updater, and do not publish a release that is not a draft.</li>
+<li>Do not declare a colour in a component: the tokens are the only source.</li>
+<li>Do not touch the plans <code>0001</code>, <code>0002</code> and <code>0003</code>.</li>
+<li>Do not write a new document in Spanish. The documentation is in English and obeys ASD-STE100.</li>
+</ul>
+
+</body>
+</html>

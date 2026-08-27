@@ -14,8 +14,7 @@
  * session that wrote this, three "defects" seen in screenshots did not exist and
  * one that you could not see did.
  *
- * CI does not run it: it needs a Chromium, and to download one at each `push`
- * costs more than it gives. It is a tool that you run by hand.
+ * CI runs it on Ubuntu after it installs Chromium. You can also run it by hand.
  *
  *     bun run build && bun run visual
  *
@@ -106,6 +105,7 @@ export function exampleLibrary(): LibraryRow[] {
     game({ title: "Cyberpunk 2077", owned_stores: ["gog"], playtime_minutes: 1860, last_played_at: 1_600_000_000, status: "abandoned", rating: 6 }),
     game({ title: "LIMBO", owned_stores: ["steam", "gog"], playtime_minutes: 240, status: "finished", rating: 7 }),
     game({ title: "Stardew Valley", owned_stores: ["steam", "gog"], playtime_minutes: 2400 }),
+    game({ title: "A game that left every store", owned_stores: [], wishlist_stores: [], status: "playing" }),
   ];
 }
 

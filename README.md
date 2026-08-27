@@ -68,6 +68,13 @@ These are the checks, the same checks that CI runs:
 ```sh
 cargo fmt --check && cargo clippy --all-targets --workspace -- -D warnings && cargo test --workspace
 bunx tsc --noEmit && bun run lint && bun test
+bun run build && bun run visual
+```
+
+The only check that CI cannot make needs a desktop session with secret-service:
+
+```sh
+cargo test -p secrets --test keyring_real -- --ignored
 ```
 
 ## Architecture

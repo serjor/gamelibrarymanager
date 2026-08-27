@@ -25,6 +25,10 @@ pub enum AppError {
     MissingItadCredentials,
     #[error("unreadable internal data: {0}")]
     Serde(#[from] serde_json::Error),
+    #[error(
+        "another long operation is in progress: wait for it to end, or cancel it, and try again"
+    )]
+    Busy,
 }
 
 // Tauri must serialise the error to send it to the frontend. It sends the

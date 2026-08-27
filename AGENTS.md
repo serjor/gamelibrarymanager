@@ -17,6 +17,11 @@ Before you write code, read also:
   and the documentation to English. It records why the project writes in English
   with ASD-STE100, and the two consequences that reach outside the repository:
   the checksums of the migrations `0001` to `0005`, and the price format.
+- `.agents/plans/0004-hardening-and-release/plan.html` — the eight phases that
+  put a limit where there is none, add the two operations that a local-first
+  application must have — to disconnect a store and to take the data out — and
+  give the repository a way to publish. Each phase closes alone and gives a
+  version of its own.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
 
@@ -30,6 +35,7 @@ Before you write code, read also:
 | [Verify the unofficial endpoints before you write the connector](docs/connectors/verify-unofficial-endpoints.md) | Read the live reference implementation, test by hand, and record the result with a date in the module. |
 | [Every store connector has a switch of its own](docs/connectors/switch-per-connector.md) | You switch a broken store off and the others continue. The reason is kept, and only the user decides to switch a store off. |
 | [An ambiguous identifier is not an identity](docs/connectors/an-ambiguous-identifier-is-not-an-identity.md) | If the store permits two readings of the identifier of the copy, the connector does not select: it gives no identifier and the title decides. |
+| [Disconnecting a store keeps what the user wrote](docs/connectors/disconnecting-a-store-keeps-user-state.md) | Disconnecting marks the account and its copies gone, removes the credential, and keeps the records, links and user state. |
 
 ### `docs/domain/` — the pure rules
 
@@ -43,6 +49,8 @@ Before you write code, read also:
 | --- | --- |
 | [To add metadata to a record writes its row again; it does not make a new one](docs/storage/enrich-records-in-place.md) | `user_state` is attached to the `game_id`: to use it again is what prevents the loss of what the user wrote. |
 | [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to two tables: an offer that ended cannot continue to look like an offer. |
+| [A database backup uses `VACUUM INTO`](docs/storage/database-backup-uses-vacuum-into.md) | Before a pending migration, SQLite writes a complete copy through the open WAL connection and only the three newest copies stay. |
+| [A delete that compares against a list of the provider uses a temporary table](docs/storage/compare-against-a-temporary-table.md) | Never a `NOT IN` with thousands of placeholders, and never a comparison divided into batches: each batch would delete what is in the other batches. |
 
 ### `docs/tauri/` — the application shell
 
@@ -52,6 +60,7 @@ Before you write code, read also:
 | [What the webview needs from the environment goes in `main.rs`](docs/tauri/prepare-the-webview-before-gtk-starts.md) | Before GTK starts, behind a platform `cfg` and with respect for what the environment already gives. In the development script it corrects only the machine of the programmer. |
 | [A script in a store login window runs on one page and carries no logic](docs/tauri/scripts-in-a-login-window.md) | You read the page of a store only where it gives the code, with no logic inside the script and with no command given to it. |
 | [A long pass saves as it goes, and a provider that cuts it off is a result](docs/tauri/long-passes-save-in-batches.md) | Write in batches, stop where the provider stops you and lose nothing from before, and say why. A failure of the database does go up. |
+| [A long operation takes a guard, and the guard clears the cancel flag](docs/tauri/one-long-operation-at-a-time.md) | One long operation at a time, and the second one is told that the application is busy. A command that goes away leaves no cancel behind, because the guard and not the command clears the flag. |
 
 ### `docs/ui/` — the interface
 
@@ -60,6 +69,7 @@ Before you write code, read also:
 | [No component declares a colour: all of them come from the tokens](docs/ui/tokens-as-the-only-source-of-colour.md) | The palette and its dark variant are defined one time. No literal values, no `Canvas`, and no colours derived from `currentColor`. |
 | [One state for the two view modes: the views only show](docs/ui/one-state-for-the-two-view-modes.md) | The filter, the sort and the selection live in `Library.tsx`; the table and the wall show what they receive. And a screen that makes its own divisions is not a view mode. |
 | [One region scrolls, and it reaches the edges of the window](docs/ui/one-region-that-scrolls.md) | The height is divided with `flex` and `min-height: 0`; the piece sets the maximum width and the frame does not, or the space at the sides stops answering the wheel. |
+| [A record with no live copy stays visible](docs/ui/record-with-no-live-copy.md) | A record with no owned store and no wishlist store keeps the user's state, and "Today" does not propose it. |
 
 ### `docs/testing/` — the tests
 
@@ -81,24 +91,13 @@ cargo fmt --all --check
 cargo clippy --all-targets --workspace -- -D warnings
 cargo test --workspace
 bunx tsc --noEmit && bun run lint && bun test
+bun run build && bun run visual
 bun run tauri dev            # the window must open
 ```
 
-There are two checks that CI **cannot** make. The first needs a desktop session
+There is one check that CI **cannot** make. It needs a desktop session
 with secret-service:
 
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
-
-The second needs a Chromium, because it measures the real layout — overlaps,
-overflows, the alignment of columns and the contrast — and `bun test` does not
-know that: with happy-dom it measures each container as zero:
-
-```sh
-bun run build && bun run visual
-```
-
-If it finds no browser: `bunx playwright install chromium`, or `CHROMIUM_PATH`
-that points to the browser that you have. How to write a check of that kind is in
-[assert on the structure](docs/testing/assert-on-the-structure.md).

@@ -128,6 +128,17 @@ impl GameRepository<'_> {
         .rows_affected())
     }
 
+    /// How many records the library has.
+    ///
+    /// The summary asked for `all()` and read its length: every row of the
+    /// table, and its genres parsed from JSON, to give one number.
+    pub async fn count_all(&self) -> Result<i64> {
+        let row = sqlx::query("SELECT COUNT(*) AS n FROM game WHERE deleted_at IS NULL")
+            .fetch_one(self.0.pool())
+            .await?;
+        Ok(row.get("n"))
+    }
+
     pub async fn all(&self) -> Result<Vec<Game>> {
         sqlx::query(
             "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres

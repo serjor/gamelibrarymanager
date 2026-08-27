@@ -47,6 +47,43 @@ impl StoreAccountRepository<'_> {
         Ok(())
     }
 
+    /// Disconnects an account without removing what its store gave us.
+    ///
+    /// The account and its copies are one operation: if either update fails,
+    /// the account remains connected and the synchronisation can still see its
+    /// rows. The game, its links and the user's state belong to other owners and
+    /// are deliberately not part of this transaction.
+    pub async fn soft_delete(&self, id: StoreAccountId) -> Result<()> {
+        let now = OffsetDateTime::now_utc();
+        let mut tx = self.0.pool().begin().await?;
+        let account_id = account_id_to_text(id);
+
+        sqlx::query(
+            "UPDATE store_account
+             SET deleted_at = ?, updated_at = ?
+             WHERE id = ? AND deleted_at IS NULL",
+        )
+        .bind(now)
+        .bind(now)
+        .bind(&account_id)
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query(
+            "UPDATE store_entry
+             SET deleted_at = ?, updated_at = ?
+             WHERE account_id = ? AND deleted_at IS NULL",
+        )
+        .bind(now)
+        .bind(now)
+        .bind(account_id)
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
     pub async fn active(&self) -> Result<Vec<StoreAccount>> {
         sqlx::query(
             "SELECT id, store, account_ref, display_name, connected_at, last_sync_at
