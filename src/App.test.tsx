@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import type {
   Account,
   AppInfo,
@@ -431,7 +431,10 @@ describe("App", () => {
 
     try {
       render(<App />);
-      fireEvent.click(await screen.findByRole("button", { name: "Disconnect Steam" }));
+      const disconnectSteam = await screen.findByRole("button", { name: "Disconnect Steam" });
+      await act(async () => {
+        fireEvent.click(disconnectSteam);
+      });
 
       await waitFor(() =>
         expect(screen.queryByRole("button", { name: "Disconnect Steam" })).toBeNull(),
