@@ -625,6 +625,9 @@ for (const theme of ["light", "dark"] as const) {
       await openUtilities(page);
       const primary = page.locator("button.primary-action");
       await primary.waitFor();
+      // Opening Utilities used a pointer click. Restore keyboard modality so
+      // the programmatic focus below matches the :focus-visible rule.
+      await page.keyboard.press("Tab");
       await primary.focus();
       return page.evaluate(() => {
         const numbers = (s: string) => (s.match(/[0-9]+/g) ?? []).map(Number);
