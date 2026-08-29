@@ -305,9 +305,9 @@ for (const width of [1535, 1536, 1600]) {
   const r = await withTheApp(
     async (page) => {
       await page.locator("td.tt button").first().click();
-      await page.locator(".detail").waitFor();
+      await page.locator(".detail, dialog[open]").first().waitFor();
       return page.evaluate(() => {
-        const inspector = document.querySelector(".detail")!.getBoundingClientRect();
+        const inspector = document.querySelector(".detail");
         const box = document.querySelector(".table-viewport")!;
         const table = box.getBoundingClientRect();
         return {
@@ -315,7 +315,7 @@ for (const width of [1535, 1536, 1600]) {
           // The table keeps the space that the inspector leaves: if that is not
           // sufficient, it scrolls horizontally and the title starts to be cut.
           tableSideways: box.scrollWidth > box.clientWidth + 1,
-          covers: inspector.left < table.right - 0.5,
+          covers: inspector !== null && inspector.getBoundingClientRect().left < table.right - 0.5,
           sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
       });
