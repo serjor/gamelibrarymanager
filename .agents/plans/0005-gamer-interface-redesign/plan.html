@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Plan — Gamer interface redesign</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8fafc;--text:#172033;--muted:#667085;
+  --line:#dce2ea;--accent:#3157d5;--accent-soft:#edf1ff;--good:#16734b;
+  --good-soft:#e9f7f0;--warn:#9a6700;--warn-soft:#fff6d8;--danger:#b42318;
+  --danger-soft:#fff0ee;--code:#eef1f5;--shadow:0 12px 35px rgba(23,32,51,.08)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#10141d;--surface:#171d28;--surface-2:#1d2532;--text:#edf1f7;--muted:#a6b0c0;
+    --line:#303a49;--accent:#91a7ff;--accent-soft:#222d57;--good:#70d6aa;
+    --good-soft:#15382c;--warn:#f0c46b;--warn-soft:#3c3015;--danger:#ff9b91;
+    --danger-soft:#49231f;--code:#242d3a;--shadow:0 14px 38px rgba(0,0,0,.22)
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:clip}
+main{width:100%;max-width:74rem;min-width:0;margin:0 auto;padding:2rem 1.25rem 5rem}
+a{color:var(--accent);text-decoration-thickness:.08em;text-underline-offset:.18em}
+a:hover{text-decoration-thickness:.14em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:3px}
+header,section,.phase{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+header{padding:2rem}
+section{padding:1.5rem;margin-top:1rem}
+.phase{padding:0;margin-top:1rem;overflow:hidden}
+.eyebrow{margin:0 0 .45rem;color:var(--accent);font-size:.76rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(1.85rem,5vw,3.15rem);line-height:1.08;letter-spacing:-.035em;margin:.15rem 0 .8rem;max-width:18ch}
+h2{font-size:1.32rem;line-height:1.25;margin:0 0 .85rem;letter-spacing:-.015em}
+h3{font-size:1.03rem;line-height:1.3;margin:0 0 .45rem}
+h4{font-size:.92rem;line-height:1.35;margin:0 0 .35rem}
+p{margin:.4rem 0}
+ul,ol{margin:.55rem 0;padding-left:1.2rem}
+li{margin:.3rem 0}
+.lede{max-width:68ch;font-size:1.07rem;color:var(--muted);margin:0}
+.meta,.stat-grid,.decision-grid,.impact-grid,.phase-facts,.triptych{display:grid;gap:.75rem}
+.meta{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:1.4rem}
+.meta div,.stat,.decision,.impact,.fact,.triptych article{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+dt,.label{color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+dd{margin:.18rem 0 0;font-weight:650}
+.status{display:inline-flex;align-items:center;gap:.35rem;border:1px solid currentColor;border-radius:999px;padding:.15rem .52rem;font-size:.75rem;font-weight:750;white-space:nowrap}
+.status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:currentColor}
+.review{color:var(--warn);background:var(--warn-soft)}
+.planned{color:var(--accent);background:var(--accent-soft)}
+.active{color:var(--warn);background:var(--warn-soft)}
+.done{color:var(--good);background:var(--good-soft)}
+.blocked{color:var(--danger);background:var(--danger-soft)}
+nav{position:sticky;top:.7rem;z-index:2;max-width:74rem;margin:1rem auto;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+nav ul{display:flex;gap:.4rem .95rem;list-style:none;margin:0;padding:0;overflow-x:auto}
+nav li{margin:0;white-space:nowrap}
+nav a{color:var(--muted);font-size:.84rem;font-weight:650;text-decoration:none}
+nav a:hover{color:var(--accent)}
+.decision-grid{grid-template-columns:1.2fr .8fr;margin-top:1rem}
+.decision{padding:1rem}
+.decision.primary{background:var(--accent-soft);border-color:var(--accent)}
+.decision strong{display:block;font-size:1.18rem;margin:.15rem 0 .35rem}
+.decision p,.impact p{color:var(--muted)}
+.callout{border-left:4px solid var(--accent);border-radius:8px;background:var(--accent-soft);padding:.85rem 1rem;margin-top:1rem}
+.callout.warning{border-color:var(--warn);background:var(--warn-soft)}
+.stat-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin:.8rem 0}
+.stat strong{display:block;font-size:1.08rem;margin-top:.2rem}
+.next-action{display:flex;gap:.7rem;align-items:flex-start;margin-top:.8rem}
+.next-action strong{white-space:nowrap}
+.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.impact{padding:1rem}
+.impact h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.no-change{color:var(--good);font-size:.75rem;font-weight:750;text-transform:uppercase}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.out{border-left:3px solid var(--danger);padding-left:1rem}
+table{border-collapse:separate;border-spacing:0;width:100%;max-width:100%;display:block;overflow-x:auto;margin:.65rem 0}
+thead,tbody{display:table;width:100%;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:.62rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--surface-2);color:var(--muted);font-size:.73rem;letter-spacing:.05em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+code{background:var(--code);border-radius:4px;padding:.1rem .32rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:.8rem 1rem;overflow-x:auto;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+details{border-top:1px solid var(--line);margin-top:.9rem;padding-top:.8rem}
+summary{cursor:pointer;color:var(--accent);font-weight:700}
+summary::marker{color:var(--accent)}
+.phase-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.phase-number{color:var(--muted);font-size:.76rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.phase-header h3{font-size:1.2rem;margin:.12rem 0 0}
+.phase-body{padding:1.3rem 1.4rem}
+.phase-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:1rem}
+.fact{padding:.7rem .8rem}
+.fact strong{display:block;margin-top:.18rem}
+.plain-impact{font-size:1.02rem;margin:.85rem 0 1rem}
+.change-list td:first-child{width:30%}
+.gate{border:1px solid var(--good);background:var(--good-soft);border-radius:9px;padding:.85rem 1rem;margin:1rem 0}
+.gate h4{color:var(--good)}
+.triptych{grid-template-columns:repeat(3,minmax(0,1fr))}
+.triptych article{padding:.85rem}
+.execution-record{background:var(--surface-2);border-radius:9px;padding:0 .9rem .8rem}
+.execution-record dl{display:grid;grid-template-columns:9rem 1fr;gap:.45rem .8rem;margin:.75rem 0 0}
+.execution-record dd{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}
+.risk-high{color:var(--danger);font-weight:750}
+.risk-med{color:var(--warn);font-weight:750}
+.checks{list-style:none;padding:0}
+.checks li{position:relative;padding-left:1.55rem}
+.checks li::before{content:"□";position:absolute;left:.1rem;color:var(--accent);font-weight:800}
+.guardrails{border-left:4px solid var(--danger)}
+footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+@media(max-width:760px){
+  main{padding:1rem .75rem 3rem}
+  header,section{padding:1.15rem}
+  .meta,.stat-grid,.decision-grid,.impact-grid,.scope-grid,.phase-facts,.triptych{grid-template-columns:1fr}
+  nav{top:0;margin:.6rem .75rem;border-radius:9px}
+  .phase-header{padding:1rem;flex-direction:column}
+  .phase-body{padding:1rem}
+  .execution-record dl{grid-template-columns:1fr;gap:.1rem}
+  thead,tbody{min-width:42rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f5f5f5;--text:#111;--muted:#555;--line:#ccc;--shadow:none}
+  body{font-size:10pt}
+  main{max-width:none;padding:0}
+  nav{display:none}
+  header,section,.phase{box-shadow:none;break-inside:avoid}
+  .phase{break-before:page}
+  details{display:block}
+  details>*{display:block}
+  summary{display:none}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<main>
+
+<header id="summary">
+  <p class="eyebrow">Change plan · Size M</p>
+  <h1>A game library that feels like a collection, not an admin page</h1>
+  <p class="lede">The application gets a live-archive identity for discovery and a command-deck system for management. Existing data and behavior stay unchanged.</p>
+
+  <dl class="meta">
+    <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
+    <div><dt>Branch</dt><dd><code>t3code/redesign-gamer-interface</code></dd></div>
+    <div><dt>Updated</dt><dd>2026-08-29</dd></div>
+    <div><dt>Status</dt><dd><span class="status review">Awaiting implementation approval</span></dd></div>
+  </dl>
+
+  <div class="decision-grid">
+    <article class="decision primary">
+      <span class="label">Recommendation</span>
+      <strong>Proceed with five production-safe phases</strong>
+      <p>The current interface already has the required data, views, semantic controls, and layout tests. The change stays inside the interface boundary.</p>
+    </article>
+    <article class="decision">
+      <span class="label">Main tradeoff</span>
+      <strong>A larger visual-test surface</strong>
+      <p>The new shell, artwork, and two themes add layout cases. They do not add a runtime dependency or a data migration.</p>
+    </article>
+  </div>
+
+  <aside class="callout"><strong>Expected result.</strong> A player can enjoy the collection first, then manage hundreds of records without a different interaction system.</aside>
+</header>
+
+<nav aria-label="Plan contents">
+  <ul>
+    <li><a href="#execution-status">Status</a></li>
+    <li><a href="#impact">Impact</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#change">Change</a></li>
+    <li><a href="#decisions">Decisions</a></li>
+    <li><a href="#phases">Phases</a></li>
+    <li><a href="#risks">Risks</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ul>
+</nav>
+
+<section id="execution-status">
+  <p class="eyebrow">Living document</p>
+  <h2>Execution status</h2>
+  <div class="stat-grid">
+    <article class="stat"><span class="label">Progress</span><strong>0 of 5 phases</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>None</strong></article>
+    <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
+    <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
+  </div>
+  <p class="next-action"><strong>Next action:</strong> <span>Get implementation approval. Then start Phase 1.</span></p>
+
+  <table>
+    <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
+    <tbody>
+      <tr><td>1. Identity and visual foundation</td><td><span class="status planned">Planned</span></td><td>The current interface stays usable and gains the approved identity.</td></tr>
+      <tr><td>2. Shell and utilities</td><td><span class="status planned">Planned</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
+      <tr><td>3. Live-archive surfaces</td><td><span class="status planned">Planned</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
+      <tr><td>4. Command-deck surfaces</td><td><span class="status planned">Planned</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
+      <tr><td>5. Setup, states, motion, and final evidence</td><td><span class="status planned">Planned</span></td><td>All entry paths and exceptional states use the same completed system.</td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Protocol for every implementation session</summary>
+    <ol>
+      <li>Read this entire HTML.</li>
+      <li>Examine the evidence for every done phase.</li>
+      <li>Compare the recorded repository state with the current worktree.</li>
+      <li>Select the first phase that is not done.</li>
+      <li>Do not skip an active or blocked phase.</li>
+      <li>Mark the selected phase <code>in_progress</code>. Record the session start.</li>
+      <li>Update the dashboard and execution record after the work.</li>
+      <li>Keep the approved specification unchanged. Record actual results separately.</li>
+      <li>If a discovery changes scope, a contract, risk, phase boundaries, or outcome, stop and ask the user.</li>
+    </ol>
+  </details>
+</section>
+
+<section id="impact">
+  <p class="eyebrow">Decision context</p>
+  <h2>What changes and why it matters</h2>
+  <div class="impact-grid">
+    <article class="impact">
+      <h3>Behavior</h3>
+      <p><strong>Change:</strong> Product navigation moves to a rail. Account and provider actions move to a utility panel.</p>
+      <p><strong>Why it matters:</strong> The collection becomes the primary subject. Maintenance actions no longer compete with it.</p>
+      <p><strong>Mechanism:</strong> <code>src/App.tsx:279-456</code> moves its presentation into components in <code>src/features/shell/</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Visual identity</h3>
+      <p><strong>Change:</strong> The interface gets one brand mark, two complete themes, artwork fallbacks, and controlled motion.</p>
+      <p><strong>Why it matters:</strong> A record with no cover still looks intentional. The application no longer looks like a generic form.</p>
+      <p><strong>Mechanism:</strong> <code>src/styles.css:8-97</code> expands its token system. Local SVG geometry supplies the marks and icons.</p>
+    </article>
+    <article class="impact">
+      <h3>Code</h3>
+      <p><strong>Change:</strong> New shell and artwork components remove top-level presentation from <code>App.tsx</code>.</p>
+      <p><strong>Why it matters:</strong> <code>App.tsx</code> keeps data orchestration. The new components only show state and send actions.</p>
+      <p><strong>Mechanism:</strong> The implementation follows the feature-directory structure in <code>README.md</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Data and contracts <span class="no-change">No change</span></h3>
+      <p><code>LibraryRow</code> already supplies vertical art, wide art, metadata, stores, play time, status, rating, and notes.</p>
+      <p>Evidence: <code>src/lib/api.ts:76-104</code>. No phase changes SQLite, Rust commands, or serialized data.</p>
+    </article>
+    <article class="impact">
+      <h3>Accessibility</h3>
+      <p><strong>Change:</strong> The new shell adds predictable focus, text labels, and a reduced-motion mode.</p>
+      <p><strong>Why it matters:</strong> Visual personality must not remove keyboard use, screen-reader structure, or readable contrast.</p>
+      <p><strong>Mechanism:</strong> The true tables and native dialog remain. Evidence: <code>LibraryTable.tsx:43-51</code> and <code>GameDetail.tsx:54-64</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Developer workflow</h3>
+      <p><strong>Change:</strong> The visual harness gains shell, artwork, setup, theme, and reduced-motion cases.</p>
+      <p><strong>Why it matters:</strong> The shell changes the layout relationships that the current harness measures.</p>
+      <p><strong>Mechanism:</strong> Extend <code>test/visual/harness.ts</code> and <code>test/visual/look.ts:39-530</code>.</p>
+    </article>
+  </div>
+</section>
+
+<section id="scope">
+  <p class="eyebrow">Boundaries</p>
+  <h2>Approved scope</h2>
+  <div class="scope-grid">
+    <article>
+      <h3>In</h3>
+      <ul>
+        <li>A live-archive identity for the wall, Today, and the game record.</li>
+        <li>A command-deck identity for the table, filters, bulk actions, Wishlist, and Review.</li>
+        <li>A labeled navigation rail and a labeled top navigation at small widths.</li>
+        <li>A native utility dialog for accounts, providers, export, and disconnect actions.</li>
+        <li>A visible activity strip for errors, provider problems, progress, and cancellation.</li>
+        <li>A dark-primary theme and a complete light theme from the system preference.</li>
+        <li>A local brand mark and a complete desktop icon set.</li>
+        <li>Deterministic monograms and token-based patterns for missing artwork.</li>
+        <li>Brief motion and full support for <code>prefers-reduced-motion</code>.</li>
+        <li>The six setup flows, loading, empty, error, and progress states.</li>
+        <li>Functional and visual tests for all changed behavior and layout.</li>
+      </ul>
+    </article>
+    <article class="out">
+      <h3>Out</h3>
+      <ul>
+        <li>Controller input, television mode, and a full-screen mode.</li>
+        <li>Launching, installing, downloading, or patching games.</li>
+        <li>A mobile application or a mobile-specific product flow.</li>
+        <li>A theme marketplace, custom themes, or a persistent theme selector.</li>
+        <li>A density selector or new stored interface preferences.</li>
+        <li>A custom font, remote font, icon package, or interface library.</li>
+        <li>Generated cover art, downloaded filler art, or external design assets.</li>
+        <li>New recommendations, changed Today rules, or new metadata.</li>
+        <li>Changes to matching, prices, connectors, storage, or domain rules.</li>
+        <li>Changes to the closed product structure in plan <code>0002</code>.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section id="change">
+  <p class="eyebrow">Current to target</p>
+  <h2>What must become true</h2>
+  <table>
+    <thead><tr><th>Result</th><th>Current</th><th>Target</th><th>What moves</th></tr></thead>
+    <tbody>
+      <tr><td>Product first</td><td>The title, operations, accounts, messages, summary, tabs, and exports share one top-level column.</td><td>The shell gives product navigation first. The utility dialog holds maintenance actions.</td><td><code>src/App.tsx</code>, new <code>src/features/shell/</code></td></tr>
+      <tr><td>Distinct identity</td><td>The palette uses neutral gray-blue colors and one system-font scale.</td><td>Ink, warm archive accents, precise command accents, and depth use semantic tokens.</td><td><code>src/styles.css</code></td></tr>
+      <tr><td>Useful missing art</td><td>A missing cover shows the title in a plain placeholder.</td><td>A shared component shows a deterministic monogram and one of four token patterns.</td><td>New <code>GameArtwork.tsx</code> and <code>artwork.ts</code></td></tr>
+      <tr><td>Emotional surfaces</td><td>The wall, Today, and the sheet use simple bordered boxes and the same small tile.</td><td>These surfaces use stronger art, hierarchy, and collection context.</td><td><code>LibraryWall.tsx</code>, <code>Today.tsx</code>, <code>GameDetail.tsx</code></td></tr>
+      <tr><td>Operational surfaces</td><td>Three tables use related structure but weak hierarchy.</td><td>One command-deck treatment makes search, comparison, and bulk work clear.</td><td><code>LibraryTable.tsx</code>, <code>Wishlist.tsx</code>, <code>ReviewQueue.tsx</code></td></tr>
+      <tr><td>Consistent entry paths</td><td>Each setup component returns a bare form directly.</td><td>A shared setup frame gives context, trust information, and a consistent form surface.</td><td><code>src/features/onboarding/</code></td></tr>
+      <tr><td>Measured layout</td><td>The harness measures content regions but has no shell or setup cases.</td><td>The harness measures the shell, utility dialog, artwork, setup screens, and motion preference.</td><td><code>test/visual/harness.ts</code>, <code>test/visual/look.ts</code></td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Current-state evidence</summary>
+    <table>
+      <thead><tr><th>Observed fact</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>The library opens first. Today is a separate screen.</td><td><code>src/App.tsx:54-60</code> · <code>App</code></td></tr>
+        <tr><td>Four product screens use buttons in one tab row.</td><td><code>src/App.tsx:396-437</code> · <code>App</code></td></tr>
+        <tr><td>Account and provider operations appear above the product screens.</td><td><code>src/App.tsx:279-394</code> · <code>App</code></td></tr>
+        <tr><td>The table and wall share filters, order, selection, and the open record.</td><td><code>src/features/library/Library.tsx:50-101</code> · <code>Library</code></td></tr>
+        <tr><td>The game record has inspector and sheet presentations.</td><td><code>src/features/game/GameDetail.tsx:6-13</code> · <code>Presentation</code></td></tr>
+        <tr><td>The wall uses fixed virtual-grid measurements.</td><td><code>src/features/library/LibraryWall.tsx:7-28</code> · <code>WIDTH</code>, <code>COVER_HEIGHT</code></td></tr>
+        <tr><td>Today uses the same tile dimensions as the wall.</td><td><code>src/features/today/Today.tsx:1-6</code> · <code>WIDTH</code>, <code>COVER_HEIGHT</code></td></tr>
+        <tr><td>The table uses native semantics and a fixed virtual row height.</td><td><code>src/features/library/LibraryTable.tsx:9-10</code>, <code>:43-51</code> · <code>ROW_HEIGHT</code></td></tr>
+        <tr><td>The visual harness examines widths from 620 to 1920 pixels.</td><td><code>test/visual/look.ts:39-40</code> · <code>WIDTHS</code></td></tr>
+        <tr><td>The current icon set contains only <code>icon.png</code>.</td><td><code>src-tauri/icons/icon.png</code>, <code>src-tauri/tauri.conf.json</code> · <code>bundle.icon</code></td></tr>
+        <tr><td>The package has no style, icon, table, or motion dependency.</td><td><code>package.json:14-29</code> · <code>dependencies</code>, <code>devDependencies</code></td></tr>
+      </tbody>
+    </table>
+  </details>
+</section>
+
+<section id="decisions">
+  <p class="eyebrow">Closed decisions</p>
+  <h2>Do not relitigate</h2>
+  <table>
+    <thead><tr><th>Question</th><th>Decision</th><th>Reason</th><th>Rejected alternative</th></tr></thead>
+    <tbody>
+      <tr><td>What visual direction applies?</td><td>Live archive for emotional surfaces. Command deck for operational surfaces.</td><td>The product must support collection pleasure and dense management.</td><td>One visual treatment for all screens. It weakens either artwork or comparison.</td></tr>
+      <tr><td>Does age define a mode?</td><td>No. The interface serves the task: explore, decide, or manage.</td><td>Players across age groups share these tasks. Age stereotypes do not describe an interaction requirement.</td><td>Young, online, and veteran themes. They divide users without a product reason.</td></tr>
+      <tr><td>Does this change plan <code>0002</code>?</td><td>No. The library starts first. Table and wall share state. Today stays separate. One record has two presentations.</td><td>These structures operate and have broad test coverage.</td><td>A backlog board, terminal view, or Today as the home screen. Plan <code>0002</code> rejected them.</td></tr>
+      <tr><td>Does the application get controller or television support?</td><td>No.</td><td>The application does not launch games. A television shell makes a false launcher promise.</td><td>A Focus and Manage dual mode. True controller navigation changes the scope to size L.</td></tr>
+      <tr><td>How does top-level navigation work?</td><td>A labeled rail changes to labeled top navigation when space is insufficient.</td><td>Text labels keep context. The table keeps its minimum readable width.</td><td>Icon-only navigation. It adds learning cost and weak context.</td></tr>
+      <tr><td>Where do maintenance actions go?</td><td>A native utility dialog holds accounts, providers, export, and disconnect actions.</td><td>These actions stay available but do not compete with the collection.</td><td>The current permanent header. It keeps the administrative hierarchy.</td></tr>
+      <tr><td>What stays visible outside the dialog?</td><td>Active progress, cancellation, errors, and provider problems.</td><td>A hidden error or operation state makes the application appear idle or correct.</td><td>All status inside the utility dialog. It hides important state.</td></tr>
+      <tr><td>How do themes work?</td><td>The system preference selects a dark-primary theme or a complete light theme.</td><td>The current application already uses <code>prefers-color-scheme</code>. No preference storage is necessary.</td><td>A dark-only theme or a stored selector. One excludes contexts. The other adds state.</td></tr>
+      <tr><td>What happens without artwork?</td><td>A deterministic monogram uses one of four token patterns.</td><td>The no-IGDB path is a supported product state.</td><td>Fabricated covers, remote filler art, or plain gray boxes.</td></tr>
+      <tr><td>What identity mark applies?</td><td>Three portrait cards converge into one library frame. The mark contains no text or controller.</td><td>The shape describes store copies that become one record. It stays distinct from a launcher.</td><td>A gamepad, letter mark, or store logo collage.</td></tr>
+      <tr><td>Can the work add visual dependencies?</td><td>No. Use React, CSS, local SVG geometry, and the current Tauri CLI.</td><td>The required shapes and motion are small. A package adds more code than the feature needs.</td><td>An icon set, motion library, component kit, or custom font.</td></tr>
+      <tr><td>How much motion applies?</td><td>Use brief state transitions. Remove nonessential motion under <code>prefers-reduced-motion</code>.</td><td>Motion can explain focus and hierarchy. Continuous motion competes with the collection.</td><td>A static interface or decorative ambient animation.</td></tr>
+      <tr><td>Does the user select density?</td><td>No. Use one balanced density.</td><td>A selector needs preference state and more layout cases.</td><td>Compact and comfortable modes.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="phases">
+  <p class="eyebrow">Executable plan</p>
+  <h2>Ordered production-safe phases</h2>
+  <p class="muted">Every phase leaves the repository usable. Each phase updates the tests for its own changes.</p>
+
+  <article class="phase" id="phase-1">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 1 of 5</span><h3>Identity and visual foundation</h3></div>
+      <span class="status planned">Planned</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>None</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>New palette, mark, and application icon</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>Medium</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>The current layout and controls stay usable.</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> The application gains a recognizable identity before its structure moves. Existing selectors continue to use semantic tokens.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/styles.css</code> · <code>:root</code></td><td>Define ink backgrounds, layered surfaces, warm archive accents, precise command accents, focus, icon, art-pattern, shadow, and motion tokens. Define complete light and dark values.</td></tr>
+          <tr><td><code>src/styles.css</code> · all selectors</td><td>Keep literal colors inside the token blocks. Do not derive component colors from <code>currentColor</code>. Keep contrast at 4.5:1 for normal text.</td></tr>
+          <tr><td><code>src/assets/app-icon.svg</code> (new)</td><td>Create a square transparent master. Three portrait cards converge into one frame. Use no text, controller, store mark, or small detail.</td></tr>
+          <tr><td><code>src/features/shell/BrandMark.tsx</code> (new)</td><td>Show the same geometry in the interface. CSS supplies all component colors. Give the lockup an accessible product name.</td></tr>
+          <tr><td><code>src/App.tsx</code> · current header title</td><td>Use <code>BrandMark</code> in the current header. Do not move operations in this phase.</td></tr>
+          <tr><td><code>src-tauri/icons/</code></td><td>Run <code>bun tauri icon src/assets/app-icon.svg</code>. Keep the generated PNG, ICO, and ICNS files.</td></tr>
+          <tr><td><code>src-tauri/tauri.conf.json</code> · <code>bundle.icon</code></td><td>List the generated desktop icon files that the Tauri bundle uses.</td></tr>
+          <tr><td><code>src/App.test.tsx</code></td><td>Make sure that the product mark has a stable accessible name.</td></tr>
+          <tr><td><code>test/visual/look.ts</code></td><td>Measure text, muted text, focus, and primary-action contrast in both themes.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>The current screens operate in both themes.</li>
+          <li>The 16px, 32px, and 128px icon previews keep one clear silhouette.</li>
+          <li><code>grep -nE '#[0-9a-fA-F]{3,8}' src/styles.css</code> returns only token definitions.</li>
+          <li><code>bun run build &amp;&amp; bun run visual</code> reports no layout or contrast problem.</li>
+          <li>All repository checks pass.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Build the normal desktop bundles. This phase changes only static interface files and bundle icons.</p></article>
+        <article><h4>Observe</h4><p>Open the application in both system themes. Examine the brand silhouette at small operating-system sizes.</p></article>
+        <article><h4>Rollback</h4><p>Revert the phase commit. The previous tokens, header title, and icon file restore the former identity.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · planned</summary>
+        <dl>
+          <dt>Started</dt><dd>Pending.</dd>
+          <dt>Completed</dt><dd>Pending.</dd>
+          <dt>Agent / session</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd>Pending.</dd>
+          <dt>Commands / results</dt><dd>Pending.</dd>
+          <dt>Deviations</dt><dd>None recorded.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>The final shell does not exist. The icon still needs small-size examination.</dd>
+          <dt>Handoff</dt><dd>Start Phase 2 after the production gate passes.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+
+  <article class="phase" id="phase-2">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 2 of 5</span><h3>Shell and utilities</h3></div>
+      <span class="status planned">Planned</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>Phase 1</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>New navigation and utility panel</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>High</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>All current screens and actions remain available.</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> Product areas become the permanent navigation. Maintenance stays one action away and no longer controls the first visual hierarchy.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/features/shell/AppShell.tsx</code> (new)</td><td>Own the rail, compact top navigation, workspace, activity slot, and utility-dialog trigger. Accept state and callbacks through props.</td></tr>
+          <tr><td><code>src/features/shell/ShellIcon.tsx</code> (new)</td><td>Supply small local SVG geometry for Library, Today, Wishlist, Review, and Utilities. CSS supplies stroke and fill tokens.</td></tr>
+          <tr><td><code>src/features/shell/ActivityStrip.tsx</code> (new)</td><td>Show active progress, cancellation, application errors, provider problems, and the last export path. Keep critical state outside the utility dialog.</td></tr>
+          <tr><td><code>src/features/shell/UtilityPanel.tsx</code> (new)</td><td>Use a native <code>dialog</code>. Show connected accounts, missing stores, IGDB, ITAD, synchronization, matching, export, disconnect, and connector switches.</td></tr>
+          <tr><td><code>src/App.tsx</code> · <code>App</code></td><td>Keep data loading, command orchestration, and state. Replace header, account lists, tabs, and export links with shell props.</td></tr>
+          <tr><td><code>src/styles.css</code> · shell selectors</td><td>Use a labeled rail at 70rem and more. Use labeled top navigation at less than 70rem. Keep one content-scroll region.</td></tr>
+          <tr><td><code>src/App.test.tsx</code></td><td>Update navigation selectors. Make sure that every current action stays available through the shell or utility dialog.</td></tr>
+          <tr><td><code>test/visual/harness.ts</code></td><td>Add utility-open and long-provider-error states.</td></tr>
+          <tr><td><code>test/visual/look.ts</code></td><td>Measure rail and top-navigation layouts, one scroll region, dialog containment, focus return, and long status text.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>Library, Today, Wishlist, and Review remain reachable by text labels.</li>
+          <li>Every account, provider, export, disconnect, and connector action remains reachable.</li>
+          <li>An active operation and its cancellation stay visible when the utility dialog is closed.</li>
+          <li>A long Epic error does not reduce the content region to less than 400px at a 900px height.</li>
+          <li>The page and shell do not scroll. Only the active content region scrolls.</li>
+          <li>All repository checks pass.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Ship the shell with the existing feature screens. No command signature or stored data changes.</p></article>
+        <article><h4>Observe</h4><p>Resize from 1920px to 620px. Open and close Utilities with the mouse, keyboard, and Escape.</p></article>
+        <article><h4>Rollback</h4><p>Revert the phase commit. <code>App.tsx</code> returns to the former header and tabs.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · planned</summary>
+        <dl>
+          <dt>Started</dt><dd>Pending.</dd>
+          <dt>Completed</dt><dd>Pending.</dd>
+          <dt>Agent / session</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd>Pending.</dd>
+          <dt>Commands / results</dt><dd>Pending.</dd>
+          <dt>Deviations</dt><dd>None recorded.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>The emotional and operational screens still use their former composition.</dd>
+          <dt>Handoff</dt><dd>Start Phase 3 after the production gate passes.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+
+  <article class="phase" id="phase-3">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 3 of 5</span><h3>Live-archive surfaces</h3></div>
+      <span class="status planned">Planned</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>Phase 2</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>New wall, Today, artwork, and game record</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>High</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>Both library views still show the same records.</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> Artwork, personal state, and collection context lead the exploratory screens. Missing metadata remains a first-class state.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/features/game/artwork.ts</code> (new)</td><td>Add pure <code>monogram(title)</code> and <code>artworkVariant(title)</code> functions. Use a stable title hash and four variants. Do not use time or randomness.</td></tr>
+          <tr><td><code>src/features/game/artwork.test.ts</code> (new)</td><td>Cover punctuation, one-word titles, multi-word titles, non-ASCII titles, empty normalized text, and stable variants.</td></tr>
+          <tr><td><code>src/features/game/GameArtwork.tsx</code> (new)</td><td>Show real portrait or wide art when present. Otherwise show the deterministic monogram. Keep decorative repeats out of accessible names.</td></tr>
+          <tr><td><code>src/features/library/LibraryWall.tsx</code> · tile constants</td><td>Set the cover box to 150×200 pixels. Recalculate tile height and virtual-grid spacing from these constants.</td></tr>
+          <tr><td><code>src/features/library/LibraryWall.tsx</code> · <code>LibraryWall</code></td><td>Use <code>GameArtwork</code>. Strengthen title, store, status, selection, open, and missing-copy hierarchy without changing selection behavior.</td></tr>
+          <tr><td><code>src/features/today/Today.tsx</code> · <code>Today</code></td><td>Use wide store art as an optional backdrop and portrait art as the record anchor. Keep <code>featured</code> and <code>shelves</code> unchanged.</td></tr>
+          <tr><td><code>src/features/game/GameDetail.tsx</code> · <code>GameDetail</code></td><td>Use a 22rem inspector and a wider archive sheet. Keep one form, one save call, native dialog behavior, and explicit Save.</td></tr>
+          <tr><td><code>src/features/library/Library.tsx</code> · <code>INSPECTOR_FITS</code></td><td>Change the measured wide-layout threshold to 96rem. The sum includes the rail, table, inspector, gap, padding, and scroll bar.</td></tr>
+          <tr><td><code>src/styles.css</code> · artwork, wall, Today, record selectors</td><td>Add archive composition, token patterns, art scrims, stronger type hierarchy, and clear fallback surfaces.</td></tr>
+          <tr><td><code>test/visual/harness.ts</code></td><td>Add local portrait and wide SVG fixtures. Keep records with no art and no summary.</td></tr>
+          <tr><td><code>src/App.test.tsx</code>, <code>test/visual/look.ts</code></td><td>Preserve shared view state, selection, sheet behavior, and saves. Measure overlap, crop boxes, fallback containment, and the 96rem presentation change.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>Table and wall show the same filtered and sorted records.</li>
+          <li>No tile overlaps another tile from 620px through 1920px.</li>
+          <li>Real art and fallback art use the same measured boxes.</li>
+          <li>A record with no art and no summary has no broken or empty region.</li>
+          <li>The sheet and inspector use the same save path.</li>
+          <li>Examine real Steam and GOG artwork in the desktop application.</li>
+          <li>If real provider artwork is unavailable, mark this phase blocked for human visual review.</li>
+          <li>All repository checks pass.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Ship the new exploratory surfaces with the existing data and rules.</p></article>
+        <article><h4>Observe</h4><p>Examine portrait and wide art, long titles, no-art records, selection, and sheet focus in both themes.</p></article>
+        <article><h4>Rollback</h4><p>Revert the phase commit. The shell stays and the former wall, Today, and record return.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · planned</summary>
+        <dl>
+          <dt>Started</dt><dd>Pending.</dd>
+          <dt>Completed</dt><dd>Pending.</dd>
+          <dt>Agent / session</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd>Pending.</dd>
+          <dt>Commands / results</dt><dd>Pending.</dd>
+          <dt>Deviations</dt><dd>None recorded.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>Real provider art can expose crop or contrast problems that local fixtures do not show.</dd>
+          <dt>Handoff</dt><dd>Start Phase 4 after the production gate passes.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+
+  <article class="phase" id="phase-4">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 4 of 5</span><h3>Command-deck surfaces</h3></div>
+      <span class="status planned">Planned</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>Phase 3</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>New dense-management system</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>Medium</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>Native tables and all batch behavior remain.</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> Search, comparison, selection, prices, and matching use one precise system. Dense work stays fast and readable.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/features/library/LibraryTable.tsx</code> · <code>ROW_HEIGHT</code></td><td>Set the balanced row height to 38 pixels. Keep the TypeScript constant and CSS cell height equal.</td></tr>
+          <tr><td><code>src/features/library/LibraryTable.tsx</code> · <code>LibraryTable</code></td><td>Keep native table markup, sortable headers, range selection, virtual spacer rows, and inspector keyboard movement.</td></tr>
+          <tr><td><code>src/features/library/LibraryFilters.tsx</code></td><td>Give search first hierarchy. Group the existing selects and count. Do not add filters or change filter rules.</td></tr>
+          <tr><td><code>src/features/library/BulkBar.tsx</code></td><td>Use a command bar that keeps selected count, status, Apply, clear, busy, and error state visible.</td></tr>
+          <tr><td><code>src/features/library/Library.tsx</code></td><td>Restyle the table-wall switch and command area. Keep one shared state and the current selection clearing rule.</td></tr>
+          <tr><td><code>src/features/wishlist/Wishlist.tsx</code></td><td>Use the command-deck table treatment. Keep discount order, all-time-low context, ITAD setup, and external-link behavior.</td></tr>
+          <tr><td><code>src/features/review/ReviewQueue.tsx</code></td><td>Use the same table rhythm and candidate surfaces. Keep ties separate, clear winners preselected, and batch confirmation explicit.</td></tr>
+          <tr><td><code>src/styles.css</code> · command selectors</td><td>Add table surfaces, header depth, row focus, selected states, numeric rhythm, command bars, and horizontal-overflow containment.</td></tr>
+          <tr><td><code>src/App.test.tsx</code></td><td>Preserve sorting, shift selection, bulk save, prices, candidate selection, ties, and batch behavior.</td></tr>
+          <tr><td><code>test/visual/look.ts</code></td><td>Measure header alignment, title width, checkbox fit, cell containment, candidate containment, and horizontal page overflow.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>The table header aligns with every visible row at all measured widths.</li>
+          <li>A shift selection and one bulk save keep notes and ratings unchanged.</li>
+          <li>Wishlist places the largest discount first and shows the all-time low.</li>
+          <li>Review keeps ties unselected and clear winners selected.</li>
+          <li>No page scrolls sideways. Each wide table scrolls only inside its region.</li>
+          <li>Keyboard focus remains visible on every command and row action.</li>
+          <li>All repository checks pass.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Ship the command-deck surfaces. The shell and archive surfaces from earlier phases stay unchanged.</p></article>
+        <article><h4>Observe</h4><p>Use a large library and review queue. Examine row density, long titles, price formats, and batch-action clarity.</p></article>
+        <article><h4>Rollback</h4><p>Revert the phase commit. The shell and archive surfaces stay. Former table styles and components return.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · planned</summary>
+        <dl>
+          <dt>Started</dt><dd>Pending.</dd>
+          <dt>Completed</dt><dd>Pending.</dd>
+          <dt>Agent / session</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd>Pending.</dd>
+          <dt>Commands / results</dt><dd>Pending.</dd>
+          <dt>Deviations</dt><dd>None recorded.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>Real libraries can contain longer titles and currencies than the fixtures.</dd>
+          <dt>Handoff</dt><dd>Start Phase 5 after the production gate passes.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+
+  <article class="phase" id="phase-5">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 5 of 5</span><h3>Setup, states, motion, and final evidence</h3></div>
+      <span class="status planned">Planned</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>Phase 4</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>Completed system on every path</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>Medium</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>No legacy interface remains in a supported state.</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> First use, degraded providers, empty libraries, and long operations receive the same care as the main collection.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/features/onboarding/SetupFrame.tsx</code> (new)</td><td>Provide brand, step context, trust information, form surface, and Back placement. Stack the two areas when width is insufficient.</td></tr>
+          <tr><td><code>src/features/onboarding/*.tsx</code></td><td>Wrap all six forms in <code>SetupFrame</code>. Keep API calls, validation, warnings, links, fields, and button behavior unchanged.</td></tr>
+          <tr><td><code>src/App.tsx</code> · loading, unlock, no-account, setup paths</td><td>Use the shared setup presentation and branded loading state. Keep Steam as the first proposal and all alternative store paths.</td></tr>
+          <tr><td><code>src/features/shell/ActivityStrip.tsx</code></td><td>Finish empty, warning, error, stopped-pass, success-path, and progress treatments. Use text and structure in addition to color.</td></tr>
+          <tr><td><code>src/styles.css</code> · motion and setup selectors</td><td>Apply brief transitions to focus, navigation, dialog entry, selection, and status changes. Remove nonessential transitions under <code>prefers-reduced-motion</code>.</td></tr>
+          <tr><td><code>src/App.test.tsx</code></td><td>Update all setup, no-account, provider, export, progress, empty, and error paths. Keep the intent of every existing test.</td></tr>
+          <tr><td><code>test/visual/harness.ts</code></td><td>Add setup, locked-secret-store, empty-library, and reduced-motion options.</td></tr>
+          <tr><td><code>test/visual/look.ts</code></td><td>Measure setup containment, long guidance, focus order, both themes, and reduced motion. Keep structural assertions instead of screenshots.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>All six setup flows fit at the supported widths and heights.</li>
+          <li>The no-keyring and no-account paths keep all required actions.</li>
+          <li>Empty Library, Today, Wishlist, and Review screens explain the next useful action.</li>
+          <li>Errors, stopped passes, progress, cancellation, and success feedback remain readable.</li>
+          <li>Reduced motion removes dialog, navigation, and selection transitions that are not necessary.</li>
+          <li>The real Tauri window opens and loads the interface.</li>
+          <li>All repository checks pass.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Build all desktop bundles. This phase completes the interface with no data migration.</p></article>
+        <article><h4>Observe</h4><p>Do first use, provider setup, synchronization, matching, price update, export, and disconnect on a desktop session.</p></article>
+        <article><h4>Rollback</h4><p>Revert the phase commit. Phases 1 through 4 stay usable with the former setup presentation.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · planned</summary>
+        <dl>
+          <dt>Started</dt><dd>Pending.</dd>
+          <dt>Completed</dt><dd>Pending.</dd>
+          <dt>Agent / session</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd>Pending.</dd>
+          <dt>Commands / results</dt><dd>Pending.</dd>
+          <dt>Deviations</dt><dd>None recorded.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>Platform font metrics and native controls can differ across Windows, macOS, and Linux.</dd>
+          <dt>Handoff</dt><dd>After the production gate passes, mark the plan done and prepare the implementation handoff.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+</section>
+
+<section id="risks">
+  <p class="eyebrow">Problems that can occur</p>
+  <h2>Risks and response</h2>
+  <table>
+    <thead><tr><th>Level</th><th>Risk</th><th>Signal</th><th>Response</th><th>Rollback</th></tr></thead>
+    <tbody>
+      <tr><td class="risk-high">High</td><td>Real provider artwork creates bad crops or weak text contrast.</td><td>Faces, logos, or titles disappear under a fixed crop. Text blends into art.</td><td>Use fixed boxes, <code>object-fit</code>, token scrims, and a required real-art examination in Phase 3.</td><td>Decrease art height or remove the backdrop. Keep portrait art and the record body.</td></tr>
+      <tr><td class="risk-high">High</td><td>The shell restores two scroll regions or reduces content height.</td><td>The page or shell scrolls with the active screen. The content region becomes less than 400px high.</td><td>Keep one explicit flex chain with <code>min-height: 0</code>. Extend the current structural harness.</td><td>Return to top navigation at a larger width. Remove noncritical content from the activity strip.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>The utility dialog hides a critical operation or provider error.</td><td>The user sees no active progress, cancellation, or broken-provider signal while the dialog is closed.</td><td>Keep critical status in <code>ActivityStrip</code>. Put only detail and maintenance actions in Utilities.</td><td>Move the affected status back to the visible strip.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>New tile or row dimensions disagree with virtual-list arithmetic.</td><td>Tiles overlap. The open row moves outside the visible list. Spacer height is incorrect.</td><td>Keep dimensions in TypeScript constants. Make CSS consume the same values where arithmetic applies.</td><td>Restore the previous dimensions and constants.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>The visual redesign removes behavior while tests change.</td><td>An action, accessible name, or state path disappears during selector updates.</td><td>Rewrite each test with its component change. Preserve the stated intent of every existing test.</td><td>Restore the former component for that phase. Do not delete the behavior test.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>Decorative patterns or status colors fail contrast requirements.</td><td>The contrast harness reports less than 4.5:1. Meaning exists only in color.</td><td>Keep colors in tokens. Add text labels and structural states. Measure both themes.</td><td>Remove a decorative layer or use the higher-contrast token.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>The brand mark becomes unreadable in small operating-system icons.</td><td>The three cards merge at 16px or 32px.</td><td>Examine generated icon sizes before Phase 1 ends.</td><td>Reduce the mark to two planes and one outer frame.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>Platform-native controls use different metrics.</td><td>A select, input, or dialog clips on one desktop system.</td><td>Keep native semantics. Run the Tauri window and release builds on all CI targets.</td><td>Increase the token size or spacing. Do not replace the native control.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="verification">
+  <p class="eyebrow">Completion evidence</p>
+  <h2>How to examine the result</h2>
+  <div class="scope-grid">
+    <article>
+      <h3>Commands</h3>
+      <pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev</code></pre>
+    </article>
+    <article>
+      <h3>Acceptance criteria</h3>
+      <ul class="checks">
+        <li>The application starts at Library and keeps Today separate.</li>
+        <li>Table and wall share filters, order, selection, and the open record.</li>
+        <li>All current product and maintenance actions remain reachable.</li>
+        <li>Dark and light themes meet contrast requirements.</li>
+        <li>No-art and no-summary records look intentional.</li>
+        <li>The page never scrolls sideways.</li>
+        <li>Only the active content region scrolls vertically.</li>
+        <li>Keyboard focus and native dialog behavior remain predictable.</li>
+        <li>Reduced motion removes nonessential transitions.</li>
+        <li>No dependency, schema, command, or serialized-data shape changes.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Unresolved</p>
+  <h2>Unknowns</h2>
+  <table>
+    <thead><tr><th>Unknown</th><th>How to resolve</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td>How real Steam and GOG artwork behaves in the archive composition.</td><td>Examine configured accounts before Phase 3 ends. Include bright, dark, text-heavy, and missing art.</td><td>Decrease backdrop height and strengthen the token scrim. Keep the portrait anchor.</td></tr>
+      <tr><td>Whether the three-card mark stays clear at 16px and 32px.</td><td>Generate the Tauri icon set and examine each small raster in Phase 1.</td><td>Use two planes and one frame.</td></tr>
+      <tr><td>Whether 70rem is the correct rail change point with native font metrics.</td><td>Measure the full range in Chromium and open the Tauri window on each desktop system.</td><td>Change to top navigation earlier. Never reduce the table below 56rem.</td></tr>
+      <tr><td>Whether 96rem leaves sufficient space for the new inspector.</td><td>Measure the table, 22rem inspector, rail, gap, padding, and scroll bar in Phase 3.</td><td>Open the game record as a sheet at a larger width.</td></tr>
+      <tr><td>Whether native form controls align across the three desktop systems.</td><td>Use CI bundles and manual Tauri starts on Windows, macOS, and Linux.</td><td>Increase shared control dimensions through tokens.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="guardrails">
+  <p class="eyebrow">Limits for the agent</p>
+  <h2>Do not</h2>
+  <ul>
+    <li>Do not change a migration, Rust command, API shape, connector, provider rule, matching rule, or Today rule.</li>
+    <li>Do not change the structural decisions in plan <code>0002</code>.</li>
+    <li>Do not add controller support, television mode, launch actions, installation actions, or a mobile product flow.</li>
+    <li>Do not add a dependency, custom font, remote asset, generated cover, or downloaded filler image.</li>
+    <li>Do not add stored theme, density, navigation, or layout preferences.</li>
+    <li>Do not declare a color in a React component. Do not derive component colors from <code>currentColor</code>.</li>
+    <li>Do not put CSS literal colors outside the token blocks.</li>
+    <li>Do not use screenshots as tests. Measure structure, containment, focus, and contrast.</li>
+    <li>Do not make a breakpoint without a measured sum and a comment that records the sum.</li>
+    <li>Do not merge phases. Do not start a later phase while an earlier phase is active or blocked.</li>
+    <li>Do not rewrite the approved specification after execution starts. Record deviations in the execution record.</li>
+  </ul>
+</section>
+
+<footer>Self-contained plan · No JavaScript · No external resources · Ready for zero-context sessions</footer>
+
+</main>
+</body>
+</html>
