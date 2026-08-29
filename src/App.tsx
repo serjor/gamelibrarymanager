@@ -25,7 +25,8 @@ import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
-import { BrandMark } from "./features/shell/BrandMark";
+import { ActivityStrip } from "./features/shell/ActivityStrip";
+import { AppShell, type AppTab } from "./features/shell/AppShell";
 import { Wishlist } from "./features/wishlist/Wishlist";
 
 /** The stores that the application can read, with the name that it shows. */
@@ -54,7 +55,7 @@ export function App() {
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   // It starts at the library and not at "Today": if the recommendation is
   // incorrect, it must not be the first thing that you see each day.
-  const [tab, setTab] = useState<"library" | "today" | "wishlist" | "review">("library");
+  const [tab, setTab] = useState<AppTab>("library");
   // The view mode lives here and not in the library, because a change of tab
   // removes the library: if the library kept the mode, a return from "To review"
   // would always give you the table even if you were looking at the covers.
@@ -278,174 +279,44 @@ export function App() {
   const wished = rows.filter((row) => row.wishlist_stores.length > 0).length;
 
   return (
-    <main>
-      <header>
-        <div className="brand-title">
-          <BrandMark />
-          <h1>Library</h1>
-        </div>
-        <div className="actions">
-          <button
-            className="primary-action"
-            onClick={() => void run("sync", api.syncNow)}
-            disabled={busy !== null}
-          >
-            {busy === "sync" ? "Synchronising…" : "Synchronise"}
-          </button>
-          {busy !== null && (
-            <button className="link" onClick={() => void api.cancelOperation()}>
-              cancel
-            </button>
-          )}
-          <button
-            onClick={() => void run("identity", api.resolveIdentities)}
-            disabled={busy !== null}
-          >
-            {busy === "identity" ? "Matching…" : "Match"}
-          </button>
-          {toConnect.map(([store, name]) => (
-            <button key={store} className="link" onClick={() => setSetup(store)}>
-              Connect {name}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      {/* With no IGDB the library operates, but the records come from the title
-          of the store. It is correct to say that, and not as an error: it is
-          not an error. */}
-      {!hasIgdb && (
-        <p className="hint">
-          No metadata: the records are made with the title of the store and with
-          no cover.{" "}
-          <button className="link" onClick={() => setSetup("igdb")}>
-            Configure IGDB
-          </button>
-        </p>
-      )}
-
-      <ul className="accounts">
-        {accounts.map((account) => (
-          <li key={`${account.store}:${account.account_ref}`}>
-            <strong>{account.store}</strong> · {account.display_name ?? account.account_ref}
-            {account.last_sync_at === null
-              ? " · not synchronised"
-              : ` · ${new Date(account.last_sync_at * 1000).toLocaleString()}`} {" "}
-            <button
-              className="link"
-              disabled={busy !== null}
-              onClick={() => disconnect(account)}
-            >
-              Disconnect {nameOf(account.store)}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {/* A store that is broken cannot make the application useless. The
-          interface says what occurs to it and offers to switch it off, which is
-          what keeps the remainder unchanged. */}
-      {withProblem.length > 0 && (
-        <ul className="connectors">
-          {withProblem.map((connector) => (
-            <li key={connector.store}>
-              <strong>{nameOf(connector.store)}</strong>{" "}
-              {connector.enabled
-                ? `could not synchronise: ${connector.last_error}`
-                : "is switched off: it does not synchronise, and the data that it gave stays in the library."}{" "}
-              <button
-                className="link"
-                disabled={busy !== null}
-                onClick={() =>
-                  void run("connector", () =>
-                    api.setConnectorEnabled(connector.store, !connector.enabled),
-                  )
-                }
-              >
-                {connector.enabled
-                  ? `Switch ${nameOf(connector.store)} off`
-                  : `Switch ${nameOf(connector.store)} on`}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {summary && (
-        <p className="summary">
-          {summary.games} records · {summary.owned} owned copies · {summary.wishlist} wished for
-          {summary.pending_review > 0 && ` · ${summary.pending_review} to review`}
-        </p>
-      )}
-
-      {report && report.failures.length > 0 && (
-        <ul role="alert">
-          {report.failures.map((failure) => (
-            <li key={`${failure.store}:${failure.account}`}>
-              {failure.store}: {failure.reason}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {progress && progress.total > 0 && (
-        <p className="hint">
-          {/* To match one thousand games takes minutes because of the IGDB
-              limit: with no bar, the user cannot tell "it is slow" from "it has
-              stopped". */}
-          <progress value={progress.done} max={progress.total} />{" "}
-          {progress.stage} · {progress.done} of {progress.total} (
-          {Math.floor((progress.done / progress.total) * 100)}%)
-        </p>
-      )}
-
-      {error && <p role="alert">{error}</p>}
-
-      <nav className="tabs">
-        <button
-          className={tab === "library" ? "tab active" : "tab"}
-          onClick={() => setTab("library")}
-        >
-          Library
-        </button>
-        <button
-          className={tab === "today" ? "tab active" : "tab"}
-          onClick={() => setTab("today")}
-        >
-          Today
-        </button>
-        <button
-          className={tab === "wishlist" ? "tab active" : "tab"}
-          onClick={() => setTab("wishlist")}
-        >
-          Wishlist{wished > 0 && ` (${wished})`}
-        </button>
-        <button
-          className={tab === "review" ? "tab active" : "tab"}
-          onClick={() => setTab("review")}
-        >
-          To review{queue.length > 0 && ` (${queue.length})`}
-        </button>
-        <span className="exports">
-          <button
-            className="link"
-            disabled={busy !== null}
-            onClick={() => void exportLibrary("json")}
-          >
-            {busy === "export-json" ? "Exporting JSON…" : "Export JSON"}
-          </button>
-          <button
-            className="link"
-            disabled={busy !== null}
-            onClick={() => void exportLibrary("csv")}
-          >
-            {busy === "export-csv" ? "Exporting CSV…" : "Export CSV"}
-          </button>
-        </span>
-      </nav>
-
-      {exportedPath && <p className="hint export-path">Written to {exportedPath}</p>}
-
+    <AppShell
+      tab={tab}
+      onTabChange={setTab}
+      wishlistCount={wished}
+      reviewCount={queue.length}
+      summary={summary}
+      activity={
+        <ActivityStrip
+          operation={busy}
+          progress={progress}
+          error={error}
+          report={report}
+          providerProblems={withProblem}
+          exportedPath={exportedPath}
+          storeName={nameOf}
+          onCancel={() => void api.cancelOperation()}
+        />
+      }
+      utility={{
+        accounts,
+        missingStores: toConnect.map(([id, name]) => ({ id, name })),
+        connectors,
+        hasIgdb,
+        hasItad,
+        busy,
+        summary,
+        storeName: nameOf,
+        onSetup: (target) => setSetup(target),
+        onSync: () => void run("sync", api.syncNow),
+        onMatch: () => void run("identity", api.resolveIdentities),
+        onExport: (format) => void exportLibrary(format),
+        onDisconnect: disconnect,
+        onToggleConnector: (connector) =>
+          void run("connector", () =>
+            api.setConnectorEnabled(connector.store, !connector.enabled),
+          ),
+      }}
+    >
       {tab === "library" && (
         <Library rows={rows} view={view} onView={setView} onSaved={patchRows} />
       )}
@@ -462,6 +333,6 @@ export function App() {
         />
       )}
       {tab === "review" && <ReviewQueue items={queue} onResolved={refresh} />}
-    </main>
+    </AppShell>
   );
 }

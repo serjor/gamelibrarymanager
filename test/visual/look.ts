@@ -11,7 +11,7 @@
  *
  *     bun run build && bun run visual
  */
-import { exampleLibrary, exampleQueue, withTheApp, exampleWishlist } from "./harness";
+import { LONG_PROVIDER_ERROR, exampleLibrary, exampleQueue, exampleWishlist, openUtilities, withTheApp } from "./harness";
 
 /**
  * An application with material in the four screens at the same time: owned games
@@ -40,17 +40,86 @@ function check(what: string, ok: boolean, detail = "") {
 const WIDTHS = [1920, 1600, 1400, 1200, 1000, 900, 800, 700, 620];
 
 /**
- * One scroll bar, and it must reach the edges.
- *
- * It is the defect that was the largest nuisance and no test looked at it: the
- * list was `70vh` in a page that also scrolled, thus there were two bars at the
- * same time and the external bar had forty pixels of movement. And with `main`
- * limited to 80rem, the wheel over the 320 px of space at each side found
- * nothing to move.
+ * The shell keeps its four destinations labelled at every width. At a wide
+ * width the navigation is a rail; below the breakpoint it becomes top navigation.
+ * The shell itself remains fixed while each feature owns its content scroll.
  */
+console.log("\nThe application shell");
+for (const width of [1400, 1000, 620]) {
+  const r = await withTheApp(
+    async (page) => {
+      await page.getByRole("navigation").waitFor();
+      return page.evaluate(() => {
+        const shell = document.querySelector(".app-shell")!;
+        const rail = document.querySelector(".shell-rail")!;
+        const content = document.querySelector(".shell-content")!;
+        const navigation = document.querySelector(".shell-navigation")!;
+        const list = document.querySelector(".shell-navigation-list")!;
+        const railStyle = getComputedStyle(rail);
+        const navigationStyle = getComputedStyle(navigation);
+        const listStyle = getComputedStyle(list);
+        const labels = [...document.querySelectorAll(".shell-nav-item")]
+          .map((item) => item.getAttribute("aria-label") ?? "")
+          .join("|");
+        const railBox = rail.getBoundingClientRect();
+        const contentBox = content.getBoundingClientRect();
+        return {
+          labels,
+          wide: railStyle.display === "flex" && listStyle.flexDirection === "column",
+          compact:
+            railStyle.display === "grid" &&
+            listStyle.flexDirection === "row" &&
+            navigationStyle.overflowX === "auto",
+          railBeforeContent: railBox.right <= contentBox.left + 1,
+          shellScrolls: shell.scrollHeight > shell.clientHeight + 1,
+          pageSideways: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        };
+      });
+    },
+    { width, height: 900, answers: ALL },
+  );
+
+  const where = width + " px";
+  check(where + " · navigation labels every workspace", r.labels === "Library|Today|Wishlist (5)|Review (3)");
+  check(where + " · shell does not scroll", !r.shellScrolls);
+  check(where + " · page does not go sideways", !r.pageSideways);
+  if (width >= 1120) {
+    check(where + " · wide rail is vertical", r.wide && r.railBeforeContent);
+  } else {
+    check(where + " · compact navigation is horizontal", r.compact);
+  }
+}
+
+console.log("\nThe utility dialog");
+const utilityState = await withTheApp(
+  async (page) => {
+    const trigger = page.getByRole("button", { name: "Utilities" });
+    await trigger.focus();
+    await openUtilities(page);
+    const containment = await page.locator("dialog[open]").evaluate((dialog) => {
+      const rect = dialog.getBoundingClientRect();
+      return {
+        inside: rect.top >= -0.5 && rect.left >= -0.5 &&
+          rect.bottom <= window.innerHeight + 0.5 && rect.right <= window.innerWidth + 0.5,
+        hasContent: dialog.querySelector(".utility-content") !== null,
+      };
+    });
+    await page.getByRole("button", { name: "Close Utilities" }).click();
+    await page.waitForFunction(() => document.querySelector("dialog[open]") === null);
+    const focusReturned = await page.evaluate(() =>
+      document.activeElement?.getAttribute("aria-controls") === "utility-dialog",
+    );
+    return { ...containment, focusReturned };
+  },
+  { width: 620, height: 900, answers: ALL },
+);
+check("utility dialog stays inside the window", utilityState.inside);
+check("utility dialog has a content region", utilityState.hasContent);
+check("closing utilities returns focus to its trigger", utilityState.focusReturned);
+
 console.log("\nOne scroll bar");
 for (const width of [1920, 1400, 1000]) {
-  for (const screenName of ["Library", "Today", "Wishlist", "To review"] as const) {
+  for (const screenName of ["Library", "Today", "Wishlist", "Review"] as const) {
     const r = await withTheApp(
       async (page) => {
         if (screenName !== "Library") {
@@ -59,17 +128,19 @@ for (const width of [1920, 1400, 1000]) {
         await page.getByRole("navigation").waitFor();
         return page.evaluate(() => {
           const root = document.documentElement;
-          const frame = document.querySelector("main")!;
+          const frame = document.querySelector(".shell-workspace")!;
           // What really scrolls: the list, "Today", the wishlist or the queue.
           const region = document.querySelector(
             ".table-viewport, .wall-viewport, .today, .wishlist, .review-screen",
           )!;
           const box = region.getBoundingClientRect();
+          const workspace = frame.getBoundingClientRect();
           return {
             pageScrolls: root.scrollHeight > root.clientHeight + 1,
             frameScrolls: frame.scrollHeight > frame.clientHeight + 1,
             // Edge to edge, less the padding of `main`, which is 24 px.
-            edgeToEdge: box.left <= 25 && box.right >= window.innerWidth - 25,
+            edgeToEdge:
+              box.left <= workspace.left + 25 && box.right >= workspace.right - 25,
             // And that real space stays: a region one hundred pixels high would
             // obey all of the above and would be useless.
             height: Math.round(box.height),
@@ -96,9 +167,7 @@ for (const width of [1920, 1400, 1000]) {
  * list, thus the test uses the longest message that the connector can produce.
  */
 console.log("\nA store with a problem in the header");
-const LONG_MESSAGE =
-  "Corrective action is required to continue. Open this Epic page and " +
-  "connect the account again: https://www.epicgames.com/id/login/continuation?code=example";
+const LONG_MESSAGE = LONG_PROVIDER_ERROR;
 
 for (const width of [1400, 620]) {
   const r = await withTheApp(
@@ -107,7 +176,7 @@ for (const width of [1400, 620]) {
       return page.evaluate(() => {
         const root = document.documentElement;
         const region = document.querySelector(".table-viewport")!;
-        const aviso = document.querySelector(".connectors")!.getBoundingClientRect();
+        const aviso = document.querySelector(".activity-problems")!.getBoundingClientRect();
         return {
           pageScrolls: root.scrollHeight > root.clientHeight + 1,
           goesSideways: root.scrollWidth > root.clientWidth + 1,
@@ -394,7 +463,7 @@ console.log("\nThe review queue");
 for (const width of WIDTHS) {
   const r = await withTheApp(
     async (page) => {
-      await page.getByRole("button", { name: /To review/ }).click();
+      await page.getByRole("button", { name: /Review/ }).click();
       await page.locator(".review tbody tr").first().waitFor();
       return page.evaluate(() => {
         const lefts = (row: Element) =>
@@ -530,6 +599,7 @@ console.log("\nThe contrast of focus and the primary action");
 for (const theme of ["light", "dark"] as const) {
   const r = await withTheApp(
     async (page) => {
+      await openUtilities(page);
       const primary = page.locator("button.primary-action");
       await primary.waitFor();
       await primary.focus();

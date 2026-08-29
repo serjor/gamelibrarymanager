@@ -67,6 +67,13 @@ export const WIDE_ART =
       "<rect width='460' height='215' fill='gray'/></svg>",
   );
 
+export const LONG_PROVIDER_ERROR = "Corrective action is required to continue. Open this Epic page and connect the account again: https://www.epicgames.com/id/login/continuation?code=example";
+
+export async function openUtilities(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Utilities" }).click();
+  await page.locator("dialog[open]").waitFor();
+}
+
 export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
   const title = overrides.title ?? "Game";
   return {
