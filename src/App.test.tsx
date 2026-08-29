@@ -338,6 +338,13 @@ describe("App", () => {
     state.exports = [];
   });
 
+  it("gives the product mark a stable accessible name", async () => {
+    state.accounts = [steamAccount];
+    render(<App />);
+
+    expect(await screen.findByRole("img", { name: "Game Library Manager" })).toBeDefined();
+  });
+
   it("a matching that stops says why and that the work is kept", async () => {
     // It stops, it does not fail: it writes its work and gives back the reason.
     // Without that message, the user sees incomplete work and does not know why.

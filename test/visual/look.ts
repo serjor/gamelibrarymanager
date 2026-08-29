@@ -526,5 +526,42 @@ for (const theme of ["light", "dark"] as const) {
   check(`${theme} · muted in the sheet ${r.inTheSheet.toFixed(2)}:1`, r.inTheSheet >= 4.5);
 }
 
+console.log("\nThe contrast of focus and the primary action");
+for (const theme of ["light", "dark"] as const) {
+  const r = await withTheApp(
+    async (page) => {
+      const primary = page.locator("button.primary-action");
+      await primary.waitFor();
+      await primary.focus();
+      return page.evaluate(() => {
+        const numbers = (s: string) => (s.match(/[0-9]+/g) ?? []).map(Number);
+        const light = (c: number[]) => {
+          const channel = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * channel(c[0] ?? 0) + 0.7152 * channel(c[1] ?? 0) + 0.0722 * channel(c[2] ?? 0);
+        };
+        const ratio = (a: number[], b: number[]) => {
+          const [high, low] = [light(a), light(b)].sort((x, y) => y - x) as [number, number];
+          return (high + 0.05) / (low + 0.05);
+        };
+        const primary = document.querySelector("button.primary-action")!;
+        const styles = getComputedStyle(primary);
+        return {
+          action: ratio(numbers(styles.color), numbers(styles.backgroundColor)),
+          focus: ratio(numbers(styles.outlineColor), numbers(getComputedStyle(document.body).backgroundColor)),
+          visible: styles.outlineStyle !== "none" && styles.outlineWidth !== "0px",
+        };
+      });
+    },
+    { theme, answers: ALL },
+  );
+
+  check(theme + " · primary-action text " + r.action.toFixed(2) + ":1", r.action >= 4.5);
+  check(theme + " · focus " + r.focus.toFixed(2) + ":1", r.focus >= 3);
+  check(theme + " · focus indicator is visible", r.visible);
+}
+
 console.log(failures === 0 ? "\nAll correct.\n" : `\n${failures} tests did not pass.\n`);
 process.exit(failures === 0 ? 0 : 1);

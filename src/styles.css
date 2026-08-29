@@ -1,64 +1,74 @@
 /* The design system.
  *
- * No selector of this file declares a literal colour: all of them come from the
- * tokens above. The rule exists because the other option — a `#b3261e` alone in
- * the middle of the sheet — makes you find it by hand on the day that you must
- * change the dark theme, and makes sure that you do not find one of them. */
+ * Every interface colour lives in the token blocks below. Selectors describe
+ * the purpose of a colour and do not decide its value. */
 
 :root {
-  /* This still controls the native controls: `select`, the text fields and
-     the scroll bars use it alone. The tokens below cover what this code
-     draws; this covers what the system draws. */
+  /* Native controls use this value. The tokens below cover what the application
+     draws. */
   color-scheme: light dark;
 
-  /* Colour. The neutral colours go a minimum quantity towards blue and are
-     not pure greys: this is an application that you look at on a screen for a
-     long time, and an exact grey reads as a decision not made. */
-  --background: #fbfbfc;
-  --surface: #ffffff;
-  /* The fill of a cover that does not exist, and of the boxes that keep its
-     space. Before, it was a `color-mix` on `currentColor`, which changed its
-     tone with the parent. */
-  --placeholder: #eceef2;
-  --border: #d7d9e0;
-  --text: #16181d;
-  --text-muted: #5a5f6e;
-  --accent: #2f5fd0;
-  --error: #b3261e;
-  /* The scrim of the sheet. It comes from the ink in the light theme and from
-     the background in the dark theme, because in the two themes it must make
-     the page darker, and the dark token is not the same in each theme. */
-  --scrim: color-mix(in srgb, var(--text) 45%, transparent);
+  /* Ink and surfaces. The page is warm paper in the light theme and deep ink
+     in the dark theme. Raised and sunken surfaces make later screens readable
+     without adding a component-specific colour. */
+  --background: #f5f1e8;
+  --surface: #fffdf8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8e3d9;
+  --surface-accent: #edf1ff;
+  --surface-selected: #e1e8ff;
+  --surface-backlog: #fbf0d8;
+  --surface-error: #fcebea;
+  --placeholder: #e6e1d7;
+  --border: #d1d6df;
+  --border-strong: #9da6b5;
+  --text: #182230;
+  --text-muted: #536074;
 
-  /* The status of the game. They have a meaning and they are apart from the
-     accent, and that is deliberate: the accent shows where you are, and these
-     say what each game is. To mix them makes the interface shout in four
-     places at the same time. */
-  --status-backlog: #8a6a12;
-  --status-playing: #1f6b86;
-  --status-finished: #1c6b4f;
-  --status-abandoned: #98413a;
+  /* The command accent is exact and cool. The archive accent is warm and
+     reserved for collection surfaces. They do not communicate the same state. */
+  --accent: #3157d5;
+  --accent-hover: #2444b5;
+  --on-accent: #ffffff;
+  --command-accent: #3157d5;
+  --command-accent-hover: #2444b5;
+  --archive-accent: #b9532f;
+  --archive-accent-strong: #923e24;
+  --archive-surface: #f9e7dd;
+  --focus: #b84f31;
+  --error: #b42318;
+  --scrim: rgba(12, 19, 30, 0.58);
 
-  /* A price at its all-time low. A token of its own and not
-     `--status-finished`, although the two are green: the tokens above say what
-     a game is for you, and this one says something about what it costs today.
-     To share the colour would make the same ink mean two things on the same
-     screen. */
-  --price-low: #157a52;
+  /* The mark and the future no-art patterns use stable semantic colours. */
+  --icon-frame: #182230;
+  --icon-card-a: #d86f45;
+  --icon-card-b: #3157d5;
+  --icon-card-c: #e4ab57;
+  --art-pattern-a: #e8b18f;
+  --art-pattern-b: #9eafea;
+  --art-pattern-c: #9bc8b5;
+  --art-pattern-d: #c3a5d7;
 
-  /* Typography. The system stack: the CSP does not declare `font-src`, thus a
-     linked font would not load and a font in the package would make you change
-     the CSP. */
-  --font: system-ui, sans-serif;
+  /* The status of the game has a meaning separate from the command accent. */
+  --status-backlog: #8b5e00;
+  --status-playing: #075b7a;
+  --status-finished: #166b4f;
+  --status-abandoned: #9f3c32;
+  --price-low: #08734c;
+
+  /* Typography. The system stack stays local to the desktop application. */
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --t-xs: 0.75rem;
   --t-s: 0.8125rem;
   --t-m: 0.875rem;
   --t-base: 1rem;
   --t-l: 1.25rem;
   --t-xl: 1.75rem;
+  --t-2xl: 2.25rem;
+  --leading-tight: 1.15;
+  --leading-copy: 1.5;
 
-  /* Spacing, in steps of 4 px. Before, there were eleven different values
-     between 0.3rem and 3rem, which is the same as no values. */
+  /* Spacing, in predictable steps. */
   --e-1: 0.25rem;
   --e-2: 0.375rem;
   --e-3: 0.5rem;
@@ -72,27 +82,62 @@
   --radius-m: 6px;
   --radius-l: 8px;
 
+  /* Depth and motion are tokens even when a selector does not need them yet.
+     This keeps the visual language shared by the later shell and archive work. */
+  --shadow-soft: 0 6px 18px rgba(24, 34, 48, 0.08);
+  --shadow-raised: 0 14px 36px rgba(24, 34, 48, 0.12);
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
   font-family: var(--font);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #131519;
-    --surface: #1a1d23;
-    --placeholder: #23262e;
-    --border: #333741;
-    --text: #e6e8ee;
-    --text-muted: #9aa0ae;
-    --accent: #8ab4f8;
-    --error: #f2857b;
-    --scrim: color-mix(in srgb, var(--background) 80%, transparent);
+    --background: #0f141d;
+    --surface: #171f2c;
+    --surface-raised: #202a3a;
+    --surface-sunken: #0b1018;
+    --surface-accent: #222f5b;
+    --surface-selected: #293965;
+    --surface-backlog: #3a2d1a;
+    --surface-error: #4b2523;
+    --placeholder: #273243;
+    --border: #344154;
+    --border-strong: #55657d;
+    --text: #edf2f7;
+    --text-muted: #a8b4c7;
+    --accent: #91a7ff;
+    --accent-hover: #b0beff;
+    --on-accent: #101622;
+    --command-accent: #91a7ff;
+    --command-accent-hover: #b0beff;
+    --archive-accent: #f1946d;
+    --archive-accent-strong: #ffb093;
+    --archive-surface: #4a2a25;
+    --focus: #ffb093;
+    --error: #ff9c91;
+    --scrim: rgba(0, 0, 0, 0.68);
 
-    --status-backlog: #d4b263;
-    --status-playing: #79c0dd;
-    --status-finished: #6fc3a0;
-    --status-abandoned: #e0928a;
+    --icon-frame: #edf2f7;
+    --icon-card-a: #f1946d;
+    --icon-card-b: #91a7ff;
+    --icon-card-c: #f2c56f;
+    --art-pattern-a: #6f4638;
+    --art-pattern-b: #3e4c83;
+    --art-pattern-c: #2e6254;
+    --art-pattern-d: #614778;
 
-    --price-low: #5fd3a5;
+    --status-backlog: #e7b762;
+    --status-playing: #83d0ed;
+    --status-finished: #72d3ab;
+    --status-abandoned: #f09a91;
+    --price-low: #70d5a9;
+
+    --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.18);
+    --shadow-raised: 0 14px 36px rgba(0, 0, 0, 0.28);
   }
 }
 
@@ -129,7 +174,7 @@ body {
 /* The keyboard must show where it is. Before, the browser did this and each
    browser draws it differently. */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -156,6 +201,44 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: var(--e-5);
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--icon-frame);
+}
+
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.brand-mark__card--a { fill: var(--icon-card-a); }
+.brand-mark__card--b { fill: var(--icon-card-b); }
+.brand-mark__card--c { fill: var(--icon-card-c); }
+.brand-mark__frame {
+  fill: none;
+  stroke: var(--icon-frame);
+  stroke-width: 4;
+}
+
+.brand-title h1 {
+  min-width: 0;
+  font-size: var(--t-xl);
+  line-height: var(--leading-tight);
 }
 
 h1,
@@ -196,6 +279,18 @@ button {
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+button.primary-action {
+  background: var(--command-accent);
+  border-color: var(--command-accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+
+button.primary-action:hover:not(:disabled) {
+  background: var(--command-accent-hover);
+  border-color: var(--command-accent-hover);
 }
 
 button:disabled {
@@ -386,7 +481,7 @@ button.link {
 }
 
 .tab.active {
-  border-bottom-color: currentColor;
+  border-bottom-color: var(--accent);
   color: var(--text);
 }
 
@@ -689,7 +784,7 @@ button.link {
 }
 
 .table tr.checked td {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-selected);
 }
 
 /* The row that the inspector shows, with a border as one row and not as nine
@@ -771,7 +866,7 @@ button.link {
 /* What stays to decide, marked. These are the equal scores and the entries
    removed by hand: the only rows that the batch button will not take. */
 .review tr.not-chosen td {
-  background: color-mix(in srgb, var(--status-backlog) 10%, transparent);
+  background: var(--surface-backlog);
 }
 
 .review .source strong {
@@ -819,15 +914,20 @@ button.link {
   font-weight: 600;
   border-radius: var(--radius-s);
   padding: 0 var(--e-1);
-  border: 1px solid currentColor;
+  border: 1px solid var(--border-strong);
   white-space: nowrap;
 }
 
 .status.backlog { color: var(--status-backlog); }
+.status.backlog { border-color: var(--status-backlog); }
 .status.playing { color: var(--status-playing); }
+.status.playing { border-color: var(--status-playing); }
 .status.finished { color: var(--status-finished); }
+.status.finished { border-color: var(--status-finished); }
 .status.abandoned { color: var(--status-abandoned); }
+.status.abandoned { border-color: var(--status-abandoned); }
 .status.gone { color: var(--text-muted); }
+.status.gone { border-color: var(--border-strong); }
 
 /* At the bottom while the selection stays: if you must search for it, nobody
    uses it. */
@@ -839,9 +939,10 @@ button.link {
   gap: var(--e-3);
   flex-wrap: wrap;
   padding: var(--e-3);
-  background: var(--surface);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
+  box-shadow: var(--shadow-soft);
   margin-top: var(--e-3);
 }
 
@@ -975,7 +1076,8 @@ button.link {
   align-items: flex-start;
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
-  background: var(--surface);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
   padding: var(--e-5);
   /* It wraps as soon as the text has no space: it is the only piece of this
      screen that does not change size alone, because it has two columns. */
@@ -1072,6 +1174,8 @@ button.link {
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
   padding: var(--e-5);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 /* Exactly seven lines, in `em` on the line height: a height in `rem` cuts the
@@ -1118,7 +1222,8 @@ button.link {
   width: min(34rem, 100%);
   max-height: 100%;
   overflow-y: auto;
-  background: var(--surface);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
 }

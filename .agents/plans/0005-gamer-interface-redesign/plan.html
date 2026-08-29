@@ -146,7 +146,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
     <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
     <div><dt>Branch</dt><dd><code>t3code/redesign-gamer-interface</code></dd></div>
     <div><dt>Updated</dt><dd>2026-08-29</dd></div>
-    <div><dt>Status</dt><dd><span class="status review">Awaiting implementation approval</span></dd></div>
+    <div><dt>Status</dt><dd><span class="status review">Phase 1 implemented · awaiting validation</span></dd></div>
   </dl>
 
   <div class="decision-grid">
@@ -182,17 +182,17 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <p class="eyebrow">Living document</p>
   <h2>Execution status</h2>
   <div class="stat-grid">
-    <article class="stat"><span class="label">Progress</span><strong>0 of 5 phases</strong></article>
-    <article class="stat"><span class="label">Active phase</span><strong>None</strong></article>
+    <article class="stat"><span class="label">Progress</span><strong>1 of 5 phases implemented</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>1. Identity and visual foundation</strong></article>
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>Get implementation approval. Then start Phase 1.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>Validate Phase 1. Then start Phase 2.</span></p>
 
   <table>
     <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
     <tbody>
-      <tr><td>1. Identity and visual foundation</td><td><span class="status planned">Planned</span></td><td>The current interface stays usable and gains the approved identity.</td></tr>
+      <tr><td>1. Identity and visual foundation</td><td><span class="status active">Awaiting validation</span></td><td>The current interface stays usable and gains the approved identity.</td></tr>
       <tr><td>2. Shell and utilities</td><td><span class="status planned">Planned</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
       <tr><td>3. Live-archive surfaces</td><td><span class="status planned">Planned</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
       <tr><td>4. Command-deck surfaces</td><td><span class="status planned">Planned</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
@@ -364,7 +364,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <article class="phase" id="phase-1">
     <div class="phase-header">
       <div><span class="phase-number">Phase 1 of 5</span><h3>Identity and visual foundation</h3></div>
-      <span class="status planned">Planned</span>
+      <span class="status active">Awaiting validation</span>
     </div>
     <div class="phase-body">
       <div class="phase-facts">
@@ -410,18 +410,18 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       </div>
 
       <details class="execution-record">
-        <summary>Execution record · planned</summary>
+        <summary>Execution record · implementation complete</summary>
         <dl>
-          <dt>Started</dt><dd>Pending.</dd>
-          <dt>Completed</dt><dd>Pending.</dd>
-          <dt>Agent / session</dt><dd>Pending.</dd>
-          <dt>Commit / change</dt><dd>Pending.</dd>
-          <dt>Actual files</dt><dd>Pending.</dd>
-          <dt>Commands / results</dt><dd>Pending.</dd>
-          <dt>Deviations</dt><dd>None recorded.</dd>
-          <dt>New decisions</dt><dd>None recorded.</dd>
-          <dt>Remaining risks</dt><dd>The final shell does not exist. The icon still needs small-size examination.</dd>
-          <dt>Handoff</dt><dd>Start Phase 2 after the production gate passes.</dd>
+          <dt>Started</dt><dd>2026-08-29.</dd>
+          <dt>Completed</dt><dd>2026-08-29.</dd>
+          <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
+          <dt>Commit / change</dt><dd>Working tree; no commit requested.</dd>
+          <dt>Actual files</dt><dd><code>src/styles.css</code>, <code>src/assets/app-icon.svg</code>, <code>src/features/shell/BrandMark.tsx</code>, <code>src/App.tsx</code>, <code>src/App.test.tsx</code>, <code>src-tauri/icons/</code>, <code>src-tauri/tauri.conf.json</code>, and <code>test/visual/look.ts</code>.</dd>
+          <dt>Commands / results</dt><dd><code>bunx tsc --noEmit</code>, <code>bun run lint</code>, and <code>bun test</code> passed with 77 tests. <code>bun run build</code> passed. Tauri icon generation passed. Static light/dark contrast checks passed.</dd>
+          <dt>Deviations</dt><dd>Bun was not available at the start, so the Tauri CLI was run through <code>npx</code>. The generated Android and iOS outputs were removed because this phase covers desktop bundles.</dd>
+          <dt>New decisions</dt><dd>None.</dd>
+          <dt>Remaining risks</dt><dd>The visual harness reached Chromium but the container lacks <code>libglib-2.0.so.0</code>. Manual 16px, 32px, and 128px raster examination still needs a desktop-capable environment. Cargo checks were not available because Cargo is not installed in this environment.</dd>
+          <dt>Handoff</dt><dd>Stop for user validation. Start Phase 2 only after approval.</dd>
         </dl>
       </details>
     </div>

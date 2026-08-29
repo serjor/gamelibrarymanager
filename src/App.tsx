@@ -25,6 +25,7 @@ import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
+import { BrandMark } from "./features/shell/BrandMark";
 import { Wishlist } from "./features/wishlist/Wishlist";
 
 /** The stores that the application can read, with the name that it shows. */
@@ -279,9 +280,16 @@ export function App() {
   return (
     <main>
       <header>
-        <h1>Library</h1>
+        <div className="brand-title">
+          <BrandMark />
+          <h1>Library</h1>
+        </div>
         <div className="actions">
-          <button onClick={() => void run("sync", api.syncNow)} disabled={busy !== null}>
+          <button
+            className="primary-action"
+            onClick={() => void run("sync", api.syncNow)}
+            disabled={busy !== null}
+          >
             {busy === "sync" ? "Synchronising…" : "Synchronise"}
           </button>
           {busy !== null && (
