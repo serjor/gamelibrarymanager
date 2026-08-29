@@ -172,6 +172,7 @@ const LONG_MESSAGE = LONG_PROVIDER_ERROR;
 for (const width of [1400, 620]) {
   const r = await withTheApp(
     async (page) => {
+      await openUtilities(page);
       await page.getByRole("button", { name: "Switch Epic off" }).waitFor();
       return page.evaluate(() => {
         const root = document.documentElement;
