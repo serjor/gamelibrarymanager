@@ -182,19 +182,19 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <p class="eyebrow">Living document</p>
   <h2>Execution status</h2>
   <div class="stat-grid">
-    <article class="stat"><span class="label">Progress</span><strong>2 of 5 phases implemented</strong></article>
-    <article class="stat"><span class="label">Active phase</span><strong>2. Shell and utilities</strong></article>
+    <article class="stat"><span class="label">Progress</span><strong>3 of 5 phases implemented</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>3. Live-archive surfaces</strong></article>
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>Validate Phase 2. Then start Phase 3.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>Validate Phase 3. Then start Phase 4.</span></p>
 
   <table>
     <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
     <tbody>
       <tr><td>1. Identity and visual foundation</td><td><span class="status done">Done</span></td><td>The current interface stays usable and gains the approved identity.</td></tr>
-      <tr><td>2. Shell and utilities</td><td><span class="status active">Awaiting validation</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
-      <tr><td>3. Live-archive surfaces</td><td><span class="status planned">Planned</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
+      <tr><td>2. Shell and utilities</td><td><span class="status done">Done</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
+      <tr><td>3. Live-archive surfaces</td><td><span class="status active">Awaiting validation</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
       <tr><td>4. Command-deck surfaces</td><td><span class="status planned">Planned</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
       <tr><td>5. Setup, states, motion, and final evidence</td><td><span class="status planned">Planned</span></td><td>All entry paths and exceptional states use the same completed system.</td></tr>
     </tbody>
@@ -430,7 +430,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <article class="phase" id="phase-2">
     <div class="phase-header">
       <div><span class="phase-number">Phase 2 of 5</span><h3>Shell and utilities</h3></div>
-      <span class="status active">Awaiting validation</span>
+      <span class="status done">Done</span>
     </div>
     <div class="phase-body">
       <div class="phase-facts">
@@ -477,18 +477,18 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       </div>
 
       <details class="execution-record">
-        <summary>Execution record · implementation complete</summary>
+        <summary>Execution record · validation complete</summary>
         <dl>
           <dt>Started</dt><dd>2026-08-29.</dd>
           <dt>Completed</dt><dd>2026-08-29.</dd>
           <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
           <dt>Commit / change</dt><dd>Working tree; no commit requested.</dd>
           <dt>Actual files</dt><dd><code>src/features/shell/AppShell.tsx</code>, <code>src/features/shell/ShellIcon.tsx</code>, <code>src/features/shell/ActivityStrip.tsx</code>, <code>src/features/shell/UtilityPanel.tsx</code>, <code>src/App.tsx</code>, <code>src/styles.css</code>, <code>src/App.test.tsx</code>, <code>src/features/shell/AppShell.test.tsx</code>, <code>src/features/shell/ActivityStrip.test.tsx</code>, <code>test/visual/harness.ts</code>, and <code>test/visual/look.ts</code>.</dd>
-          <dt>Commands / results</dt><dd><code>npx tsc --noEmit</code>, <code>npx eslint src</code>, <code>npx vite build</code>, and <code>git diff --check</code> passed. Bun tests, Cargo checks, Tauri dev, and visual checks were not run because Bun, Cargo, Chromium, and the preview host are unavailable.</dd>
+          <dt>Commands / results</dt><dd><code>npx tsc --noEmit</code>, <code>npx eslint src</code>, <code>npx vite build</code>, <code>npx --no-install bun test</code> (85 tests), and <code>git diff --check</code> passed. Cargo checks, Tauri dev, and Chromium visual checks remain unavailable in this environment.</dd>
           <dt>Deviations</dt><dd>No command signatures or stored data changed. The repository was edited through a terminal fallback because the patch helper failed in the sandbox while mounting <code>devpts</code>.</dd>
           <dt>New decisions</dt><dd>None.</dd>
-          <dt>Remaining risks</dt><dd>Full Bun, Cargo, Tauri, and Chromium visual checks remain for a desktop-capable environment. Phase 3 still owns the emotional and operational screen compositions.</dd>
-          <dt>Handoff</dt><dd>Run the full production gate in a complete desktop environment. Start Phase 3 after it passes.</dd>
+          <dt>Remaining risks</dt><dd>Cargo, Tauri dev, and real desktop visual checks still require a desktop-capable environment. The phase 3 artwork composition is tracked in the next phase.</dd>
+          <dt>Handoff</dt><dd>Phase 2 validated. Phase 3 started.</dd>
         </dl>
       </details>
     </div>
@@ -497,7 +497,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <article class="phase" id="phase-3">
     <div class="phase-header">
       <div><span class="phase-number">Phase 3 of 5</span><h3>Live-archive surfaces</h3></div>
-      <span class="status planned">Planned</span>
+      <span class="status active">Awaiting validation</span>
     </div>
     <div class="phase-body">
       <div class="phase-facts">
@@ -548,18 +548,18 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       </div>
 
       <details class="execution-record">
-        <summary>Execution record · planned</summary>
+        <summary>Execution record · implementation complete · awaiting validation</summary>
         <dl>
-          <dt>Started</dt><dd>Pending.</dd>
-          <dt>Completed</dt><dd>Pending.</dd>
-          <dt>Agent / session</dt><dd>Pending.</dd>
-          <dt>Commit / change</dt><dd>Pending.</dd>
-          <dt>Actual files</dt><dd>Pending.</dd>
-          <dt>Commands / results</dt><dd>Pending.</dd>
-          <dt>Deviations</dt><dd>None recorded.</dd>
-          <dt>New decisions</dt><dd>None recorded.</dd>
-          <dt>Remaining risks</dt><dd>Real provider art can expose crop or contrast problems that local fixtures do not show.</dd>
-          <dt>Handoff</dt><dd>Start Phase 4 after the production gate passes.</dd>
+          <dt>Started</dt><dd>2026-08-29.</dd>
+          <dt>Completed</dt><dd>2026-08-29 (implementation).</dd>
+          <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
+          <dt>Commit / change</dt><dd>Working tree; no commit requested.</dd>
+          <dt>Actual files</dt><dd><code>src/features/game/GameArtwork.tsx</code>, <code>src/features/game/artwork.ts</code>, <code>src/features/game/artwork.test.ts</code>, <code>src/features/game/artworkTypes.ts</code>, <code>src/features/library/LibraryWall.tsx</code>, <code>src/features/today/Today.tsx</code>, <code>src/features/game/GameDetail.tsx</code>, <code>src/features/library/Library.tsx</code>, <code>src/styles.css</code>, <code>src/App.test.tsx</code>, <code>test/visual/harness.ts</code>, and <code>test/visual/look.ts</code>.</dd>
+          <dt>Commands / results</dt><dd><code>npx --no-install bun test</code> passed with 85 tests. <code>npx --no-install bun run lint</code>, <code>npx --no-install bun run build</code>, <code>npx tsc --noEmit</code>, <code>npx eslint src</code>, <code>npx vite build</code>, and <code>git diff --check</code> passed. The visual harness was attempted with the installed Chromium, but it stopped because <code>libglib-2.0.so.0</code> is not available.</dd>
+          <dt>Deviations</dt><dd>No data, API, command, or dependency changes. Two existing application assertions were scoped to their semantic containers after Utilities introduced duplicate text in the mounted dialog. The patch helper remained unavailable because the sandbox could not mount <code>devpts</code>, so targeted terminal edits were used.</dd>
+          <dt>New decisions</dt><dd>None.</dd>
+          <dt>Remaining risks</dt><dd>Real Steam and GOG artwork still needs desktop review for crop and contrast. The visual harness needs the missing Chromium library; Cargo checks and Tauri dev also require a complete desktop-capable environment.</dd>
+          <dt>Handoff</dt><dd>Phase 3 is implemented and awaits the real-art and full production gate. Start Phase 4 only after that gate passes.</dd>
         </dl>
       </details>
     </div>

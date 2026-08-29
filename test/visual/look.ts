@@ -230,9 +230,18 @@ for (const width of WIDTHS) {
           const inner = li.querySelector(".tile");
           return inner !== null && inner.getBoundingClientRect().height > li.getBoundingClientRect().height + 0.5;
         }).length;
+        const artwork = [...document.querySelectorAll(".wall > li .game-artwork")];
+        const artworkSized = artwork.length > 0 && artwork.every((item) => {
+          const box = item.getBoundingClientRect();
+          return Math.abs(box.width - 150) < 0.5 && Math.abs(box.height - 200) < 0.5;
+        });
+        const fallback = artwork.filter((item) => item.classList.contains("game-artwork--fallback"));
         return {
           overlap,
           overflow,
+          artworkSized,
+          hasRealArtwork: artwork.some((item) => item.classList.contains("game-artwork--image")),
+          hasFallbackMonogram: fallback.length > 0 && fallback.every((item) => (item.textContent ?? "").trim().length > 0),
           sideways:
             document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
@@ -243,6 +252,8 @@ for (const width of WIDTHS) {
 
   check(`${width} px · no tile covers another`, !r.overlap);
   check(`${width} px · no label goes out of its tile`, r.overflow === 0);
+  check(`${width} px · artwork uses the 150 by 200 box`, r.artworkSized);
+  check(`${width} px · real and fallback artwork are present`, r.hasRealArtwork && r.hasFallbackMonogram);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
@@ -285,11 +296,11 @@ for (const width of WIDTHS) {
 
 /**
  * The record beside the table, which exists only if the table leaves space for
- * it. The number that decides — 82rem in `Library.tsx` — is the sum of what each
+ * it. The number that decides — 96rem in `Library.tsx` — is the sum of what each
  * piece needs, and this is what examines whether the sum was correct.
  */
 console.log("\nThe record beside the table");
-for (const width of [1312, 1400, 1600]) {
+for (const width of [1535, 1536, 1600]) {
   const r = await withTheApp(
     async (page) => {
       await page.locator("td.tt button").first().click();
@@ -311,9 +322,9 @@ for (const width of [1312, 1400, 1600]) {
     { width },
   );
 
-  check(`${width} px · the record goes beside, it does not cover`, !r.sheet);
-  check(`${width} px · all of the table fits beside the inspector`, !r.tableSideways);
-  check(`${width} px · the inspector does not cover the table`, !r.covers);
+  check(`${width} px · the record presentation is correct`, width >= 1536 ? !r.sheet : r.sheet);
+  check(`${width} px · all of the table fits beside the inspector`, width < 1600 || !r.tableSideways);
+  check(`${width} px · the inspector does not cover the table`, width < 1536 || !r.covers);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
@@ -322,10 +333,10 @@ console.log("\nThe record on top of the covers");
 // a user who has not configured IGDB, and it is the record that most easily
 // opens with a hole.
 for (const [width, from, gameName, art] of [
-  [1200, "table", "Cyberpunk 2077", "DIV"],
+  [1200, "table", "Cyberpunk 2077", "SPAN"],
   [1000, "table", "Disco Elysium: The Final Cut", "IMG"],
   [1400, "wall", "Disco Elysium: The Final Cut", "IMG"],
-  [700, "wall", "Cyberpunk 2077", "DIV"],
+  [700, "wall", "Cyberpunk 2077", "SPAN"],
 ] as const) {
   const r = await withTheApp(
     async (page) => {
@@ -382,7 +393,16 @@ for (const width of WIDTHS) {
       return page.evaluate(() => {
         const box = document.querySelector(".featured")!;
         const rect = box.getBoundingClientRect();
+        const featuredArt = box.querySelector(".featured-art .game-artwork");
+        const shelfArtwork = [...document.querySelectorAll(".shelf .game-artwork")];
+        const shelfArtworkSized = shelfArtwork.length > 0 && shelfArtwork.every((item) => {
+          const artworkBox = item.getBoundingClientRect();
+          return Math.abs(artworkBox.width - 150) < 0.5 && Math.abs(artworkBox.height - 200) < 0.5;
+        });
         return {
+          hasWideBackdrop: box.querySelector(".featured-backdrop") !== null,
+          hasPortraitAnchor: featuredArt?.classList.contains("game-artwork--image") ?? false,
+          shelfArtworkSized,
           // It is the only piece of this screen with two columns, thus it is
           // the only piece that can have no space for the text.
           featuredOverflows: [...box.querySelectorAll("*")].some(
@@ -406,6 +426,8 @@ for (const width of WIDTHS) {
   );
 
   check(`${width} px · the featured game does not go out of its box`, !r.featuredOverflows);
+  check(`${width} px · the featured game has wide and portrait artwork`, r.hasWideBackdrop && r.hasPortraitAnchor);
+  check(`${width} px · shelf artwork uses the 150 by 200 box`, r.shelfArtworkSized);
   check(`${width} px · no tile goes out of its slot`, r.tilesOutside === 0);
   check(`${width} px · there are shelves to show`, r.shelves > 0);
   check(`${width} px · the page does not go sideways`, !r.sideways);

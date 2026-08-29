@@ -557,9 +557,9 @@ button.link {
   color: var(--text-muted);
 }
 
-.view.activa {
+.view.active {
   background: var(--accent);
-  color: var(--surface);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -702,11 +702,10 @@ button.link {
   overflow: auto;
 }
 
-/* The maximum is not decoration: 96rem + 1rem of space + 20rem of inspector +
-   3rem of padding are exactly 120rem, which is a 1920 screen at its full size.
-   The table never uses the space of the inspector, thus to open a record there
-   does not move one column. And a row of 1900 px is also not readable: the title
-   stays at one end and the year at the other. */
+/* The table keeps its own readable maximum. The inspector has its separate
+   22rem column, so opening a record does not move the table or change its
+   measured columns. A row wider than this is also not readable: the title stays
+   at one end and the year at the other. */
 .table {
   width: 100%;
   max-width: 96rem;
@@ -1166,7 +1165,7 @@ button.link {
    stays where it is and it is the record that scrolls inside when the window is
    lower than the form. */
 .detail {
-  width: 20rem;
+  width: 22rem;
   flex-shrink: 0;
   align-self: flex-start;
   max-height: 100%;
@@ -1219,7 +1218,7 @@ button.link {
 }
 
 .sheet-box {
-  width: min(34rem, 100%);
+  width: min(42rem, 100%);
   max-height: 100%;
   overflow-y: auto;
   background: var(--surface-raised);
@@ -1772,4 +1771,122 @@ button.link {
   .shell-utility-trigger {
     transition: none;
   }
+}
+
+
+/* Phase 3 archive artwork. The component supplies the source; these selectors
+   supply the shared crop, fallback identity, and collection depth. */
+.game-artwork {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-m);
+  background: var(--placeholder);
+}
+
+.game-artwork--fallback {
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--text);
+  font-size: var(--t-xl);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.game-artwork--fallback::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  opacity: 0.65;
+  z-index: -1;
+}
+
+.game-artwork--fallback > span {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+}
+
+.game-artwork--pattern-a {
+  background-image: linear-gradient(135deg, var(--art-pattern-a) 0 50%, var(--art-pattern-b) 50% 100%);
+}
+
+.game-artwork--pattern-b {
+  background-image: linear-gradient(90deg, var(--art-pattern-b) 0 28%, var(--art-pattern-c) 28% 70%, var(--art-pattern-d) 70% 100%);
+}
+
+.game-artwork--pattern-c {
+  background-image: radial-gradient(circle at 28% 28%, var(--art-pattern-a) 0 18%, var(--art-pattern-c) 18% 52%, var(--art-pattern-b) 52% 100%);
+}
+
+.game-artwork--pattern-d {
+  background-image: repeating-linear-gradient(135deg, var(--art-pattern-d) 0 18px, var(--art-pattern-a) 18px 36px, var(--art-pattern-b) 36px 54px);
+}
+
+.tile .game-artwork {
+  width: 100%;
+  height: var(--cover-height);
+}
+
+.wall > li.checked .game-artwork {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.wall > li.open .game-artwork {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.featured {
+  position: relative;
+  overflow: hidden;
+}
+
+.featured.has-backdrop {
+  background: var(--surface-sunken);
+}
+
+.featured-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-l);
+  opacity: 0.18;
+}
+
+.featured > :not(.featured-backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+.featured-art .game-artwork {
+  width: 10.5rem;
+  height: 14rem;
+}
+
+.detail-art {
+  width: 100%;
+  height: 15rem;
+}
+
+.sheet-art.game-artwork {
+  width: 100%;
+  height: 15rem;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+}
+
+.sheet-art.game-artwork--fallback > span {
+  width: 5rem;
+  height: 5rem;
+  font-size: var(--t-2xl);
 }

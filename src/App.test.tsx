@@ -323,7 +323,7 @@ describe("App", () => {
   beforeEach(() => {
     // Wide by default: that is where all of the library is visible, and the
     // narrow window is tested separately.
-    width(1400);
+    width(1600);
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
     state.connectors = [];
@@ -500,14 +500,15 @@ describe("App", () => {
     ];
     render(<App />);
 
-    expect(await screen.findByText(/invalid or expired credentials/)).toBeDefined();
+    const activity = await screen.findByRole("region", { name: "Activity" });
+    expect(within(activity).getByText(/invalid or expired credentials/)).toBeDefined();
     await openUtilities();
     (await screen.findByRole("button", { name: "Switch Epic off" })).click();
 
     expect(await screen.findByRole("button", { name: "Switch Epic on" })).toBeDefined();
     // And what is important: the others stay where they were.
     expect(screen.getByRole("button", { name: "Synchronise" })).toBeDefined();
-    expect(screen.getByText(/Steam/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Disconnect Steam" })).toBeDefined();
   });
 
   it("a connector switched off explains that its data stays in the library", async () => {
@@ -535,8 +536,12 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.summary = { owned: 412, wishlist: 37, games: 400, pending_review: 12 };
     render(<App />);
-    expect(await screen.findByText(/400 records/)).toBeDefined();
-    expect(screen.getByText(/12 to review/)).toBeDefined();
+    await waitFor(() => {
+      const workspace = screen.getByRole("main");
+      expect(within(workspace).getByText(/400 records/)).toBeDefined();
+    });
+    const workspace = screen.getByRole("main");
+    expect(within(workspace).getByText(/12 to review/)).toBeDefined();
   });
 
   it("the library shows the records with their stores", async () => {
@@ -766,7 +771,7 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog")).toBeDefined();
     expect(screen.getByText(/No summary/)).toBeDefined();
-    expect(document.querySelector(".sheet-art")?.tagName).toBe("DIV");
+    expect(document.querySelector(".sheet-art")?.tagName).toBe("SPAN");
     expect(inTheRecord().getByLabelText("Notes")).toBeDefined();
   });
 
@@ -777,8 +782,8 @@ describe("App", () => {
     state.rows = [row({ title: "Celeste", sort_title: "celeste", rating: 9 })];
 
     for (const [px, expected] of [
-      [1400, null],
-      [1000, "dialog"],
+      [1600, null],
+      [1400, "dialog"],
     ] as const) {
       width(px);
       const { unmount } = render(<App />);

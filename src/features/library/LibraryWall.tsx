@@ -1,4 +1,5 @@
 import type { LibraryRow } from "../../lib/api";
+import { GameArtwork } from "../game/GameArtwork";
 import { STATUS_LABEL } from "../../lib/status";
 import { useVirtualGrid } from "./useVirtualGrid";
 import { withShift, useSelection } from "./useSelection";
@@ -10,15 +11,15 @@ import { isNoLongerInStore } from "./filters";
  * The cover has an explicit height and the column has an explicit width, and
  * **not** an `aspect-ratio`: a grid item that stretches gives no height to its
  * row, the row divides the height that stays in the container, and the covers
- * cover each other. 126×168 is the 3:4 ratio of the covers.
+ * cover each other. 150×200 is the 3:4 ratio of the covers.
  *
  * They come from here and not from the CSS because they are the same
  * measurements with which the wall calculates which rows apply. The shelves of
  * "Today" import them and do not repeat them: a tile with a different size on
  * each screen would not be the same tile.
  */
-export const WIDTH = 126;
-export const COVER_HEIGHT = 168;
+export const WIDTH = 150;
+export const COVER_HEIGHT = 200;
 /**
  * The cover plus the label. The 60 are measured, not estimated: two lines of
  * title (31), the line of stores or the gone marker (18) and the two spaces of
@@ -94,16 +95,7 @@ export function LibraryWall({
                   <i className={`dot ${row.status}`} aria-hidden="true" />
                 )}
                 <button className="tile" onClick={() => onOpen(row)}>
-                  {row.cover_url ? (
-                    <img src={row.cover_url} alt="" loading="lazy" />
-                  ) : (
-                    // Decoration: the title is already below, and to repeat it
-                    // would make a screen reader read it two times for each
-                    // game.
-                    <span className="cover-placeholder" aria-hidden="true">
-                      {row.title}
-                    </span>
-                  )}
+                  <GameArtwork row={row} loading="lazy" />
                   <span className="tile-title">{row.title}</span>
                   {isNoLongerInStore(row) ? (
                     <span className="status gone">Not in a store</span>

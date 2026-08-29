@@ -16,18 +16,18 @@ export type View = "table" | "wall";
  *
  * It is not a round number and it does not come from the window of
  * `tauri.conf.json`: it is the sum of what each piece needs to operate. The
- * table stops being usable below 56rem (`.table` in `styles.css`), the inspector
- * is 20rem (`.detail`), between the two there is 1rem of space (`--e-5`) and
- * `main` uses 3rem of padding: 80rem. The 2rem more are for the scroll bar,
- * which counts in what a media query measures and not in what stays for the
- * window.
+ * table stops being usable below 56rem (the table in styles.css), the inspector
+ * is 22rem (the detail panel), the gap is 1rem, the rail is 14rem, and the
+ * workspace uses 3rem of padding. The layout allowance includes the scroll bar
+ * and totals 96rem, which counts in what a media query measures and not in what
+ * stays for the window.
  *
  * Below that width, the game record opens as a sheet. The other option — to keep
  * the inspector and let the table scroll horizontally beside it — cuts the title
  * to "Ba…" exactly when you compare records, which is when you most need to read
  * it.
  */
-const INSPECTOR_FITS = "(min-width: 82rem)";
+const INSPECTOR_FITS = "(min-width: 96rem)";
 
 /** Where ↑↓ already means something: the cursor of a text, the options of a list. */
 function isTyping(target: EventTarget | null): boolean {

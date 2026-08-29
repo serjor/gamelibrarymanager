@@ -67,6 +67,14 @@ export const WIDE_ART =
       "<rect width='460' height='215' fill='gray'/></svg>",
   );
 
+export const PORTRAIT_ART =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='150' height='200'>" +
+      "<rect width='150' height='200' fill='gray'/>" +
+      "<circle cx='75' cy='100' r='48' fill='white'/></svg>",
+  );
+
 export const LONG_PROVIDER_ERROR = "Corrective action is required to continue. Open this Epic page and connect the account again: https://www.epicgames.com/id/login/continuation?code=example";
 
 export async function openUtilities(page: Page): Promise<void> {
@@ -104,8 +112,8 @@ export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
  */
 export function exampleLibrary(): LibraryRow[] {
   return [
-    game({ title: "Disco Elysium: The Final Cut", owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
-    game({ title: "Hades", playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: WIDE_ART }),
+    game({ title: "Disco Elysium: The Final Cut", cover_url: PORTRAIT_ART, owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
+    game({ title: "Hades", cover_url: PORTRAIT_ART, playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: WIDE_ART }),
     game({ title: "Ori and the Blind Forest: Definitive Edition", owned_stores: ["steam", "gog"], playtime_minutes: 660, status: "finished", rating: 8 }),
     game({ title: "Outer Wilds", playtime_minutes: 0, status: "backlog" }),
     game({ title: "Divinity: Original Sin 2", owned_stores: ["gog"], playtime_minutes: 0, status: "backlog" }),
