@@ -25,73 +25,86 @@ export function LibraryFilters({
   onChange: (filters: Filters) => void;
 }) {
   return (
-    <div className="filters">
-      <input
-        type="search"
-        value={filters.search}
-        onChange={(e) => onChange({ ...filters, search: e.target.value })}
-        placeholder="Search in the library"
-        aria-label="Search in the library"
-      />
+    <div className="filters" role="group" aria-label="Library filters">
+      <label className="filter-search">
+        <span className="filter-label">Search</span>
+        <input
+          type="search"
+          value={filters.search}
+          onChange={(e) => onChange({ ...filters, search: e.target.value })}
+          placeholder="Search in the library"
+          aria-label="Search in the library"
+        />
+      </label>
 
-      <select
-        value={filters.store ?? ""}
-        onChange={(e) => onChange({ ...filters, store: e.target.value || null })}
-        aria-label="Store"
-      >
-        <option value="">All of the stores</option>
-        {stores.map((store) => (
-          <option key={store} value={store}>
-            {store}
-          </option>
-        ))}
-      </select>
+      <div className="filter-set">
+        <label className="filter-field">
+          <span className="filter-label">Store</span>
+          <select
+            value={filters.store ?? ""}
+            onChange={(e) => onChange({ ...filters, store: e.target.value || null })}
+          >
+            <option value="">All of the stores</option>
+            {stores.map((store) => (
+              <option key={store} value={store}>
+                {store}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <select
-        value={filters.availability ?? ""}
-        onChange={(e) =>
-          onChange({
-            ...filters,
-            availability: (e.target.value || null) as Filters["availability"],
-          })
-        }
-        aria-label="Availability"
-      >
-        <option value="">All games</option>
-        <option value="gone">No longer in a store</option>
-      </select>
+        <label className="filter-field">
+          <span className="filter-label">Availability</span>
+          <select
+            value={filters.availability ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...filters,
+                availability: (e.target.value || null) as Filters["availability"],
+              })
+            }
+          >
+            <option value="">All games</option>
+            <option value="gone">No longer in a store</option>
+          </select>
+        </label>
 
-      <select
-        value={filters.status ?? ""}
-        onChange={(e) =>
-          onChange({ ...filters, status: (e.target.value || null) as Filters["status"] })
-        }
-        aria-label="Status"
-      >
-        <option value="">Any status</option>
-        {STATUSES.map((status) => (
-          <option key={status.value} value={status.value}>
-            {status.label}
-          </option>
-        ))}
-      </select>
+        <label className="filter-field">
+          <span className="filter-label">Status</span>
+          <select
+            value={filters.status ?? ""}
+            onChange={(e) =>
+              onChange({ ...filters, status: (e.target.value || null) as Filters["status"] })
+            }
+          >
+            <option value="">Any status</option>
+            {STATUSES.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <select
-        value={filters.genre ?? ""}
-        onChange={(e) => onChange({ ...filters, genre: e.target.value || null })}
-        aria-label="Genre"
-      >
-        <option value="">Any genre</option>
-        {genres.map((genre) => (
-          <option key={genre} value={genre}>
-            {genre}
-          </option>
-        ))}
-      </select>
+        <label className="filter-field">
+          <span className="filter-label">Genre</span>
+          <select
+            value={filters.genre ?? ""}
+            onChange={(e) => onChange({ ...filters, genre: e.target.value || null })}
+          >
+            <option value="">Any genre</option>
+            {genres.map((genre) => (
+              <option key={genre} value={genre}>
+                {genre}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <span className="hint">
+      <output className="filter-count" aria-live="polite">
         {shown === total ? `${total} games` : `${shown} of ${total}`}
-      </span>
+      </output>
     </div>
   );
 }

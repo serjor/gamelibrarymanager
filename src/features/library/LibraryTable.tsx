@@ -7,7 +7,7 @@ import type { Sort, SortField } from "./sort";
 import { isNoLongerInStore } from "./filters";
 
 /** A fixed row height: the virtual list is arithmetic, not measurement. */
-const ROW_HEIGHT = 33;
+const ROW_HEIGHT = 38;
 
 interface Column {
   field: SortField;
@@ -111,7 +111,7 @@ export function LibraryTable({
 
   return (
     <div className="table-viewport" ref={containerRef}>
-      <table className="table">
+      <table className="table command-table" aria-label="Game library">
         <colgroup>
           <col style={{ width: "2.2rem" }} />
           {COLUMNS.map((column) => (

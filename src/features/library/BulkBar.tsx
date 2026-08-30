@@ -62,33 +62,36 @@ export function BulkBar({
   };
 
   return (
-    <div className="bulk">
-      <strong>
-        {count} selected
-      </strong>
+    <div className="bulk command-bar" role="region" aria-label="Bulk actions" aria-busy={busy}>
+      <div className="bulk-selection">
+        <strong aria-live="polite">{count} selected</strong>
+        <span>Update the selected records together.</span>
+      </div>
 
-      <label className="bulk-field" htmlFor="bulk-status">
-        Mark as
-      </label>
-      <select
-        id="bulk-status"
-        value={status}
-        onChange={(e) => setStatus(e.target.value as PlayStatus | "")}
-      >
-        <option value="">Not marked</option>
-        {STATUSES.map((value) => (
-          <option key={value} value={value}>
-            {STATUS_LABEL[value]}
-          </option>
-        ))}
-      </select>
+      <div className="bulk-controls">
+        <label className="bulk-field" htmlFor="bulk-status">
+          Mark as
+        </label>
+        <select
+          id="bulk-status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as PlayStatus | "")}
+        >
+          <option value="">Not marked</option>
+          {STATUSES.map((value) => (
+            <option key={value} value={value}>
+              {STATUS_LABEL[value]}
+            </option>
+          ))}
+        </select>
 
-      <button disabled={busy} onClick={() => void apply()}>
-        {busy ? "Applying…" : "Apply"}
-      </button>
-      <button className="link" onClick={onClear}>
-        clear selection
-      </button>
+        <button className="primary-action" disabled={busy} onClick={() => void apply()}>
+          {busy ? "Applying…" : "Apply"}
+        </button>
+        <button className="link" onClick={onClear}>
+          clear selection
+        </button>
+      </div>
 
       {error && <p role="alert">{error}</p>}
     </div>

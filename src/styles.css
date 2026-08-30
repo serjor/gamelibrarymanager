@@ -748,7 +748,7 @@ button.link {
 }
 
 .table td {
-  height: 33px;
+  height: 38px;
   padding: 0 var(--e-3);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -1894,4 +1894,323 @@ button.link {
   width: 5rem;
   height: 5rem;
   font-size: var(--t-2xl);
+}
+
+/* Phase 4 command-deck surfaces. The dense screens share one hierarchy:
+   controls first, a readable table below, and a clear state for work in
+   progress. All surfaces use the design tokens so the light and dark themes
+   keep the same meaning. */
+.command-deck {
+  min-width: 0;
+}
+
+.command-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e-4);
+  flex-wrap: wrap;
+  padding: var(--e-4) var(--e-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-soft);
+}
+
+.command-toolbar:focus-within {
+  border-color: var(--accent);
+}
+
+.library-toolbar {
+  align-items: stretch;
+}
+
+.library-toolbar .views {
+  align-self: flex-end;
+  background: var(--surface);
+}
+
+.filters {
+  align-items: stretch;
+  gap: var(--e-4);
+  min-width: 0;
+}
+
+.filter-search {
+  display: flex;
+  flex: 1 1 15rem;
+  min-width: min(100%, 15rem);
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--e-1);
+  margin: 0;
+}
+
+.filter-set {
+  display: flex;
+  flex: 2 1 32rem;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+}
+
+.filter-field {
+  display: flex;
+  flex: 1 1 7.5rem;
+  min-width: 7.5rem;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+}
+
+.filter-label {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.filter-search input,
+.filter-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.filter-count {
+  align-self: flex-end;
+  flex: none;
+  padding: var(--e-2) 0;
+  color: var(--text-muted);
+  font-size: var(--t-s);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.view {
+  min-height: 2.5rem;
+}
+
+.command-table {
+  background: var(--surface-raised);
+}
+
+.command-table thead th {
+  background: var(--surface-sunken);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.command-table tbody tr {
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.command-table tbody tr:hover td,
+.command-table tbody tr:focus-within td {
+  background: var(--surface-accent);
+}
+
+.table.command-table td {
+  height: 38px;
+}
+
+.table.command-table tr.checked td {
+  background: var(--surface-selected);
+}
+
+.command-table .num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.command-table .link:focus-visible,
+.command-table button:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+.bulk.command-bar {
+  align-items: center;
+  margin-top: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--surface-raised);
+}
+
+.bulk-selection {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin-right: auto;
+}
+
+.bulk-selection strong {
+  font-size: var(--t-m);
+}
+
+.bulk-selection span {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.bulk-controls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.bulk-controls .bulk-field {
+  margin: 0;
+}
+
+.bulk-controls select {
+  min-height: 2.25rem;
+  background: var(--surface);
+}
+
+.bulk-controls .primary-action {
+  min-height: 2.25rem;
+}
+
+.wishlist-summary {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.wishlist-summary p {
+  margin: 0;
+}
+
+.wishlist-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.wishlist-actions p {
+  margin: 0;
+}
+
+.wishlist-table.command-table thead th,
+.review.command-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.wishlist-table.command-table tbody tr,
+.review.command-table tbody tr {
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.wishlist-table.command-table tbody tr:hover td {
+  background: var(--surface-accent);
+}
+
+.review-command-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.review-guidance {
+  max-width: 65rem;
+}
+
+.review.command-table .candidate {
+  min-height: 3.5rem;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.review.command-table .candidate:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+}
+
+.review.command-table .candidate.chosen {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.review.command-table .source img,
+.review.command-table .cover-missing.wide {
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 48rem) {
+  .command-toolbar {
+    padding: var(--e-3);
+  }
+
+  .filter-search,
+  .filter-set {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .filter-field {
+    flex-basis: calc(50% - var(--e-3));
+    min-width: 0;
+  }
+
+  .filter-count {
+    flex-basis: 100%;
+    padding: 0;
+  }
+
+  .library-toolbar .views {
+    width: 100%;
+  }
+
+  .library-toolbar .view {
+    flex: 1 1 0;
+  }
+
+  .bulk-selection,
+  .bulk-controls {
+    flex-basis: 100%;
+  }
+
+  .bulk-selection {
+    margin-right: 0;
+  }
+
+  .bulk-controls {
+    justify-content: flex-start;
+  }
+
+  .wishlist-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .review-command-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-table tbody tr,
+  .review.command-table .candidate {
+    transition: none;
+  }
 }

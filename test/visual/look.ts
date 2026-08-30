@@ -273,6 +273,15 @@ for (const width of WIDTHS) {
         // was one pixel too large, the browser drew an ellipsis beside each
         // check box of the table.
         const check_ = document.querySelector("tbody tr:not([style]) td");
+        const rows = [...document.querySelectorAll(".table.command-table tbody tr:not([style])")];
+        const cellOverflow = rows
+          .flatMap((row) => [...row.querySelectorAll("td")])
+          .filter((cell) => {
+            const box = cell.getBoundingClientRect();
+            return [...cell.querySelectorAll("*")].some(
+              (inner) => inner.getBoundingClientRect().right > box.right + 0.5,
+            );
+          }).length;
         return {
           checkCut: check_ !== null && check_.scrollWidth > check_.clientWidth + 1,
           aligned:
@@ -281,6 +290,11 @@ for (const width of WIDTHS) {
             JSON.stringify(lefts(header)) === JSON.stringify(lefts(first)),
           titleCut:
             title !== null && title.scrollWidth > title.clientWidth + 1,
+          cellOverflow,
+          rowHeight: rows[0]?.getBoundingClientRect().height ?? 0,
+          searchFirst:
+            document.querySelector(".filters")?.firstElementChild?.classList.contains("filter-search") ??
+            false,
           sideways:
             document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
@@ -292,6 +306,9 @@ for (const width of WIDTHS) {
   check(`${width} px · the header aligns with the cells`, r.aligned);
   check(`${width} px · the title is not cut`, !r.titleCut);
   check(`${width} px · the check box fits in its cell`, !r.checkCut);
+  check(`${width} px · library cells stay inside their columns`, r.cellOverflow === 0);
+  check(`${width} px · virtual rows keep their 38 px rhythm`, Math.abs(r.rowHeight - 38) < 0.5);
+  check(`${width} px · search has the first filter hierarchy`, r.searchFirst);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 

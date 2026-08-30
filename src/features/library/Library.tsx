@@ -138,8 +138,8 @@ export function Library({
   );
 
   return (
-    <section className="library">
-      <div className="bar">
+    <section className="library command-deck">
+      <div className="bar command-toolbar library-toolbar">
         <LibraryFilters
           filters={filters}
           stores={stores}
