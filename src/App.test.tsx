@@ -584,6 +584,35 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Wished" })).toBeNull();
   });
 
+  it("keeps the table viewport when filters temporarily have no matches", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({ title: "RPG one", genres: ["RPG"], status: "playing" }),
+      row({ title: "RPG two", genres: ["RPG"], status: "playing" }),
+      row({ title: "Action one", genres: ["Action"], status: "finished" }),
+      row({ title: "Action two", genres: ["Action"], status: "backlog" }),
+    ];
+    render(<App />);
+    await screen.findByRole("button", { name: "RPG one" });
+
+    const viewport = document.querySelector(".table-viewport");
+    expect(viewport).not.toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Genre"), { target: { value: "RPG" } });
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "abandoned" } });
+    expect(screen.getByText("No game agrees with your filter.")).toBeDefined();
+    expect(document.querySelector(".table-viewport")).toBe(viewport);
+
+    fireEvent.change(screen.getByLabelText("Genre"), { target: { value: "" } });
+    expect(screen.getByText("No game agrees with your filter.")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "" } });
+
+    for (const title of ["RPG one", "RPG two", "Action one", "Action two"]) {
+      expect(screen.getByRole("button", { name: title })).toBeDefined();
+    }
+    expect(document.querySelector(".table-viewport")).toBe(viewport);
+  });
+
   it("a click on a column sorts by it, and a second click inverts it", async () => {
     state.accounts = [steamAccount];
     state.rows = FOUR;

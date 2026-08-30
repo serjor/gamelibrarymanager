@@ -98,7 +98,11 @@ export function LibraryTable({
   }, [opened, rows, containerRef]);
 
   if (rows.length === 0) {
-    return <p className="hint">No game agrees with your filter.</p>;
+    return (
+      <div className="table-viewport" ref={containerRef}>
+        <p className="hint">No game agrees with your filter.</p>
+      </div>
+    );
   }
 
   const visible = rows.slice(range.start, range.end);

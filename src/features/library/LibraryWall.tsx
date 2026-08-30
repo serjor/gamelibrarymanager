@@ -56,7 +56,11 @@ export function LibraryWall({
   const onMark = useSelection(rows, selected, onSelect);
 
   if (rows.length === 0) {
-    return <p className="hint">No game agrees with your filter.</p>;
+    return (
+      <div className="wall-viewport" ref={containerRef}>
+        <p className="hint">No game agrees with your filter.</p>
+      </div>
+    );
   }
 
   return (
