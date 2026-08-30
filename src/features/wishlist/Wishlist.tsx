@@ -135,7 +135,7 @@ export function Wishlist({
               <col style={{ width: "7rem" }} />
               <col style={{ width: "9rem" }} />
               <col style={{ width: "8rem" }} />
-              <col style={{ width: "7rem" }} />
+              <col style={{ width: "8rem" }} />
             </colgroup>
             <thead>
               <tr>

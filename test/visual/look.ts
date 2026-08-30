@@ -152,6 +152,7 @@ for (const theme of ["light", "dark"] as const) {
               rect.left >= -0.5 &&
               rect.bottom <= window.innerHeight + 0.5 &&
               rect.right <= window.innerWidth + 0.5,
+            frameBounds: `${rect.top.toFixed(1)}..${rect.bottom.toFixed(1)} of ${window.innerHeight}`,
             overflowing,
             wideColumns: style.gridTemplateColumns.trim().split(/\s+/).length > 1,
             hasBrand: element.querySelector('[role="img"]') !== null,
@@ -163,7 +164,7 @@ for (const theme of ["light", "dark"] as const) {
       { width, height: 900, theme, setup },
     );
     const where = theme + " · " + setup + " · " + width + " px";
-    check(where + " · frame stays inside the window", r.inside);
+    check(where + " · frame stays inside the window", r.inside, r.frameBounds);
     check(where + " · long guidance stays inside the frame", !r.overflowing);
     check(where + " · brand and trust context exist", r.hasBrand && r.hasTrust);
     check(where + " · focus enters and advances inside the frame", r.firstFocus && r.focusOrder);
@@ -182,7 +183,7 @@ for (const theme of ["light", "dark"] as const) {
     async (page) => {
       const frame = page.locator(".setup-frame");
       await frame.waitFor();
-      await frame.getByLabel("Passphrase of the store").focus();
+      await frame.getByLabel("Passphrase", { exact: true }).fill("local-passphrase");
       await page.keyboard.press("Tab");
       return page.evaluate(() => {
         const frame = document.querySelector(".setup-frame");
