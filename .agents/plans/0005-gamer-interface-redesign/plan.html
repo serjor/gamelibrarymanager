@@ -146,7 +146,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
     <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
     <div><dt>Branch</dt><dd><code>t3code/redesign-gamer-interface</code></dd></div>
     <div><dt>Updated</dt><dd>2026-08-30</dd></div>
-    <div><dt>Status</dt><dd><span class="status review">Phase 4 implemented · awaiting validation</span></dd></div>
+    <div><dt>Status</dt><dd><span class="status done">Phase 4 approved · Phase 5 planned</span></dd></div>
   </dl>
 
   <div class="decision-grid">
@@ -182,12 +182,12 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <p class="eyebrow">Living document</p>
   <h2>Execution status</h2>
   <div class="stat-grid">
-    <article class="stat"><span class="label">Progress</span><strong>3 of 5 phases implemented</strong></article>
-    <article class="stat"><span class="label">Active phase</span><strong>4. Command-deck surfaces</strong></article>
+    <article class="stat"><span class="label">Progress</span><strong>4 of 5 phases implemented</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>None · Phase 5 planned</strong></article>
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>Validate Phase 4. Then start Phase 5.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>Start Phase 5 when requested.</span></p>
 
   <table>
     <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
@@ -195,7 +195,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       <tr><td>1. Identity and visual foundation</td><td><span class="status done">Done</span></td><td>The current interface stays usable and gains the approved identity.</td></tr>
       <tr><td>2. Shell and utilities</td><td><span class="status done">Done</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
       <tr><td>3. Live-archive surfaces</td><td><span class="status done">Done</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
-      <tr><td>4. Command-deck surfaces</td><td><span class="status review">Awaiting validation</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
+      <tr><td>4. Command-deck surfaces</td><td><span class="status done">Done</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
       <tr><td>5. Setup, states, motion, and final evidence</td><td><span class="status planned">Planned</span></td><td>All entry paths and exceptional states use the same completed system.</td></tr>
     </tbody>
   </table>
@@ -569,7 +569,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <article class="phase" id="phase-4">
     <div class="phase-header">
       <div><span class="phase-number">Phase 4 of 5</span><h3>Command-deck surfaces</h3></div>
-      <span class="status review">Awaiting validation</span>
+      <span class="status done">Done</span>
     </div>
     <div class="phase-body">
       <div class="phase-facts">
@@ -618,10 +618,10 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       </div>
 
       <details class="execution-record">
-        <summary>Execution record · implementation complete · awaiting validation</summary>
+        <summary>Execution record · validation complete</summary>
         <dl>
           <dt>Started</dt><dd>2026-08-30.</dd>
-          <dt>Completed</dt><dd>2026-08-30 (implementation).</dd>
+          <dt>Completed</dt><dd>2026-08-30 (implementation and user validation).</dd>
           <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
           <dt>Commit / change</dt><dd>Pending.</dd>
           <dt>Actual files</dt><dd><code>src/features/library/LibraryTable.tsx</code>, <code>src/features/library/LibraryWall.tsx</code>, <code>src/features/library/LibraryFilters.tsx</code>, <code>src/features/library/BulkBar.tsx</code>, <code>src/features/library/Library.tsx</code>, <code>src/features/wishlist/Wishlist.tsx</code>, <code>src/features/review/ReviewQueue.tsx</code>, <code>src/styles.css</code>, <code>src/App.test.tsx</code>, and <code>test/visual/look.ts</code>.</dd>
@@ -629,7 +629,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
           <dt>Deviations</dt><dd>No data, API, command, dependency, or filter-rule changes. The reported genre/status sequence exposed a virtualizer lifecycle issue: the empty state removed the measured viewport, leaving the reserve window of four rows after the filter reset. LibraryTable and LibraryWall now keep their scroll viewport mounted, and App.test.tsx covers the sequence. The preview could not load the localhost-only Vite server through its separate interface; no network exposure was enabled to work around it.</dd>
           <dt>New decisions</dt><dd>None recorded.</dd>
           <dt>Remaining risks</dt><dd>The visual harness needs the missing Chromium library. Cargo checks and Tauri dev need a complete desktop-capable environment. Real libraries can contain longer titles and currencies than the fixtures.</dd>
-          <dt>Handoff</dt><dd>Phase 4 is implemented and awaits user validation. Start Phase 5 only after the production gate passes.</dd>
+          <dt>Handoff</dt><dd>Phase 4 validated by the user. Phase 5 remains planned.</dd>
         </dl>
       </details>
     </div>
