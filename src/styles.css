@@ -1848,6 +1848,11 @@ button.link {
 
 .featured {
   position: relative;
+  /* `Today` is the scroll region. Its children must keep their content height
+     and overflow through that region. Without this, `overflow: hidden` makes
+     the flex minimum height zero and the shelves can compress the proposal to
+     a narrow strip. */
+  flex-shrink: 0;
   overflow: hidden;
 }
 

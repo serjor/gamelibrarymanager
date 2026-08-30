@@ -395,6 +395,7 @@ for (const width of WIDTHS) {
         const box = document.querySelector(".featured")!;
         const rect = box.getBoundingClientRect();
         const featuredArt = box.querySelector(".featured-art .game-artwork");
+        const featuredArtBox = featuredArt?.getBoundingClientRect();
         const shelfArtwork = [...document.querySelectorAll(".shelf .game-artwork")];
         const shelfArtworkSized = shelfArtwork.length > 0 && shelfArtwork.every((item) => {
           const artworkBox = item.getBoundingClientRect();
@@ -406,9 +407,17 @@ for (const width of WIDTHS) {
           shelfArtworkSized,
           // It is the only piece of this screen with two columns, thus it is
           // the only piece that can have no space for the text.
-          featuredOverflows: [...box.querySelectorAll("*")].some(
-            (inner) => inner.getBoundingClientRect().right > rect.right + 0.5,
-          ),
+          featuredOverflows: [...box.querySelectorAll("*")].some((inner) => {
+            const innerRect = inner.getBoundingClientRect();
+            return (
+              innerRect.right > rect.right + 0.5 ||
+              innerRect.bottom > rect.bottom + 0.5
+            );
+          }),
+          featuredContainsArt:
+            featuredArtBox !== undefined &&
+            featuredArtBox.top >= rect.top - 0.5 &&
+            featuredArtBox.bottom <= rect.bottom + 0.5,
           // The tile is the same tile as the wall tile, with the same sizes: if
           // it goes out of its slot here, the shelf does not obey them.
           tilesOutside: [...document.querySelectorAll(".shelf > li")].filter((slot) => {
@@ -427,6 +436,7 @@ for (const width of WIDTHS) {
   );
 
   check(`${width} px · the featured game does not go out of its box`, !r.featuredOverflows);
+  check(`${width} px · the featured game keeps its full portrait`, r.featuredContainsArt);
   check(`${width} px · the featured game has wide and portrait artwork`, r.hasWideBackdrop && r.hasPortraitAnchor);
   check(`${width} px · shelf artwork uses the 150 by 200 box`, r.shelfArtworkSized);
   check(`${width} px · no tile goes out of its slot`, r.tilesOutside === 0);
