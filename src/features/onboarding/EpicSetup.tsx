@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 /**
  * Where the client credentials come from. Epic has no application registry
@@ -20,7 +21,13 @@ const LEGENDARY_EGS_URL =
  * the next, and saying so before the user connects is cheaper than explaining
  * it afterwards.
  */
-export function EpicSetup({ onConnected }: { onConnected: () => void }) {
+export function EpicSetup({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +48,14 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Step 1 · Connect a store"
+      title="Add Epic to the archive"
+      description="Connect Epic through its launcher flow. You can switch this provider off later if its private API changes."
+      trust="Your Epic password stays on Epic's page. This application receives only the permission that Epic gives back."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Connect Epic</h2>
       <p className="hint">
         Your Epic password does not come through here: the Epic page will open
@@ -98,6 +112,7 @@ export function EpicSetup({ onConnected }: { onConnected: () => void }) {
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
         {busy ? "Waiting for you to sign in…" : "Sign in to Epic"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

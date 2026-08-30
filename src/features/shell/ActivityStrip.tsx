@@ -12,6 +12,7 @@ export interface ActivityStripProps {
   progress: SyncProgress | null;
   error: string | null;
   report: SyncReport | null;
+  stoppedPass?: string | null;
   providerProblems: ConnectorState[];
   exportedPath: string | null;
   storeName: (store: string) => string;
@@ -39,36 +40,77 @@ function operationLabel(operation: string): string {
   }
 }
 
+function reportSummary(report: SyncReport): string {
+  return (
+    "Synchronised " +
+    String(report.owned) +
+    " owned copies and " +
+    String(report.wishlist) +
+    " wished-for copies" +
+    (report.removed > 0
+      ? "; removed " + String(report.removed) + " copies"
+      : "") +
+    "."
+  );
+}
 export function ActivityStrip({
   operation,
   progress,
   error,
   report,
+  stoppedPass,
   providerProblems,
   exportedPath,
   storeName,
   onCancel,
 }: ActivityStripProps) {
   const failures = report?.failures ?? [];
+  const skipped = report?.skipped ?? [];
+  const hasReport = report !== null;
+  const hasWarnings =
+    failures.length > 0 ||
+    skipped.length > 0 ||
+    providerProblems.length > 0;
+  const passStopped =
+    stoppedPass ??
+    (report?.cancelled === true
+      ? 'The pass stopped. Work made to that point is kept; run it again to continue.'
+      : null);
   const hasActivity =
     operation !== null ||
     error !== null ||
-    failures.length > 0 ||
-    providerProblems.length > 0 ||
+    hasReport ||
+    passStopped !== null ||
+    hasWarnings ||
     exportedPath !== null;
 
   if (!hasActivity) return null;
 
+  const activityState =
+    operation !== null
+      ? "progress"
+      : error !== null
+        ? "error"
+        : passStopped !== null
+          ? "stopped"
+          : hasWarnings
+            ? "warning"
+            : "success";
   const canCancel = operation === "sync" || operation === "identity" || operation === "prices";
 
   return (
-    <section className="activity-strip" aria-label="Activity">
+    <section
+      className={`activity-strip activity-strip--${activityState}`}
+      aria-label="Activity"
+      aria-busy={operation !== null}
+    >
       {operation !== null && (
         <div className="activity-operation" role="status" aria-live="polite">
           <strong>{operationLabel(operation)}</strong>
+          <span className="activity-state-label">In progress</span>
           {progress !== null && progress.total > 0 ? (
             <span className="activity-progress">
-              <progress value={progress.done} max={progress.total} />
+              <progress aria-label="Operation progress" value={progress.done} max={progress.total} />
               <span>
                 {progress.stage} · {progress.done} of {progress.total} (
                 {Math.floor((progress.done / progress.total) * 100)}%)
@@ -78,21 +120,48 @@ export function ActivityStrip({
             <span className="hint">Working…</span>
           )}
           {canCancel && (
-            <button className="link activity-cancel" onClick={onCancel}>
+            <button type="button" className="link activity-cancel" onClick={onCancel}>
               Cancel
             </button>
           )}
         </div>
       )}
 
+      {passStopped !== null && operation === null && (
+        <div
+          className="activity-status activity-status--stopped"
+          role="status"
+          aria-live="polite"
+        >
+          <strong>Pass stopped</strong>
+          <span>{passStopped}</span>
+        </div>
+      )}
+      {report !== null && !report.cancelled && operation === null && (
+        <div
+          className={"activity-status activity-status--" + (hasWarnings ? "warning" : "success")}
+          role="status"
+          aria-live="polite"
+        >
+          <strong>
+            {hasWarnings
+              ? "Synchronisation completed with warnings"
+              : "Synchronisation complete"}
+          </strong>
+          <span>{reportSummary(report)}</span>
+        </div>
+      )}
+
+
       {error !== null && (
         <p className="activity-error" role="alert">
-          {error}
+          <strong>Error</strong>
+          <span>{error}</span>
         </p>
       )}
 
       {failures.length > 0 && (
-        <ul className="activity-errors" role="alert">
+        <ul className="activity-errors activity-warning-list" role="alert" aria-label="Synchronisation warnings">
           {failures.map((failure) => (
             <li key={`${failure.store}:${failure.account}`}>
               {failure.store}: {failure.reason}
@@ -101,8 +170,19 @@ export function ActivityStrip({
         </ul>
       )}
 
+      {skipped.length > 0 && (
+        <ul
+          className="activity-skipped activity-warning-list"
+          aria-label="Skipped stores"
+        >
+          {skipped.map((store) => (
+            <li key={store}>{storeName(store)} was skipped because its connector is switched off.</li>
+          ))}
+        </ul>
+      )}
+
       {providerProblems.length > 0 && (
-        <ul className="activity-problems" aria-label="Provider problems">
+        <ul className="activity-problems activity-warning-list" aria-label="Provider problems" role="alert">
           {providerProblems.map((connector) => (
             <li key={connector.store}>
               <strong>{storeName(connector.store)}</strong>{" "}
@@ -114,7 +194,12 @@ export function ActivityStrip({
         </ul>
       )}
 
-      {exportedPath !== null && <p className="hint export-path">Written to {exportedPath}</p>}
+      {exportedPath !== null && (
+        <div className="activity-status activity-status--success" role="status">
+          <strong>Export complete</strong>
+          <span className="export-path">Written to {exportedPath}</span>
+        </div>
+      )}
     </section>
   );
 }

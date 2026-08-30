@@ -52,6 +52,7 @@ function yearOf(epoch: number | null): string {
  */
 export function LibraryTable({
   rows,
+  totalRows = rows.length,
   sort,
   onSort,
   selected,
@@ -60,6 +61,7 @@ export function LibraryTable({
   opened,
 }: {
   rows: LibraryRow[];
+  totalRows?: number;
   sort: Sort;
   onSort: (sort: Sort) => void;
   selected: Set<string>;
@@ -100,7 +102,19 @@ export function LibraryTable({
   if (rows.length === 0) {
     return (
       <div className="table-viewport" ref={containerRef}>
-        <p className="hint">No game agrees with your filter.</p>
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">
+            {totalRows === 0 ? "Your library is empty" : "No games match this filter"}
+          </strong>
+          <p className="hint">
+            {totalRows === 0
+              ? "Synchronise a store to bring your owned and wished-for games into this archive."
+              : "No game agrees with your filter."}
+          </p>
+          {totalRows > 0 && (
+            <p className="hint">Change or clear a filter to see more games.</p>
+          )}
+        </div>
       </div>
     );
   }

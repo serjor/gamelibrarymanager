@@ -10,6 +10,7 @@ import type {
   PriceRow,
   ReviewItem,
   StateUpdate,
+  SyncReport,
 } from "./lib/api";
 
 const state = {
@@ -33,6 +34,15 @@ const state = {
   /** How many times the prices were really requested. */
   priceRequests: 0,
   /** The reason that the matching stopped, if it stopped. */
+  syncResult: {
+    owned: 0,
+    wishlist: 0,
+    removed: 0,
+    failures: [],
+    skipped: [],
+    cancelled: false,
+  } as SyncReport,
+  syncError: null as string | null,
   matchingStopped: null as string | null,
   exportPath: null as string | null,
   exports: [] as [string, "json" | "csv"][],
@@ -99,7 +109,9 @@ mock.module("./lib/api", () => ({
     librarySummary: () => Promise.resolve(state.summary),
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () =>
-      Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [], skipped: [] }),
+      state.syncError === null
+        ? Promise.resolve(state.syncResult)
+        : Promise.reject(state.syncError),
     resolveIdentities: () =>
       Promise.resolve({
         linked: 0,
@@ -339,6 +351,15 @@ describe("App", () => {
     state.confirmed = [];
     state.priceRequests = 0;
     state.matchingStopped = null;
+    state.syncResult = {
+      owned: 0,
+      wishlist: 0,
+      removed: 0,
+      failures: [],
+      skipped: [],
+      cancelled: false,
+    };
+    state.syncError = null;
     state.exportPath = null;
     state.exports = [];
   });
@@ -354,25 +375,75 @@ describe("App", () => {
     // It stops, it does not fail: it writes its work and gives back the reason.
     // Without that message, the user sees incomplete work and does not know why.
     state.accounts = [steamAccount];
+
     state.matchingStopped = "the request limit is reached";
     render(<App />);
     await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Match" }));
 
-    const message = await screen.findByRole("alert");
+    const message = await screen.findByText(/The matching stopped/);
     expect(message.textContent).toContain("the request limit is reached");
     expect(message.textContent).toContain("is kept");
   });
 
+  it("a completed synchronisation reports success and its counts", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, failures: [], skipped: [], cancelled: false };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText("Synchronisation complete")).toBeDefined();
+    expect(screen.getByText(/4 owned copies and 2 wished-for copies/)).toBeDefined();
+  });
+
+  it("a cancelled synchronisation says that saved work is kept", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 2, wishlist: 1, removed: 0, failures: [], skipped: [], cancelled: true };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText("Pass stopped")).toBeDefined();
+    expect(screen.getByText(/synchronisation stopped/)).toBeDefined();
+  });
+
+
+  it("a synchronisation error remains visible as an alert", async () => {
+    state.accounts = [steamAccount];
+    state.syncError = "The synchronisation failed.";
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("The synchronisation failed.");
+  });
   it("with no connected account it goes to the Steam setup screen", async () => {
     render(<App />);
     expect(await screen.findByText("Connect Steam")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Bring your collection together" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+    expect(screen.getByRole("button", { name: "or start with GOG" })).toBeDefined();
   });
 
   it("with no keyring in the system it asks for the passphrase first", async () => {
     state.info = { version: "0.1.0", secrets_backend: "passphrase", unlocked: false };
     render(<App />);
     expect(await screen.findByText("Passphrase of the store")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Unlock your local secret store" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+  });
+
+  it("empty product screens explain the next useful action", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [];
+    render(<App />);
+    expect(await screen.findByText("Your library is empty")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    expect(await screen.findByText("Nothing to play yet")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Wishlist" }));
+    expect(await screen.findByText("Wishlist is empty")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(await screen.findByText("Review queue is clear")).toBeDefined();
   });
 
   it("with no IGDB it gives a message and does not block the library", async () => {
@@ -395,6 +466,11 @@ describe("App", () => {
     await openUtilities();
     (await screen.findByRole("button", { name: "Configure IGDB" })).click();
     expect(await screen.findByText("Metadata: IGDB")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Add richer game records" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("button", { name: "Utilities" })).toBeDefined();
   });
 
   it("it offers to connect GOG when there is no GOG account yet", async () => {

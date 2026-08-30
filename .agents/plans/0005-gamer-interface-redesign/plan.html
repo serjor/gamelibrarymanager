@@ -146,7 +146,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
     <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
     <div><dt>Branch</dt><dd><code>t3code/redesign-gamer-interface</code></dd></div>
     <div><dt>Updated</dt><dd>2026-08-30</dd></div>
-    <div><dt>Status</dt><dd><span class="status done">Phase 4 approved · Phase 5 planned</span></dd></div>
+    <div><dt>Status</dt><dd><span class="status done">Phase 5 implemented · desktop checks pending</span></dd></div>
   </dl>
 
   <div class="decision-grid">
@@ -182,12 +182,12 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <p class="eyebrow">Living document</p>
   <h2>Execution status</h2>
   <div class="stat-grid">
-    <article class="stat"><span class="label">Progress</span><strong>4 of 5 phases implemented</strong></article>
-    <article class="stat"><span class="label">Active phase</span><strong>None · Phase 5 planned</strong></article>
+    <article class="stat"><span class="label">Progress</span><strong>5 of 5 phases implemented</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>None · Phase 5 implemented</strong></article>
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>Start Phase 5 when requested.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>Run the blocked desktop-only checks in a complete environment.</span></p>
 
   <table>
     <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
@@ -196,7 +196,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       <tr><td>2. Shell and utilities</td><td><span class="status done">Done</span></td><td>All current screens and actions operate inside the new shell.</td></tr>
       <tr><td>3. Live-archive surfaces</td><td><span class="status done">Done</span></td><td>The wall, Today, and the game record use the emotional system.</td></tr>
       <tr><td>4. Command-deck surfaces</td><td><span class="status done">Done</span></td><td>The dense screens use one fast and consistent management system.</td></tr>
-      <tr><td>5. Setup, states, motion, and final evidence</td><td><span class="status planned">Planned</span></td><td>All entry paths and exceptional states use the same completed system.</td></tr>
+      <tr><td>5. Setup, states, motion, and final evidence</td><td><span class="status done">Done</span></td><td>All entry paths and exceptional states use the same completed system.</td></tr>
     </tbody>
   </table>
 
@@ -638,7 +638,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <article class="phase" id="phase-5">
     <div class="phase-header">
       <div><span class="phase-number">Phase 5 of 5</span><h3>Setup, states, motion, and final evidence</h3></div>
-      <span class="status planned">Planned</span>
+      <span class="status done">Done</span>
     </div>
     <div class="phase-body">
       <div class="phase-facts">
@@ -685,18 +685,18 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
       </div>
 
       <details class="execution-record">
-        <summary>Execution record · planned</summary>
+        <summary>Execution record · implementation complete</summary>
         <dl>
-          <dt>Started</dt><dd>Pending.</dd>
-          <dt>Completed</dt><dd>Pending.</dd>
-          <dt>Agent / session</dt><dd>Pending.</dd>
-          <dt>Commit / change</dt><dd>Pending.</dd>
-          <dt>Actual files</dt><dd>Pending.</dd>
-          <dt>Commands / results</dt><dd>Pending.</dd>
-          <dt>Deviations</dt><dd>None recorded.</dd>
-          <dt>New decisions</dt><dd>None recorded.</dd>
-          <dt>Remaining risks</dt><dd>Platform font metrics and native controls can differ across Windows, macOS, and Linux.</dd>
-          <dt>Handoff</dt><dd>After the production gate passes, mark the plan done and prepare the implementation handoff.</dd>
+          <dt>Started</dt><dd>2026-08-30.</dd>
+          <dt>Completed</dt><dd>2026-08-30 (implementation and repository validation).</dd>
+          <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
+          <dt>Commit / change</dt><dd>Working tree; no commit requested.</dd>
+          <dt>Actual files</dt><dd><code>src/features/onboarding/SetupFrame.tsx</code>, all six existing setup forms in <code>src/features/onboarding/</code>, <code>src/App.tsx</code>, <code>src/features/shell/ActivityStrip.tsx</code>, <code>src/styles.css</code>, the empty-state updates in <code>src/features/library/</code>, <code>src/features/today/Today.tsx</code>, <code>src/features/wishlist/Wishlist.tsx</code>, <code>src/features/review/ReviewQueue.tsx</code>, <code>src/App.test.tsx</code>, <code>src/features/shell/ActivityStrip.test.tsx</code>, <code>test/visual/harness.ts</code>, and <code>test/visual/look.ts</code>.</dd>
+          <dt>Commands / results</dt><dd><code>npx --no-install bunx tsc --noEmit</code>, <code>npx --no-install bun run lint</code>, and <code>npx --no-install bun test</code> passed with 94 tests. <code>npx --no-install bun run build</code> and <code>git diff --check</code> passed. <code>npx --no-install bun run visual</code> was attempted, but Chromium cannot start because <code>libglib-2.0.so.0</code> is not available. The Rust checks and <code>npx --no-install bun run tauri dev</code> could not run because Cargo is not installed.</dd>
+          <dt>Deviations</dt><dd>No data, API, command, dependency, migration, or product-rule changes. The shared setup frame owns presentation only; the six forms retain their calls, validation, guidance, links, fields, and buttons, with an optional Back callback for utility-launched flows. The visual preview could not reach the local Vite server, and the visual harness could not start Chromium because of the missing system library. Rust and Tauri checks remain environment-blocked.</dd>
+          <dt>New decisions</dt><dd>None.</dd>
+          <dt>Remaining risks</dt><dd>Desktop-only visual, Cargo, and Tauri checks remain pending in a complete environment. Platform font metrics and native controls can differ across Windows, macOS, and Linux.</dd>
+          <dt>Handoff</dt><dd>Phase 5 implementation is complete. Review the working tree and run the blocked desktop-only checks before release.</dd>
         </dl>
       </details>
     </div>

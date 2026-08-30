@@ -22,6 +22,7 @@ import { EpicSetup } from "./features/onboarding/EpicSetup";
 import { IgdbSetup } from "./features/onboarding/IgdbSetup";
 import { ItadSetup } from "./features/onboarding/ItadSetup";
 import { UnlockSecrets } from "./features/onboarding/UnlockSecrets";
+import { SetupLoading } from "./features/onboarding/SetupFrame";
 import { ReviewQueue } from "./features/review/ReviewQueue";
 import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
@@ -66,6 +67,7 @@ export function App() {
   const [report, setReport] = useState<SyncReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [stoppedPass, setStoppedPass] = useState<string | null>(null);
   const [exportedPath, setExportedPath] = useState<string | null>(null);
 
   // `alive` prevents a load in progress from writing state on a component that
@@ -155,9 +157,19 @@ export function App() {
   const run = async (label: string, action: () => Promise<unknown>) => {
     setBusy(label);
     setError(null);
+    setStoppedPass(null);
+    setReport(null);
     try {
       const result = await action();
-      if (label === "sync") setReport(result as SyncReport);
+      if (label === "sync") {
+        const syncReport = result as SyncReport;
+        setReport(syncReport);
+        if (syncReport.cancelled) {
+          setStoppedPass(
+            'The synchronisation stopped. Work made to that point is kept; click "Synchronise" again to continue.',
+          );
+        }
+      }
       // A pass that stopped in the middle does not give an error: it keeps its
       // work and gives back the reason. If the interface did not say that here,
       // the user would see incomplete work with no word about why, which is
@@ -165,11 +177,18 @@ export function App() {
       if (label === "identity") {
         const { stopped } = result as IdentityReport;
         if (stopped !== null) {
-          setError(
-            `The matching stopped: ${stopped}. The work made to that point is ` +
-              'kept; click "Match" again to continue from there.',
+          setStoppedPass(
+            `The matching stopped: ${stopped}. Work made to that point is kept; click "Match" again to continue from there.`,
           );
         }
+      }
+      if (
+        label === "prices" &&
+        (result as { cancelled?: boolean }).cancelled === true
+      ) {
+        setStoppedPass(
+          'The price update stopped. Work made to that point is kept; click "Update the prices" again to continue.',
+        );
       }
       await refresh();
     } catch (cause) {
@@ -206,10 +225,14 @@ export function App() {
     }
   };
 
+  const retryOpening = () => {
+    setError(null);
+    void refresh();
+  };
   if (!info) {
     return (
-      <main>
-        <p>{error ?? "Opening the library…"}</p>
+      <main className="setup-page">
+        <SetupLoading error={error} onRetry={retryOpening} />
       </main>
     );
   }
@@ -218,7 +241,7 @@ export function App() {
   // resolve.
   if (!info.unlocked) {
     return (
-      <main>
+      <main className="setup-page">
         <UnlockSecrets onUnlocked={refresh} />
       </main>
     );
@@ -231,15 +254,22 @@ export function App() {
 
   if (setup !== null) {
     return (
-      <main>
-        {setup === "steam" && <SteamSetup onConnected={closeSetup} />}
-        {setup === "gog" && <GogSetup onConnected={closeSetup} />}
-        {setup === "epic" && <EpicSetup onConnected={closeSetup} />}
-        {setup === "igdb" && <IgdbSetup onConnected={closeSetup} />}
-        {setup === "itad" && <ItadSetup onConnected={closeSetup} />}
-        <button className="link" onClick={() => setSetup(null)}>
-          Back
-        </button>
+      <main className="setup-page">
+        {setup === "steam" && (
+          <SteamSetup onConnected={closeSetup} onBack={() => setSetup(null)} />
+        )}
+        {setup === "gog" && (
+          <GogSetup onConnected={closeSetup} onBack={() => setSetup(null)} />
+        )}
+        {setup === "epic" && (
+          <EpicSetup onConnected={closeSetup} onBack={() => setSetup(null)} />
+        )}
+        {setup === "igdb" && (
+          <IgdbSetup onConnected={closeSetup} onBack={() => setSetup(null)} />
+        )}
+        {setup === "itad" && (
+          <ItadSetup onConnected={closeSetup} onBack={() => setSetup(null)} />
+        )}
       </main>
     );
   }
@@ -250,13 +280,28 @@ export function App() {
   // does not forget this screen.
   if (accounts.length === 0) {
     return (
-      <main>
+      <main className="setup-page">
         <SteamSetup onConnected={refresh} />
-        {STORES.filter(([store]) => store !== "steam").map(([store, name]) => (
-          <button key={store} className="link" onClick={() => setSetup(store)}>
-            or start with {name}
-          </button>
-        ))}
+        <section
+          className="setup-alternatives"
+          aria-labelledby="setup-alternatives-title"
+        >
+          <p id="setup-alternatives-title" className="setup-alternatives-title">
+            Or start with another store
+          </p>
+          <div className="setup-alternatives-actions">
+            {STORES.filter(([store]) => store !== "steam").map(([store, name]) => (
+              <button
+                key={store}
+                type="button"
+                className="link"
+                onClick={() => setSetup(store)}
+              >
+                or start with {name}
+              </button>
+            ))}
+          </div>
+        </section>
       </main>
     );
   }
@@ -291,6 +336,7 @@ export function App() {
           progress={progress}
           error={error}
           report={report}
+          stoppedPass={stoppedPass}
           providerProblems={withProblem}
           exportedPath={exportedPath}
           storeName={nameOf}

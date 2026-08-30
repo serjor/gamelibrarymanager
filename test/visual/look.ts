@@ -38,6 +38,7 @@ function check(what: string, ok: boolean, detail = "") {
 
 /** From the largest to the narrowest: the complete path, not two points. */
 const WIDTHS = [1920, 1600, 1400, 1200, 1000, 900, 800, 700, 620];
+const SETUP_TARGETS = ["steam", "gog", "epic", "igdb", "itad"] as const;
 
 /**
  * The shell keeps its four destinations labelled at every width. At a wide
@@ -115,7 +116,149 @@ const utilityState = await withTheApp(
 );
 check("utility dialog stays inside the window", utilityState.inside);
 check("utility dialog has a content region", utilityState.hasContent);
+
+console.log("\nSetup surfaces");
+for (const theme of ["light", "dark"] as const) {
+  for (const setup of SETUP_TARGETS) {
+    const width = setup === "steam" ? 1200 : 620;
+    const r = await withTheApp(
+      async (page) => {
+        const frame = page.locator(".setup-frame");
+        await frame.waitFor();
+        const input = frame.locator("input").first();
+        await input.focus();
+        const firstFocus = await page.evaluate(() => {
+          const frame = document.querySelector(".setup-frame");
+          return frame !== null && frame.contains(document.activeElement);
+        });
+        await page.keyboard.press("Tab");
+        const focusOrder = await page.evaluate(() => {
+          const frame = document.querySelector(".setup-frame");
+          if (frame === null) return false;
+          const controls = [...frame.querySelectorAll("input, button")];
+          const position = controls.indexOf(document.activeElement as Element);
+          return position > 0 && position < controls.length;
+        });
+        const geometry = await frame.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const overflowing = [...element.querySelectorAll("*")].some((child) => {
+            const childRect = child.getBoundingClientRect();
+            return childRect.left < rect.left - 0.5 || childRect.right > rect.right + 0.5;
+          });
+          const style = getComputedStyle(element);
+          return {
+            inside:
+              rect.top >= -0.5 &&
+              rect.left >= -0.5 &&
+              rect.bottom <= window.innerHeight + 0.5 &&
+              rect.right <= window.innerWidth + 0.5,
+            overflowing,
+            wideColumns: style.gridTemplateColumns.trim().split(/\s+/).length > 1,
+            hasBrand: element.querySelector('[role="img"]') !== null,
+            hasTrust: element.querySelector(".setup-trust")?.textContent?.includes("Private by design") ?? false,
+          };
+        });
+        return { ...geometry, firstFocus, focusOrder };
+      },
+      { width, height: 900, theme, setup },
+    );
+    const where = theme + " · " + setup + " · " + width + " px";
+    check(where + " · frame stays inside the window", r.inside);
+    check(where + " · long guidance stays inside the frame", !r.overflowing);
+    check(where + " · brand and trust context exist", r.hasBrand && r.hasTrust);
+    check(where + " · focus enters and advances inside the frame", r.firstFocus && r.focusOrder);
+    if (width === 1200) {
+      check(where + " · the two setup areas stay side by side", r.wideColumns);
+    } else {
+      check(where + " · the setup areas stack at narrow width", !r.wideColumns);
+    }
+  }
+}
 check("closing utilities returns focus to its trigger", utilityState.focusReturned);
+
+console.log("\nLocked secret store");
+for (const theme of ["light", "dark"] as const) {
+  const r = await withTheApp(
+    async (page) => {
+      const frame = page.locator(".setup-frame");
+      await frame.waitFor();
+      await frame.getByLabel("Passphrase of the store").focus();
+      await page.keyboard.press("Tab");
+      return page.evaluate(() => {
+        const frame = document.querySelector(".setup-frame");
+        const rect = frame?.getBoundingClientRect();
+        return {
+          inside:
+            rect !== undefined &&
+            rect.top >= -0.5 &&
+            rect.left >= -0.5 &&
+            rect.bottom <= window.innerHeight + 0.5 &&
+            rect.right <= window.innerWidth + 0.5,
+          hasPassphrase: document.querySelector('input[type="password"]') !== null,
+          noNavigation: document.querySelector(".shell-navigation") === null,
+          focusInside: frame !== null && frame.contains(document.activeElement),
+        };
+      });
+    },
+    { width: 620, height: 900, theme, lockedSecretStore: true },
+  );
+  check(theme + " · locked store fits inside the window", r.inside);
+  check(theme + " · locked store keeps the passphrase action", r.hasPassphrase && r.noNavigation);
+  check(theme + " · locked-store focus stays in setup", r.focusInside);
+}
+
+console.log("\nEmpty product screens");
+const emptyScreens = await withTheApp(
+  async (page) => {
+    await page.locator(".table-viewport .empty-state").waitFor();
+    const library = await page.locator(".table-viewport .empty-state").count();
+    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByText("Nothing to play yet").waitFor();
+    const today = await page.getByText("Nothing to play yet").count();
+    await page.getByRole("button", { name: "Wishlist" }).click();
+    await page.getByText("Wishlist is empty").waitFor();
+    const wishlist = await page.getByText("Wishlist is empty").count();
+    await page.getByRole("button", { name: "Review" }).click();
+    await page.getByText("Review queue is clear").waitFor();
+    const review = await page.getByText("Review queue is clear").count();
+    return {
+      library,
+      today,
+      wishlist,
+      review,
+      sideways: await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth),
+    };
+  },
+  { width: 1000, height: 900, emptyLibrary: true },
+);
+check("empty Library has a structured next action", emptyScreens.library === 1);
+check("empty Today has a structured next action", emptyScreens.today === 1);
+check("empty Wishlist has a structured next action", emptyScreens.wishlist === 1);
+check("empty Review has a structured next action", emptyScreens.review === 1);
+check("empty screens do not go sideways", !emptyScreens.sideways);
+
+console.log("\nReduced motion");
+const reducedUtility = await withTheApp(
+  async (page) => {
+    await openUtilities(page);
+    return page.evaluate(() => {
+      const dialog = document.querySelector(".utility-dialog")!;
+      const navigation = document.querySelector(".shell-nav-item")!;
+      return {
+        dialogAnimation: getComputedStyle(dialog).animationName,
+        navigationTransition: getComputedStyle(navigation).transitionDuration,
+      };
+    });
+  },
+  { width: 620, height: 900, theme: "dark", reducedMotion: true, answers: ALL },
+);
+check("reduced motion removes dialog entry animation", reducedUtility.dialogAnimation === "none");
+check("reduced motion removes navigation transition", reducedUtility.navigationTransition === "0s");
+const reducedSetup = await withTheApp(
+  (page) => page.evaluate(() => getComputedStyle(document.querySelector(".setup-frame")!).animationName),
+  { width: 620, height: 900, theme: "light", reducedMotion: true, setup: "steam" },
+);
+check("reduced motion removes setup entry animation", reducedSetup === "none");
 
 console.log("\nOne scroll bar");
 for (const width of [1920, 1400, 1000]) {

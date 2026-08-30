@@ -89,6 +89,7 @@ export function Library({
 
   const shared = {
     rows: visible,
+    totalRows: rows.length,
     selected,
     onSelect: mark,
     onOpen: (row: LibraryRow) => setOpened(row.game_id),

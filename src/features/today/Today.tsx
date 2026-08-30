@@ -46,10 +46,15 @@ export function Today({
 
   if (proposal === null) {
     return (
-      <p className="hint">
-        There is not yet an owned game to propose. Synchronise a store and this
-        screen will show what to play.
-      </p>
+      <section className="today empty-screen">
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">Nothing to play yet</strong>
+          <p className="hint">
+            There is not yet an owned game to propose. Synchronise a store and
+            this screen will show what to play.
+          </p>
+        </div>
+      </section>
     );
   }
 

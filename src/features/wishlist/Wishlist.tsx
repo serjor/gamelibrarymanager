@@ -106,19 +106,25 @@ export function Wishlist({
 
       {error && <p role="alert">{error}</p>}
 
-      {list.length === 0 &&
-        (copies > 0 ? (
+      {list.length === 0 && (
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">
+            {copies > 0 ? "Records need matching" : "Wishlist is empty"}
+          </strong>
+          {copies > 0 ? (
           <p className="hint">
             The stores gave {copies} wished-for copies, but none of them has a
             record yet: this screen shows records, thus it is empty. Click
             "Match" and let it finish; then come back here.
           </p>
-        ) : (
+          ) : (
           <p className="hint">
             There is no game in your wishlist. Synchronise a store and this screen
             will show what you must still buy, with its price.
           </p>
-        ))}
+          )}
+        </div>
+      )}
 
       {list.length > 0 && (
         <div className="wishlist-viewport">

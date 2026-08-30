@@ -37,12 +37,14 @@ const GAP = 12;
  */
 export function LibraryWall({
   rows,
+  totalRows = rows.length,
   selected,
   onSelect,
   onOpen,
   opened,
 }: {
   rows: LibraryRow[];
+  totalRows?: number;
   selected: Set<string>;
   onSelect: (gameIds: string[], checked: boolean) => void;
   onOpen: (row: LibraryRow) => void;
@@ -58,7 +60,19 @@ export function LibraryWall({
   if (rows.length === 0) {
     return (
       <div className="wall-viewport" ref={containerRef}>
-        <p className="hint">No game agrees with your filter.</p>
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">
+            {totalRows === 0 ? "Your library is empty" : "No games match this filter"}
+          </strong>
+          <p className="hint">
+            {totalRows === 0
+              ? "Synchronise a store to bring your owned and wished-for games into this archive."
+              : "No game agrees with your filter."}
+          </p>
+          {totalRows > 0 && (
+            <p className="hint">Change or clear a filter to see more games.</p>
+          )}
+        </div>
       </div>
     );
   }

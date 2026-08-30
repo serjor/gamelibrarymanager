@@ -109,7 +109,14 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
   };
 
   if (items.length === 0) {
-    return <p className="hint">There is nothing to review.</p>;
+    return (
+      <section className="review-screen command-deck empty-screen">
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">Review queue is clear</strong>
+          <p className="hint">There is nothing to review. Synchronise a store or run Match when you have new records.</p>
+        </div>
+      </section>
+    );
   }
 
   const open = (url: string) => {
