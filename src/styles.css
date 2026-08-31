@@ -819,6 +819,7 @@ button.link {
   color: inherit;
   text-align: left;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -2038,6 +2039,18 @@ button.link {
 .command-table .num {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Compact labels must obey the fixed column width just like title buttons do.
+   Without this cap, a badge can be clipped visually by the cell while its box
+   still crosses into the following column. */
+.command-table td > .status,
+.command-table td > .hint {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .command-table .link:focus-visible,
