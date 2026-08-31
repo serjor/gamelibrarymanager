@@ -11,7 +11,7 @@
  *
  *     bun run build && bun run visual
  */
-import { exampleLibrary, exampleQueue, withTheApp, exampleWishlist } from "./harness";
+import { LONG_PROVIDER_ERROR, exampleLibrary, exampleQueue, exampleWishlist, openUtilities, withTheApp } from "./harness";
 
 /**
  * An application with material in the four screens at the same time: owned games
@@ -38,19 +38,232 @@ function check(what: string, ok: boolean, detail = "") {
 
 /** From the largest to the narrowest: the complete path, not two points. */
 const WIDTHS = [1920, 1600, 1400, 1200, 1000, 900, 800, 700, 620];
+const SETUP_TARGETS = ["steam", "gog", "epic", "igdb", "itad"] as const;
 
 /**
- * One scroll bar, and it must reach the edges.
- *
- * It is the defect that was the largest nuisance and no test looked at it: the
- * list was `70vh` in a page that also scrolled, thus there were two bars at the
- * same time and the external bar had forty pixels of movement. And with `main`
- * limited to 80rem, the wheel over the 320 px of space at each side found
- * nothing to move.
+ * The shell keeps its four destinations labelled at every width. At a wide
+ * width the navigation is a rail; below the breakpoint it becomes top navigation.
+ * The shell itself remains fixed while each feature owns its content scroll.
  */
+console.log("\nThe application shell");
+for (const width of [1400, 1000, 620]) {
+  const r = await withTheApp(
+    async (page) => {
+      await page.getByRole("navigation").waitFor();
+      return page.evaluate(() => {
+        const shell = document.querySelector(".app-shell")!;
+        const rail = document.querySelector(".shell-rail")!;
+        const content = document.querySelector(".shell-content")!;
+        const navigation = document.querySelector(".shell-navigation")!;
+        const list = document.querySelector(".shell-navigation-list")!;
+        const railStyle = getComputedStyle(rail);
+        const navigationStyle = getComputedStyle(navigation);
+        const listStyle = getComputedStyle(list);
+        const labels = [...document.querySelectorAll(".shell-nav-item")]
+          .map((item) => item.getAttribute("aria-label") ?? "")
+          .join("|");
+        const railBox = rail.getBoundingClientRect();
+        const contentBox = content.getBoundingClientRect();
+        return {
+          labels,
+          wide: railStyle.display === "flex" && listStyle.flexDirection === "column",
+          compact:
+            railStyle.display === "grid" &&
+            listStyle.flexDirection === "row" &&
+            navigationStyle.overflowX === "auto",
+          railBeforeContent: railBox.right <= contentBox.left + 1,
+          shellScrolls: shell.scrollHeight > shell.clientHeight + 1,
+          pageSideways: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        };
+      });
+    },
+    { width, height: 900, answers: ALL },
+  );
+
+  const where = width + " px";
+  check(where + " · navigation labels every workspace", r.labels === "Library|Today|Wishlist (5)|Review (3)");
+  check(where + " · shell does not scroll", !r.shellScrolls);
+  check(where + " · page does not go sideways", !r.pageSideways);
+  if (width >= 1120) {
+    check(where + " · wide rail is vertical", r.wide && r.railBeforeContent);
+  } else {
+    check(where + " · compact navigation is horizontal", r.compact);
+  }
+}
+
+console.log("\nThe utility dialog");
+const utilityState = await withTheApp(
+  async (page) => {
+    const trigger = page.getByRole("button", { name: "Utilities" });
+    await trigger.focus();
+    await openUtilities(page);
+    const containment = await page.locator("dialog[open]").evaluate((dialog) => {
+      const rect = dialog.getBoundingClientRect();
+      return {
+        inside: rect.top >= -0.5 && rect.left >= -0.5 &&
+          rect.bottom <= window.innerHeight + 0.5 && rect.right <= window.innerWidth + 0.5,
+        hasContent: dialog.querySelector(".utility-content") !== null,
+      };
+    });
+    await page.getByRole("button", { name: "Close Utilities" }).click();
+    await page.waitForFunction(() => document.querySelector("dialog[open]") === null);
+    const focusReturned = await page.evaluate(() =>
+      document.activeElement?.getAttribute("aria-controls") === "utility-dialog",
+    );
+    return { ...containment, focusReturned };
+  },
+  { width: 620, height: 900, answers: ALL },
+);
+check("utility dialog stays inside the window", utilityState.inside);
+check("utility dialog has a content region", utilityState.hasContent);
+
+console.log("\nSetup surfaces");
+for (const theme of ["light", "dark"] as const) {
+  for (const setup of SETUP_TARGETS) {
+    const width = setup === "steam" ? 1200 : 620;
+    const r = await withTheApp(
+      async (page) => {
+        const frame = page.locator(".setup-frame");
+        await frame.waitFor();
+        const input = frame.locator("input").first();
+        await input.focus();
+        const firstFocus = await page.evaluate(() => {
+          const frame = document.querySelector(".setup-frame");
+          return frame !== null && frame.contains(document.activeElement);
+        });
+        await page.keyboard.press("Tab");
+        const focusOrder = await page.evaluate(() => {
+          const frame = document.querySelector(".setup-frame");
+          if (frame === null) return false;
+          const controls = [...frame.querySelectorAll("input, button")];
+          const position = controls.indexOf(document.activeElement as Element);
+          return position > 0 && position < controls.length;
+        });
+        const geometry = await frame.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const overflowing = [...element.querySelectorAll("*")].some((child) => {
+            const childRect = child.getBoundingClientRect();
+            return childRect.left < rect.left - 0.5 || childRect.right > rect.right + 0.5;
+          });
+          const style = getComputedStyle(element);
+          return {
+            inside:
+              rect.top >= -0.5 &&
+              rect.left >= -0.5 &&
+              rect.bottom <= window.innerHeight + 0.5 &&
+              rect.right <= window.innerWidth + 0.5,
+            frameBounds: `${rect.top.toFixed(1)}..${rect.bottom.toFixed(1)} of ${window.innerHeight}`,
+            overflowing,
+            wideColumns: style.gridTemplateColumns.trim().split(/\s+/).length > 1,
+            hasBrand: element.querySelector('[role="img"]') !== null,
+            hasTrust: element.querySelector(".setup-trust")?.textContent?.includes("Private by design") ?? false,
+          };
+        });
+        return { ...geometry, firstFocus, focusOrder };
+      },
+      { width, height: 900, theme, setup },
+    );
+    const where = theme + " · " + setup + " · " + width + " px";
+    check(where + " · frame stays inside the window", r.inside, r.frameBounds);
+    check(where + " · long guidance stays inside the frame", !r.overflowing);
+    check(where + " · brand and trust context exist", r.hasBrand && r.hasTrust);
+    check(where + " · focus enters and advances inside the frame", r.firstFocus && r.focusOrder);
+    if (width === 1200) {
+      check(where + " · the two setup areas stay side by side", r.wideColumns);
+    } else {
+      check(where + " · the setup areas stack at narrow width", !r.wideColumns);
+    }
+  }
+}
+check("closing utilities returns focus to its trigger", utilityState.focusReturned);
+
+console.log("\nLocked secret store");
+for (const theme of ["light", "dark"] as const) {
+  const r = await withTheApp(
+    async (page) => {
+      const frame = page.locator(".setup-frame");
+      await frame.waitFor();
+      await frame.getByLabel("Passphrase", { exact: true }).fill("local-passphrase");
+      await page.keyboard.press("Tab");
+      return page.evaluate(() => {
+        const frame = document.querySelector(".setup-frame");
+        const rect = frame?.getBoundingClientRect();
+        return {
+          inside:
+            rect !== undefined &&
+            rect.top >= -0.5 &&
+            rect.left >= -0.5 &&
+            rect.bottom <= window.innerHeight + 0.5 &&
+            rect.right <= window.innerWidth + 0.5,
+          hasPassphrase: document.querySelector('input[type="password"]') !== null,
+          noNavigation: document.querySelector(".shell-navigation") === null,
+          focusInside: frame !== null && frame.contains(document.activeElement),
+        };
+      });
+    },
+    { width: 620, height: 900, theme, lockedSecretStore: true },
+  );
+  check(theme + " · locked store fits inside the window", r.inside);
+  check(theme + " · locked store keeps the passphrase action", r.hasPassphrase && r.noNavigation);
+  check(theme + " · locked-store focus stays in setup", r.focusInside);
+}
+
+console.log("\nEmpty product screens");
+const emptyScreens = await withTheApp(
+  async (page) => {
+    await page.locator(".table-viewport .empty-state").waitFor();
+    const library = await page.locator(".table-viewport .empty-state").count();
+    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByText("Nothing to play yet").waitFor();
+    const today = await page.getByText("Nothing to play yet").count();
+    await page.getByRole("button", { name: "Wishlist" }).click();
+    await page.getByText("Wishlist is empty").waitFor();
+    const wishlist = await page.getByText("Wishlist is empty").count();
+    await page.getByRole("button", { name: "Review" }).click();
+    await page.getByText("Review queue is clear").waitFor();
+    const review = await page.getByText("Review queue is clear").count();
+    return {
+      library,
+      today,
+      wishlist,
+      review,
+      sideways: await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth),
+    };
+  },
+  { width: 1000, height: 900, emptyLibrary: true },
+);
+check("empty Library has a structured next action", emptyScreens.library === 1);
+check("empty Today has a structured next action", emptyScreens.today === 1);
+check("empty Wishlist has a structured next action", emptyScreens.wishlist === 1);
+check("empty Review has a structured next action", emptyScreens.review === 1);
+check("empty screens do not go sideways", !emptyScreens.sideways);
+
+console.log("\nReduced motion");
+const reducedUtility = await withTheApp(
+  async (page) => {
+    await openUtilities(page);
+    return page.evaluate(() => {
+      const dialog = document.querySelector(".utility-dialog")!;
+      const navigation = document.querySelector(".shell-nav-item")!;
+      return {
+        dialogAnimation: getComputedStyle(dialog).animationName,
+        navigationTransition: getComputedStyle(navigation).transitionDuration,
+      };
+    });
+  },
+  { width: 620, height: 900, theme: "dark", reducedMotion: true, answers: ALL },
+);
+check("reduced motion removes dialog entry animation", reducedUtility.dialogAnimation === "none");
+check("reduced motion removes navigation transition", reducedUtility.navigationTransition === "0s");
+const reducedSetup = await withTheApp(
+  (page) => page.evaluate(() => getComputedStyle(document.querySelector(".setup-frame")!).animationName),
+  { width: 620, height: 900, theme: "light", reducedMotion: true, setup: "steam" },
+);
+check("reduced motion removes setup entry animation", reducedSetup === "none");
+
 console.log("\nOne scroll bar");
 for (const width of [1920, 1400, 1000]) {
-  for (const screenName of ["Library", "Today", "Wishlist", "To review"] as const) {
+  for (const screenName of ["Library", "Today", "Wishlist", "Review"] as const) {
     const r = await withTheApp(
       async (page) => {
         if (screenName !== "Library") {
@@ -59,17 +272,19 @@ for (const width of [1920, 1400, 1000]) {
         await page.getByRole("navigation").waitFor();
         return page.evaluate(() => {
           const root = document.documentElement;
-          const frame = document.querySelector("main")!;
+          const frame = document.querySelector(".shell-workspace")!;
           // What really scrolls: the list, "Today", the wishlist or the queue.
           const region = document.querySelector(
             ".table-viewport, .wall-viewport, .today, .wishlist, .review-screen",
           )!;
           const box = region.getBoundingClientRect();
+          const workspace = frame.getBoundingClientRect();
           return {
             pageScrolls: root.scrollHeight > root.clientHeight + 1,
             frameScrolls: frame.scrollHeight > frame.clientHeight + 1,
             // Edge to edge, less the padding of `main`, which is 24 px.
-            edgeToEdge: box.left <= 25 && box.right >= window.innerWidth - 25,
+            edgeToEdge:
+              box.left <= workspace.left + 25 && box.right >= workspace.right - 25,
             // And that real space stays: a region one hundred pixels high would
             // obey all of the above and would be useless.
             height: Math.round(box.height),
@@ -96,18 +311,17 @@ for (const width of [1920, 1400, 1000]) {
  * list, thus the test uses the longest message that the connector can produce.
  */
 console.log("\nA store with a problem in the header");
-const LONG_MESSAGE =
-  "Corrective action is required to continue. Open this Epic page and " +
-  "connect the account again: https://www.epicgames.com/id/login/continuation?code=example";
+const LONG_MESSAGE = LONG_PROVIDER_ERROR;
 
 for (const width of [1400, 620]) {
   const r = await withTheApp(
     async (page) => {
+      await openUtilities(page);
       await page.getByRole("button", { name: "Switch Epic off" }).waitFor();
       return page.evaluate(() => {
         const root = document.documentElement;
         const region = document.querySelector(".table-viewport")!;
-        const aviso = document.querySelector(".connectors")!.getBoundingClientRect();
+        const aviso = document.querySelector(".activity-problems")!.getBoundingClientRect();
         return {
           pageScrolls: root.scrollHeight > root.clientHeight + 1,
           goesSideways: root.scrollWidth > root.clientWidth + 1,
@@ -161,9 +375,18 @@ for (const width of WIDTHS) {
           const inner = li.querySelector(".tile");
           return inner !== null && inner.getBoundingClientRect().height > li.getBoundingClientRect().height + 0.5;
         }).length;
+        const artwork = [...document.querySelectorAll(".wall > li .game-artwork")];
+        const artworkSized = artwork.length > 0 && artwork.every((item) => {
+          const box = item.getBoundingClientRect();
+          return Math.abs(box.width - 150) < 0.5 && Math.abs(box.height - 200) < 0.5;
+        });
+        const fallback = artwork.filter((item) => item.classList.contains("game-artwork--fallback"));
         return {
           overlap,
           overflow,
+          artworkSized,
+          hasRealArtwork: artwork.some((item) => item.classList.contains("game-artwork--image")),
+          hasFallbackMonogram: fallback.length > 0 && fallback.every((item) => (item.textContent ?? "").trim().length > 0),
           sideways:
             document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
@@ -174,6 +397,8 @@ for (const width of WIDTHS) {
 
   check(`${width} px · no tile covers another`, !r.overlap);
   check(`${width} px · no label goes out of its tile`, r.overflow === 0);
+  check(`${width} px · artwork uses the 150 by 200 box`, r.artworkSized);
+  check(`${width} px · real and fallback artwork are present`, r.hasRealArtwork && r.hasFallbackMonogram);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
@@ -192,6 +417,15 @@ for (const width of WIDTHS) {
         // was one pixel too large, the browser drew an ellipsis beside each
         // check box of the table.
         const check_ = document.querySelector("tbody tr:not([style]) td");
+        const rows = [...document.querySelectorAll(".table.command-table tbody tr:not([style])")];
+        const cellOverflow = rows
+          .flatMap((row) => [...row.querySelectorAll("td")])
+          .filter((cell) => {
+            const box = cell.getBoundingClientRect();
+            return [...cell.querySelectorAll("*")].some(
+              (inner) => inner.getBoundingClientRect().right > box.right + 0.5,
+            );
+          }).length;
         return {
           checkCut: check_ !== null && check_.scrollWidth > check_.clientWidth + 1,
           aligned:
@@ -200,6 +434,11 @@ for (const width of WIDTHS) {
             JSON.stringify(lefts(header)) === JSON.stringify(lefts(first)),
           titleCut:
             title !== null && title.scrollWidth > title.clientWidth + 1,
+          cellOverflow,
+          rowHeight: rows[0]?.getBoundingClientRect().height ?? 0,
+          searchFirst:
+            document.querySelector(".filters")?.firstElementChild?.classList.contains("filter-search") ??
+            false,
           sideways:
             document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
@@ -211,22 +450,25 @@ for (const width of WIDTHS) {
   check(`${width} px · the header aligns with the cells`, r.aligned);
   check(`${width} px · the title is not cut`, !r.titleCut);
   check(`${width} px · the check box fits in its cell`, !r.checkCut);
+  check(`${width} px · library cells stay inside their columns`, r.cellOverflow === 0);
+  check(`${width} px · virtual rows keep their 38 px rhythm`, Math.abs(r.rowHeight - 38) < 0.5);
+  check(`${width} px · search has the first filter hierarchy`, r.searchFirst);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
 /**
  * The record beside the table, which exists only if the table leaves space for
- * it. The number that decides — 82rem in `Library.tsx` — is the sum of what each
+ * it. The number that decides — 96rem in `Library.tsx` — is the sum of what each
  * piece needs, and this is what examines whether the sum was correct.
  */
 console.log("\nThe record beside the table");
-for (const width of [1312, 1400, 1600]) {
+for (const width of [1535, 1536, 1600]) {
   const r = await withTheApp(
     async (page) => {
       await page.locator("td.tt button").first().click();
-      await page.locator(".detail").waitFor();
+      await page.locator(".detail, dialog[open]").first().waitFor();
       return page.evaluate(() => {
-        const inspector = document.querySelector(".detail")!.getBoundingClientRect();
+        const inspector = document.querySelector(".detail");
         const box = document.querySelector(".table-viewport")!;
         const table = box.getBoundingClientRect();
         return {
@@ -234,7 +476,7 @@ for (const width of [1312, 1400, 1600]) {
           // The table keeps the space that the inspector leaves: if that is not
           // sufficient, it scrolls horizontally and the title starts to be cut.
           tableSideways: box.scrollWidth > box.clientWidth + 1,
-          covers: inspector.left < table.right - 0.5,
+          covers: inspector !== null && inspector.getBoundingClientRect().left < table.right - 0.5,
           sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         };
       });
@@ -242,9 +484,9 @@ for (const width of [1312, 1400, 1600]) {
     { width },
   );
 
-  check(`${width} px · the record goes beside, it does not cover`, !r.sheet);
-  check(`${width} px · all of the table fits beside the inspector`, !r.tableSideways);
-  check(`${width} px · the inspector does not cover the table`, !r.covers);
+  check(`${width} px · the record presentation is correct`, width >= 1536 ? !r.sheet : r.sheet);
+  check(`${width} px · all of the table fits beside the inspector`, width < 1600 || !r.tableSideways);
+  check(`${width} px · the inspector does not cover the table`, width < 1536 || !r.covers);
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
@@ -253,10 +495,10 @@ console.log("\nThe record on top of the covers");
 // a user who has not configured IGDB, and it is the record that most easily
 // opens with a hole.
 for (const [width, from, gameName, art] of [
-  [1200, "table", "Cyberpunk 2077", "DIV"],
+  [1200, "table", "Cyberpunk 2077", "SPAN"],
   [1000, "table", "Disco Elysium: The Final Cut", "IMG"],
   [1400, "wall", "Disco Elysium: The Final Cut", "IMG"],
-  [700, "wall", "Cyberpunk 2077", "DIV"],
+  [700, "wall", "Cyberpunk 2077", "SPAN"],
 ] as const) {
   const r = await withTheApp(
     async (page) => {
@@ -313,12 +555,30 @@ for (const width of WIDTHS) {
       return page.evaluate(() => {
         const box = document.querySelector(".featured")!;
         const rect = box.getBoundingClientRect();
+        const featuredArt = box.querySelector(".featured-art .game-artwork");
+        const featuredArtBox = featuredArt?.getBoundingClientRect();
+        const shelfArtwork = [...document.querySelectorAll(".shelf .game-artwork")];
+        const shelfArtworkSized = shelfArtwork.length > 0 && shelfArtwork.every((item) => {
+          const artworkBox = item.getBoundingClientRect();
+          return Math.abs(artworkBox.width - 150) < 0.5 && Math.abs(artworkBox.height - 200) < 0.5;
+        });
         return {
+          hasWideBackdrop: box.querySelector(".featured-backdrop") !== null,
+          hasPortraitAnchor: featuredArt?.classList.contains("game-artwork--image") ?? false,
+          shelfArtworkSized,
           // It is the only piece of this screen with two columns, thus it is
           // the only piece that can have no space for the text.
-          featuredOverflows: [...box.querySelectorAll("*")].some(
-            (inner) => inner.getBoundingClientRect().right > rect.right + 0.5,
-          ),
+          featuredOverflows: [...box.querySelectorAll("*")].some((inner) => {
+            const innerRect = inner.getBoundingClientRect();
+            return (
+              innerRect.right > rect.right + 0.5 ||
+              innerRect.bottom > rect.bottom + 0.5
+            );
+          }),
+          featuredContainsArt:
+            featuredArtBox !== undefined &&
+            featuredArtBox.top >= rect.top - 0.5 &&
+            featuredArtBox.bottom <= rect.bottom + 0.5,
           // The tile is the same tile as the wall tile, with the same sizes: if
           // it goes out of its slot here, the shelf does not obey them.
           tilesOutside: [...document.querySelectorAll(".shelf > li")].filter((slot) => {
@@ -337,6 +597,9 @@ for (const width of WIDTHS) {
   );
 
   check(`${width} px · the featured game does not go out of its box`, !r.featuredOverflows);
+  check(`${width} px · the featured game keeps its full portrait`, r.featuredContainsArt);
+  check(`${width} px · the featured game has wide and portrait artwork`, r.hasWideBackdrop && r.hasPortraitAnchor);
+  check(`${width} px · shelf artwork uses the 150 by 200 box`, r.shelfArtworkSized);
   check(`${width} px · no tile goes out of its slot`, r.tilesOutside === 0);
   check(`${width} px · there are shelves to show`, r.shelves > 0);
   check(`${width} px · the page does not go sideways`, !r.sideways);
@@ -394,7 +657,7 @@ console.log("\nThe review queue");
 for (const width of WIDTHS) {
   const r = await withTheApp(
     async (page) => {
-      await page.getByRole("button", { name: /To review/ }).click();
+      await page.getByRole("button", { name: /Review/ }).click();
       await page.locator(".review tbody tr").first().waitFor();
       return page.evaluate(() => {
         const lefts = (row: Element) =>
@@ -524,6 +787,47 @@ for (const theme of ["light", "dark"] as const) {
   check(`${theme} · text ${r.text.toFixed(2)}:1`, r.text >= 4.5);
   check(`${theme} · muted ${r.muted.toFixed(2)}:1`, r.muted >= 4.5);
   check(`${theme} · muted in the sheet ${r.inTheSheet.toFixed(2)}:1`, r.inTheSheet >= 4.5);
+}
+
+console.log("\nThe contrast of focus and the primary action");
+for (const theme of ["light", "dark"] as const) {
+  const r = await withTheApp(
+    async (page) => {
+      await openUtilities(page);
+      const primary = page.locator("button.primary-action");
+      await primary.waitFor();
+      // Opening Utilities used a pointer click. Restore keyboard modality so
+      // the programmatic focus below matches the :focus-visible rule.
+      await page.keyboard.press("Tab");
+      await primary.focus();
+      return page.evaluate(() => {
+        const numbers = (s: string) => (s.match(/[0-9]+/g) ?? []).map(Number);
+        const light = (c: number[]) => {
+          const channel = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * channel(c[0] ?? 0) + 0.7152 * channel(c[1] ?? 0) + 0.0722 * channel(c[2] ?? 0);
+        };
+        const ratio = (a: number[], b: number[]) => {
+          const [high, low] = [light(a), light(b)].sort((x, y) => y - x) as [number, number];
+          return (high + 0.05) / (low + 0.05);
+        };
+        const primary = document.querySelector("button.primary-action")!;
+        const styles = getComputedStyle(primary);
+        return {
+          action: ratio(numbers(styles.color), numbers(styles.backgroundColor)),
+          focus: ratio(numbers(styles.outlineColor), numbers(getComputedStyle(document.body).backgroundColor)),
+          visible: styles.outlineStyle !== "none" && styles.outlineWidth !== "0px",
+        };
+      });
+    },
+    { theme, answers: ALL },
+  );
+
+  check(theme + " · primary-action text " + r.action.toFixed(2) + ":1", r.action >= 4.5);
+  check(theme + " · focus " + r.focus.toFixed(2) + ":1", r.focus >= 3);
+  check(theme + " · focus indicator is visible", r.visible);
 }
 
 console.log(failures === 0 ? "\nAll correct.\n" : `\n${failures} tests did not pass.\n`);

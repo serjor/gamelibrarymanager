@@ -10,6 +10,7 @@ import type {
   PriceRow,
   ReviewItem,
   StateUpdate,
+  SyncReport,
 } from "./lib/api";
 
 const state = {
@@ -33,6 +34,15 @@ const state = {
   /** How many times the prices were really requested. */
   priceRequests: 0,
   /** The reason that the matching stopped, if it stopped. */
+  syncResult: {
+    owned: 0,
+    wishlist: 0,
+    removed: 0,
+    failures: [],
+    skipped: [],
+    cancelled: false,
+  } as SyncReport,
+  syncError: null as string | null,
   matchingStopped: null as string | null,
   exportPath: null as string | null,
   exports: [] as [string, "json" | "csv"][],
@@ -99,7 +109,9 @@ mock.module("./lib/api", () => ({
     librarySummary: () => Promise.resolve(state.summary),
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () =>
-      Promise.resolve({ owned: 0, wishlist: 0, removed: 0, failures: [], skipped: [] }),
+      state.syncError === null
+        ? Promise.resolve(state.syncResult)
+        : Promise.reject(state.syncError),
     resolveIdentities: () =>
       Promise.resolve({
         linked: 0,
@@ -314,11 +326,16 @@ function width(px: number) {
   ).happyDOM.setViewport({ width: px });
 }
 
+async function openUtilities() {
+  fireEvent.click(await screen.findByRole("button", { name: "Utilities" }));
+  return screen.findByRole("dialog");
+}
+
 describe("App", () => {
   beforeEach(() => {
     // Wide by default: that is where all of the library is visible, and the
     // narrow window is tested separately.
-    width(1400);
+    width(1600);
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
     state.connectors = [];
@@ -334,32 +351,99 @@ describe("App", () => {
     state.confirmed = [];
     state.priceRequests = 0;
     state.matchingStopped = null;
+    state.syncResult = {
+      owned: 0,
+      wishlist: 0,
+      removed: 0,
+      failures: [],
+      skipped: [],
+      cancelled: false,
+    };
+    state.syncError = null;
     state.exportPath = null;
     state.exports = [];
+  });
+
+  it("gives the product mark a stable accessible name", async () => {
+    state.accounts = [steamAccount];
+    render(<App />);
+
+    expect(await screen.findByRole("img", { name: "Game Library Manager" })).toBeDefined();
   });
 
   it("a matching that stops says why and that the work is kept", async () => {
     // It stops, it does not fail: it writes its work and gives back the reason.
     // Without that message, the user sees incomplete work and does not know why.
     state.accounts = [steamAccount];
+
     state.matchingStopped = "the request limit is reached";
     render(<App />);
+    await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Match" }));
 
-    const message = await screen.findByRole("alert");
+    const message = await screen.findByText(/The matching stopped/);
     expect(message.textContent).toContain("the request limit is reached");
     expect(message.textContent).toContain("is kept");
   });
 
+  it("a completed synchronisation reports success and its counts", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, failures: [], skipped: [], cancelled: false };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText("Synchronisation complete")).toBeDefined();
+    expect(screen.getByText(/4 owned copies and 2 wished-for copies/)).toBeDefined();
+  });
+
+  it("a cancelled synchronisation says that saved work is kept", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 2, wishlist: 1, removed: 0, failures: [], skipped: [], cancelled: true };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText("Pass stopped")).toBeDefined();
+    expect(screen.getByText(/synchronisation stopped/)).toBeDefined();
+  });
+
+
+  it("a synchronisation error remains visible as an alert", async () => {
+    state.accounts = [steamAccount];
+    state.syncError = "The synchronisation failed.";
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("The synchronisation failed.");
+  });
   it("with no connected account it goes to the Steam setup screen", async () => {
     render(<App />);
     expect(await screen.findByText("Connect Steam")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Bring your collection together" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+    expect(screen.getByRole("button", { name: "or start with GOG" })).toBeDefined();
   });
 
   it("with no keyring in the system it asks for the passphrase first", async () => {
     state.info = { version: "0.1.0", secrets_backend: "passphrase", unlocked: false };
     render(<App />);
     expect(await screen.findByText("Passphrase of the store")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Unlock your local secret store" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+  });
+
+  it("empty product screens explain the next useful action", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [];
+    render(<App />);
+    expect(await screen.findByText("Your library is empty")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Today" }));
+    expect(await screen.findByText("Nothing to play yet")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Wishlist" }));
+    expect(await screen.findByText("Wishlist is empty")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    expect(await screen.findByText("Review queue is clear")).toBeDefined();
   });
 
   it("with no IGDB it gives a message and does not block the library", async () => {
@@ -370,7 +454,8 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.hasIgdb = false;
     render(<App />);
-    expect(await screen.findByText(/the records are made with the title/)).toBeDefined();
+    await openUtilities();
+    expect(await screen.findByText(/Not configured: titles have no cover art/)).toBeDefined();
     expect(screen.getByRole("button", { name: "Synchronise" })).toBeDefined();
   });
 
@@ -378,13 +463,20 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.hasIgdb = false;
     render(<App />);
+    await openUtilities();
     (await screen.findByRole("button", { name: "Configure IGDB" })).click();
     expect(await screen.findByText("Metadata: IGDB")).toBeDefined();
+    expect(document.querySelector(".setup-frame")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Add richer game records" })).toBeDefined();
+    expect(screen.getByText("Private by design")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("button", { name: "Utilities" })).toBeDefined();
   });
 
   it("it offers to connect GOG when there is no GOG account yet", async () => {
     state.accounts = [steamAccount];
     render(<App />);
+    await openUtilities();
     (await screen.findByRole("button", { name: "Connect GOG" })).click();
     // The search uses something that is only in the setup screen: the heading has
     // the same name as the button that goes to it and would tell nothing apart.
@@ -397,6 +489,7 @@ describe("App", () => {
     // had no way to reach Steam later.
     state.accounts = [gogAccount];
     render(<App />);
+    await openUtilities();
     (await screen.findByRole("button", { name: "Connect Steam" })).click();
     expect(await screen.findByLabelText("Steam API key")).toBeDefined();
   });
@@ -404,6 +497,7 @@ describe("App", () => {
   it("it offers to connect Epic when there is no Epic account yet", async () => {
     state.accounts = [steamAccount];
     render(<App />);
+    await openUtilities();
     (await screen.findByRole("button", { name: "Connect Epic" })).click();
     // The search uses something that is only in the setup screen: the heading has
     // the same name as the button that goes to it and would tell nothing apart.
@@ -414,6 +508,7 @@ describe("App", () => {
   it("with the three stores connected it offers to connect none", async () => {
     state.accounts = [steamAccount, gogAccount, epicAccount];
     render(<App />);
+    await openUtilities();
     await screen.findByRole("button", { name: "Synchronise" });
     expect(screen.queryByRole("button", { name: "Connect Steam" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Connect GOG" })).toBeNull();
@@ -431,6 +526,7 @@ describe("App", () => {
 
     try {
       render(<App />);
+      await openUtilities();
       const disconnectSteam = await screen.findByRole("button", { name: "Disconnect Steam" });
       await act(async () => {
         fireEvent.click(disconnectSteam);
@@ -452,6 +548,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.exportPath = "/tmp/game-library.json";
     render(<App />);
+    await openUtilities();
 
     fireEvent.click(await screen.findByRole("button", { name: "Export JSON" }));
 
@@ -459,14 +556,15 @@ describe("App", () => {
     expect(screen.getByText("Written to /tmp/game-library.json")).toBeDefined();
   });
 
-  it("a store that operates correctly appears in no place", async () => {
-    // The state of the connector is shown only when there is something to say: a
+  it("a healthy connector can be switched off from Utilities", async () => {
+    // The connector status is quiet in the activity strip, but its switch remains available in Utilities. A
     // permanent list of "all correct" is noise that nobody reads.
     state.accounts = [steamAccount, epicAccount];
     state.connectors = [{ store: "epic", enabled: true, last_error: null }];
     render(<App />);
+    await openUtilities();
     await screen.findByRole("button", { name: "Synchronise" });
-    expect(screen.queryByRole("button", { name: "Switch Epic off" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Switch Epic off" })).toBeDefined();
   });
 
   it("a connector that failed says why and you can switch it off", async () => {
@@ -478,13 +576,15 @@ describe("App", () => {
     ];
     render(<App />);
 
-    expect(await screen.findByText(/invalid or expired credentials/)).toBeDefined();
+    const activity = await screen.findByRole("region", { name: "Activity" });
+    expect(within(activity).getByText(/invalid or expired credentials/)).toBeDefined();
+    await openUtilities();
     (await screen.findByRole("button", { name: "Switch Epic off" })).click();
 
     expect(await screen.findByRole("button", { name: "Switch Epic on" })).toBeDefined();
     // And what is important: the others stay where they were.
     expect(screen.getByRole("button", { name: "Synchronise" })).toBeDefined();
-    expect(screen.getByText(/steam/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Disconnect Steam" })).toBeDefined();
   });
 
   it("a connector switched off explains that its data stays in the library", async () => {
@@ -512,8 +612,12 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.summary = { owned: 412, wishlist: 37, games: 400, pending_review: 12 };
     render(<App />);
-    expect(await screen.findByText(/400 records/)).toBeDefined();
-    expect(screen.getByText(/12 to review/)).toBeDefined();
+    await waitFor(() => {
+      const workspace = screen.getByRole("main");
+      expect(within(workspace).getByText(/400 records/)).toBeDefined();
+    });
+    const workspace = screen.getByRole("main");
+    expect(within(workspace).getByText(/12 to review/)).toBeDefined();
   });
 
   it("the library shows the records with their stores", async () => {
@@ -554,6 +658,35 @@ describe("App", () => {
     });
     expect(screen.getByRole("button", { name: "Gone" })).toBeDefined();
     expect(screen.queryByRole("button", { name: "Wished" })).toBeNull();
+  });
+
+  it("keeps the table viewport when filters temporarily have no matches", async () => {
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({ title: "RPG one", genres: ["RPG"], status: "playing" }),
+      row({ title: "RPG two", genres: ["RPG"], status: "playing" }),
+      row({ title: "Action one", genres: ["Action"], status: "finished" }),
+      row({ title: "Action two", genres: ["Action"], status: "backlog" }),
+    ];
+    render(<App />);
+    await screen.findByRole("button", { name: "RPG one" });
+
+    const viewport = document.querySelector(".table-viewport");
+    expect(viewport).not.toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Genre"), { target: { value: "RPG" } });
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "abandoned" } });
+    expect(screen.getByText("No game agrees with your filter.")).toBeDefined();
+    expect(document.querySelector(".table-viewport")).toBe(viewport);
+
+    fireEvent.change(screen.getByLabelText("Genre"), { target: { value: "" } });
+    expect(screen.getByText("No game agrees with your filter.")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "" } });
+
+    for (const title of ["RPG one", "RPG two", "Action one", "Action two"]) {
+      expect(screen.getByRole("button", { name: title })).toBeDefined();
+    }
+    expect(document.querySelector(".table-viewport")).toBe(viewport);
   });
 
   it("a click on a column sorts by it, and a second click inverts it", async () => {
@@ -743,7 +876,7 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog")).toBeDefined();
     expect(screen.getByText(/No summary/)).toBeDefined();
-    expect(document.querySelector(".sheet-art")?.tagName).toBe("DIV");
+    expect(document.querySelector(".sheet-art")?.tagName).toBe("SPAN");
     expect(inTheRecord().getByLabelText("Notes")).toBeDefined();
   });
 
@@ -754,8 +887,8 @@ describe("App", () => {
     state.rows = [row({ title: "Celeste", sort_title: "celeste", rating: 9 })];
 
     for (const [px, expected] of [
-      [1400, null],
-      [1000, "dialog"],
+      [1600, null],
+      [1400, "dialog"],
     ] as const) {
       width(px);
       const { unmount } = render(<App />);
@@ -976,7 +1109,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(2\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(2\)/ })).click();
 
     await screen.findByText("Equal scores (1)");
     expect(matchesWith("LIMBO")).toBe("not chosen");
@@ -989,7 +1122,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
 
     // The other record is selected: the chosen one and the other one exchange.
     fireEvent.click(await screen.findByRole("button", { name: /^Another game, but of 2009/ }));
@@ -1006,7 +1139,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
 
     // The chosen candidate comes with no year and no similarity — the two have a
     // column of their own — thus its accessible name is the title alone and it is
@@ -1047,7 +1180,7 @@ describe("App", () => {
       },
     ];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
     expect(await screen.findByText(/Disco Elysium: The Final Cut/)).toBeDefined();
     expect(screen.getByText(/make a record with the title of the store/)).toBeDefined();
   });
@@ -1059,7 +1192,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(2\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(2\)/ })).click();
     expect(await screen.findByText(/Equal scores \(1\)/)).toBeDefined();
     expect(screen.getByText(/The remainder \(1\)/)).toBeDefined();
     // The year is what tells two records with the same name apart.
@@ -1075,7 +1208,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE];
     render(<App />);
-    (await screen.findByRole("button", { name: /To review \(1\)/ })).click();
+    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
     // With nothing selected there is no batch button: there is nothing to
     // confirm.
     expect(screen.queryByRole("button", { name: /Confirm 1 match/ })).toBeNull();

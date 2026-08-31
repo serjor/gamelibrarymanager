@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 const CONSOLE_URL = "https://dev.twitch.tv/console/apps";
 
@@ -10,7 +11,13 @@ const CONSOLE_URL = "https://dev.twitch.tv/console/apps";
  * user registers their application. This screen is the cost of no server, thus
  * it at least carries the direct link and examines the credentials immediately.
  */
-export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
+export function IgdbSetup({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,7 +38,14 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Optional provider · Metadata"
+      title="Add richer game records"
+      description="IGDB can add covers and summaries to your local collection. The library works without it."
+      trust="The Twitch credentials belong to you and stay on this computer. IGDB is optional and never blocks the library."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Metadata: IGDB</h2>
       <p className="hint">
         An application of your own in the Twitch portal is necessary. It is free
@@ -97,6 +111,7 @@ export function IgdbSetup({ onConnected }: { onConnected: () => void }) {
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
         {busy ? "Examining…" : "Save"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

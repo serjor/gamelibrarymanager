@@ -7,7 +7,7 @@ import type { Sort, SortField } from "./sort";
 import { isNoLongerInStore } from "./filters";
 
 /** A fixed row height: the virtual list is arithmetic, not measurement. */
-const ROW_HEIGHT = 33;
+const ROW_HEIGHT = 38;
 
 interface Column {
   field: SortField;
@@ -52,6 +52,7 @@ function yearOf(epoch: number | null): string {
  */
 export function LibraryTable({
   rows,
+  totalRows = rows.length,
   sort,
   onSort,
   selected,
@@ -60,6 +61,7 @@ export function LibraryTable({
   opened,
 }: {
   rows: LibraryRow[];
+  totalRows?: number;
   sort: Sort;
   onSort: (sort: Sort) => void;
   selected: Set<string>;
@@ -98,7 +100,23 @@ export function LibraryTable({
   }, [opened, rows, containerRef]);
 
   if (rows.length === 0) {
-    return <p className="hint">No game agrees with your filter.</p>;
+    return (
+      <div className="table-viewport" ref={containerRef}>
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">
+            {totalRows === 0 ? "Your library is empty" : "No games match this filter"}
+          </strong>
+          <p className="hint">
+            {totalRows === 0
+              ? "Synchronise a store to bring your owned and wished-for games into this archive."
+              : "No game agrees with your filter."}
+          </p>
+          {totalRows > 0 && (
+            <p className="hint">Change or clear a filter to see more games.</p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   const visible = rows.slice(range.start, range.end);
@@ -111,7 +129,7 @@ export function LibraryTable({
 
   return (
     <div className="table-viewport" ref={containerRef}>
-      <table className="table">
+      <table className="table command-table" aria-label="Game library">
         <colgroup>
           <col style={{ width: "2.2rem" }} />
           {COLUMNS.map((column) => (
@@ -170,11 +188,13 @@ export function LibraryTable({
                 <td>{row.genres[0] ?? "—"}</td>
                 <td>
                   {row.owned_stores.length > 0 ? (
-                    row.owned_stores.map((store) => (
-                      <span key={store} className="store">
-                        {store}
-                      </span>
-                    ))
+                    <span className="store-list">
+                      {row.owned_stores.map((store) => (
+                        <span key={store} className="store">
+                          {store}
+                        </span>
+                      ))}
+                    </span>
                   ) : isNoLongerInStore(row) ? (
                     <span className="status gone">Not in a store</span>
                   ) : (

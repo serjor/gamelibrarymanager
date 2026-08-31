@@ -1,64 +1,74 @@
 /* The design system.
  *
- * No selector of this file declares a literal colour: all of them come from the
- * tokens above. The rule exists because the other option — a `#b3261e` alone in
- * the middle of the sheet — makes you find it by hand on the day that you must
- * change the dark theme, and makes sure that you do not find one of them. */
+ * Every interface colour lives in the token blocks below. Selectors describe
+ * the purpose of a colour and do not decide its value. */
 
 :root {
-  /* This still controls the native controls: `select`, the text fields and
-     the scroll bars use it alone. The tokens below cover what this code
-     draws; this covers what the system draws. */
+  /* Native controls use this value. The tokens below cover what the application
+     draws. */
   color-scheme: light dark;
 
-  /* Colour. The neutral colours go a minimum quantity towards blue and are
-     not pure greys: this is an application that you look at on a screen for a
-     long time, and an exact grey reads as a decision not made. */
-  --background: #fbfbfc;
-  --surface: #ffffff;
-  /* The fill of a cover that does not exist, and of the boxes that keep its
-     space. Before, it was a `color-mix` on `currentColor`, which changed its
-     tone with the parent. */
-  --placeholder: #eceef2;
-  --border: #d7d9e0;
-  --text: #16181d;
-  --text-muted: #5a5f6e;
-  --accent: #2f5fd0;
-  --error: #b3261e;
-  /* The scrim of the sheet. It comes from the ink in the light theme and from
-     the background in the dark theme, because in the two themes it must make
-     the page darker, and the dark token is not the same in each theme. */
-  --scrim: color-mix(in srgb, var(--text) 45%, transparent);
+  /* Ink and surfaces. The page is warm paper in the light theme and deep ink
+     in the dark theme. Raised and sunken surfaces make later screens readable
+     without adding a component-specific colour. */
+  --background: #f5f1e8;
+  --surface: #fffdf8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8e3d9;
+  --surface-accent: #edf1ff;
+  --surface-selected: #e1e8ff;
+  --surface-backlog: #fbf0d8;
+  --surface-error: #fcebea;
+  --placeholder: #e6e1d7;
+  --border: #d1d6df;
+  --border-strong: #9da6b5;
+  --text: #182230;
+  --text-muted: #536074;
 
-  /* The status of the game. They have a meaning and they are apart from the
-     accent, and that is deliberate: the accent shows where you are, and these
-     say what each game is. To mix them makes the interface shout in four
-     places at the same time. */
-  --status-backlog: #8a6a12;
-  --status-playing: #1f6b86;
-  --status-finished: #1c6b4f;
-  --status-abandoned: #98413a;
+  /* The command accent is exact and cool. The archive accent is warm and
+     reserved for collection surfaces. They do not communicate the same state. */
+  --accent: #3157d5;
+  --accent-hover: #2444b5;
+  --on-accent: #ffffff;
+  --command-accent: #3157d5;
+  --command-accent-hover: #2444b5;
+  --archive-accent: #b9532f;
+  --archive-accent-strong: #923e24;
+  --archive-surface: #f9e7dd;
+  --focus: #b84f31;
+  --error: #b42318;
+  --scrim: rgba(12, 19, 30, 0.58);
 
-  /* A price at its all-time low. A token of its own and not
-     `--status-finished`, although the two are green: the tokens above say what
-     a game is for you, and this one says something about what it costs today.
-     To share the colour would make the same ink mean two things on the same
-     screen. */
-  --price-low: #157a52;
+  /* The mark and the future no-art patterns use stable semantic colours. */
+  --icon-frame: #182230;
+  --icon-card-a: #d86f45;
+  --icon-card-b: #3157d5;
+  --icon-card-c: #e4ab57;
+  --art-pattern-a: #e8b18f;
+  --art-pattern-b: #9eafea;
+  --art-pattern-c: #9bc8b5;
+  --art-pattern-d: #c3a5d7;
 
-  /* Typography. The system stack: the CSP does not declare `font-src`, thus a
-     linked font would not load and a font in the package would make you change
-     the CSP. */
-  --font: system-ui, sans-serif;
+  /* The status of the game has a meaning separate from the command accent. */
+  --status-backlog: #8b5e00;
+  --status-playing: #075b7a;
+  --status-finished: #166b4f;
+  --status-abandoned: #9f3c32;
+  --price-low: #08734c;
+
+  /* Typography. The system stack stays local to the desktop application. */
+  --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --t-xs: 0.75rem;
   --t-s: 0.8125rem;
   --t-m: 0.875rem;
   --t-base: 1rem;
   --t-l: 1.25rem;
   --t-xl: 1.75rem;
+  --t-2xl: 2.25rem;
+  --leading-tight: 1.15;
+  --leading-copy: 1.5;
 
-  /* Spacing, in steps of 4 px. Before, there were eleven different values
-     between 0.3rem and 3rem, which is the same as no values. */
+  /* Spacing, in predictable steps. */
   --e-1: 0.25rem;
   --e-2: 0.375rem;
   --e-3: 0.5rem;
@@ -72,27 +82,62 @@
   --radius-m: 6px;
   --radius-l: 8px;
 
+  /* Depth and motion are tokens even when a selector does not need them yet.
+     This keeps the visual language shared by the later shell and archive work. */
+  --shadow-soft: 0 6px 18px rgba(24, 34, 48, 0.08);
+  --shadow-raised: 0 14px 36px rgba(24, 34, 48, 0.12);
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --motion-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
   font-family: var(--font);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #131519;
-    --surface: #1a1d23;
-    --placeholder: #23262e;
-    --border: #333741;
-    --text: #e6e8ee;
-    --text-muted: #9aa0ae;
-    --accent: #8ab4f8;
-    --error: #f2857b;
-    --scrim: color-mix(in srgb, var(--background) 80%, transparent);
+    --background: #0f141d;
+    --surface: #171f2c;
+    --surface-raised: #202a3a;
+    --surface-sunken: #0b1018;
+    --surface-accent: #222f5b;
+    --surface-selected: #293965;
+    --surface-backlog: #3a2d1a;
+    --surface-error: #4b2523;
+    --placeholder: #273243;
+    --border: #344154;
+    --border-strong: #55657d;
+    --text: #edf2f7;
+    --text-muted: #a8b4c7;
+    --accent: #91a7ff;
+    --accent-hover: #b0beff;
+    --on-accent: #101622;
+    --command-accent: #91a7ff;
+    --command-accent-hover: #b0beff;
+    --archive-accent: #f1946d;
+    --archive-accent-strong: #ffb093;
+    --archive-surface: #4a2a25;
+    --focus: #ffb093;
+    --error: #ff9c91;
+    --scrim: rgba(0, 0, 0, 0.68);
 
-    --status-backlog: #d4b263;
-    --status-playing: #79c0dd;
-    --status-finished: #6fc3a0;
-    --status-abandoned: #e0928a;
+    --icon-frame: #edf2f7;
+    --icon-card-a: #f1946d;
+    --icon-card-b: #91a7ff;
+    --icon-card-c: #f2c56f;
+    --art-pattern-a: #6f4638;
+    --art-pattern-b: #3e4c83;
+    --art-pattern-c: #2e6254;
+    --art-pattern-d: #614778;
 
-    --price-low: #5fd3a5;
+    --status-backlog: #e7b762;
+    --status-playing: #83d0ed;
+    --status-finished: #72d3ab;
+    --status-abandoned: #f09a91;
+    --price-low: #70d5a9;
+
+    --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.18);
+    --shadow-raised: 0 14px 36px rgba(0, 0, 0, 0.28);
   }
 }
 
@@ -129,7 +174,7 @@ body {
 /* The keyboard must show where it is. Before, the browser did this and each
    browser draws it differently. */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -140,8 +185,8 @@ body {
    part of the box that scrolls.
 
    `overflow: auto` is a safety net: the library screens divide the height and
-   never go outside it, but a setup screen in a low window does, and without this
-   its last lines would be out of reach. */
+   never go outside it, but a setup page can also include the alternative-store
+   actions below its frame. Without this, those actions could be out of reach. */
 main {
   height: 100%;
   padding: var(--e-6);
@@ -156,6 +201,44 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: var(--e-5);
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--icon-frame);
+}
+
+.brand-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.brand-mark__card--a { fill: var(--icon-card-a); }
+.brand-mark__card--b { fill: var(--icon-card-b); }
+.brand-mark__card--c { fill: var(--icon-card-c); }
+.brand-mark__frame {
+  fill: none;
+  stroke: var(--icon-frame);
+  stroke-width: 4;
+}
+
+.brand-title h1 {
+  min-width: 0;
+  font-size: var(--t-xl);
+  line-height: var(--leading-tight);
 }
 
 h1,
@@ -196,6 +279,18 @@ button {
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+button.primary-action {
+  background: var(--command-accent);
+  border-color: var(--command-accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+
+button.primary-action:hover:not(:disabled) {
+  background: var(--command-accent-hover);
+  border-color: var(--command-accent-hover);
 }
 
 button:disabled {
@@ -386,7 +481,7 @@ button.link {
 }
 
 .tab.active {
-  border-bottom-color: currentColor;
+  border-bottom-color: var(--accent);
   color: var(--text);
 }
 
@@ -462,9 +557,9 @@ button.link {
   color: var(--text-muted);
 }
 
-.view.activa {
+.view.active {
   background: var(--accent);
-  color: var(--surface);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -607,11 +702,10 @@ button.link {
   overflow: auto;
 }
 
-/* The maximum is not decoration: 96rem + 1rem of space + 20rem of inspector +
-   3rem of padding are exactly 120rem, which is a 1920 screen at its full size.
-   The table never uses the space of the inspector, thus to open a record there
-   does not move one column. And a row of 1900 px is also not readable: the title
-   stays at one end and the year at the other. */
+/* The table keeps its own readable maximum. The inspector has its separate
+   22rem column, so opening a record does not move the table or change its
+   measured columns. A row wider than this is also not readable: the title stays
+   at one end and the year at the other. */
 .table {
   width: 100%;
   max-width: 96rem;
@@ -654,7 +748,7 @@ button.link {
 }
 
 .table td {
-  height: 33px;
+  height: 38px;
   padding: 0 var(--e-3);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
@@ -689,7 +783,7 @@ button.link {
 }
 
 .table tr.checked td {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: var(--surface-selected);
 }
 
 /* The row that the inspector shows, with a border as one row and not as nine
@@ -725,6 +819,7 @@ button.link {
   color: inherit;
   text-align: left;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -771,7 +866,7 @@ button.link {
 /* What stays to decide, marked. These are the equal scores and the entries
    removed by hand: the only rows that the batch button will not take. */
 .review tr.not-chosen td {
-  background: color-mix(in srgb, var(--status-backlog) 10%, transparent);
+  background: var(--surface-backlog);
 }
 
 .review .source strong {
@@ -805,13 +900,27 @@ button.link {
   width: 100%;
 }
 
+/* Store badges share a fixed table column. Let them shrink as a group so
+   two stores never extend beyond the cell while preserving both labels. */
+.store-list {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--e-1);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
 .store {
-  font-size: var(--t-xs);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
   padding: 0 var(--e-1);
-  margin-right: var(--e-1);
   color: var(--text-muted);
+  font-size: var(--t-xs);
+  text-overflow: ellipsis;
 }
 
 .status {
@@ -819,15 +928,20 @@ button.link {
   font-weight: 600;
   border-radius: var(--radius-s);
   padding: 0 var(--e-1);
-  border: 1px solid currentColor;
+  border: 1px solid var(--border-strong);
   white-space: nowrap;
 }
 
 .status.backlog { color: var(--status-backlog); }
+.status.backlog { border-color: var(--status-backlog); }
 .status.playing { color: var(--status-playing); }
+.status.playing { border-color: var(--status-playing); }
 .status.finished { color: var(--status-finished); }
+.status.finished { border-color: var(--status-finished); }
 .status.abandoned { color: var(--status-abandoned); }
+.status.abandoned { border-color: var(--status-abandoned); }
 .status.gone { color: var(--text-muted); }
+.status.gone { border-color: var(--border-strong); }
 
 /* At the bottom while the selection stays: if you must search for it, nobody
    uses it. */
@@ -839,9 +953,10 @@ button.link {
   gap: var(--e-3);
   flex-wrap: wrap;
   padding: var(--e-3);
-  background: var(--surface);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
+  box-shadow: var(--shadow-soft);
   margin-top: var(--e-3);
 }
 
@@ -975,7 +1090,8 @@ button.link {
   align-items: flex-start;
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
-  background: var(--surface);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
   padding: var(--e-5);
   /* It wraps as soon as the text has no space: it is the only piece of this
      screen that does not change size alone, because it has two columns. */
@@ -1064,7 +1180,7 @@ button.link {
    stays where it is and it is the record that scrolls inside when the window is
    lower than the form. */
 .detail {
-  width: 20rem;
+  width: 22rem;
   flex-shrink: 0;
   align-self: flex-start;
   max-height: 100%;
@@ -1072,6 +1188,8 @@ button.link {
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
   padding: var(--e-5);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 /* Exactly seven lines, in `em` on the line height: a height in `rem` cuts the
@@ -1115,10 +1233,11 @@ button.link {
 }
 
 .sheet-box {
-  width: min(34rem, 100%);
+  width: min(42rem, 100%);
   max-height: 100%;
   overflow-y: auto;
-  background: var(--surface);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius-l);
 }
@@ -1144,4 +1263,1412 @@ button.link {
 
 .sheet-body {
   padding: var(--e-5);
+}
+
+
+/* Phase 2 shell: the product stays visible while maintenance moves to Utilities. */
+.app-shell {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.shell-rail {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+  background: var(--surface-sunken);
+  border-right: 1px solid var(--border);
+}
+
+.shell-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.shell-brand .brand-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.shell-brand-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.shell-brand-copy strong {
+  font-size: var(--t-m);
+  line-height: var(--leading-tight);
+}
+
+.shell-brand-copy span,
+.shell-kicker {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shell-navigation {
+  min-width: 0;
+  flex: 1;
+}
+
+.shell-navigation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shell-navigation-list li {
+  min-width: 0;
+}
+
+.shell-nav-item,
+.shell-utility-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  width: 100%;
+  min-width: 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  text-align: left;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease), border-color var(--motion-fast) var(--motion-ease);
+}
+
+.shell-nav-item:hover:not(:disabled),
+.shell-utility-trigger:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.shell-nav-item.active {
+  background: var(--surface-accent);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.shell-nav-item > span:not(.shell-nav-count),
+.shell-utility-trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-nav-count {
+  margin-left: auto;
+  flex: none;
+  min-width: 1.4rem;
+  padding: 0 var(--e-1);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.shell-nav-item.active .shell-nav-count {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.shell-utility-trigger {
+  flex: none;
+  margin-top: auto;
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.shell-icon {
+  display: block;
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.shell-icon__stroke {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.shell-icon__fill {
+  fill: var(--text-muted);
+}
+
+.shell-nav-item.active .shell-icon__stroke,
+.shell-nav-item.active .shell-icon__fill,
+.shell-utility-trigger:hover:not(:disabled) .shell-icon__stroke,
+.shell-utility-trigger:hover:not(:disabled) .shell-icon__fill {
+  stroke: var(--accent);
+  fill: var(--accent);
+}
+
+.shell-content {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.shell-activity-slot {
+  flex: none;
+  min-width: 0;
+  padding: var(--e-3) var(--e-6) 0;
+}
+.shell-activity-slot:empty {
+  display: none;
+}
+
+
+.shell-workspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: var(--e-4) var(--e-6) var(--e-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  overflow: hidden;
+}
+
+.shell-page-header {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e-5);
+  min-width: 0;
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.shell-page-header h1 {
+  margin: 0;
+  font-size: var(--t-xl);
+  line-height: var(--leading-tight);
+}
+
+.shell-kicker {
+  margin: 0 0 var(--e-1);
+}
+
+.workspace-summary {
+  max-width: 34rem;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.activity-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.activity-operation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  min-width: 0;
+}
+
+.activity-progress {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  min-width: 12rem;
+  color: var(--text-muted);
+  font-size: var(--t-s);
+}
+
+.activity-progress progress {
+  width: min(14rem, 100%);
+}
+
+.activity-cancel {
+  margin-left: auto;
+}
+
+.activity-error,
+.activity-errors,
+.activity-problems {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.activity-errors,
+.activity-problems {
+  padding-left: var(--e-5);
+}
+
+.activity-problems {
+  color: var(--text-muted);
+}
+
+.utility-dialog {
+  width: min(42rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-l);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--shadow-raised);
+}
+
+.utility-dialog::backdrop {
+  background: var(--scrim);
+}
+
+.utility-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-height: calc(100vh - 2rem);
+}
+
+.utility-header {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-5);
+  padding: var(--e-5) var(--e-6);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.utility-header h2 {
+  margin: 0;
+  font-size: var(--t-xl);
+}
+
+.utility-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-5) var(--e-6) var(--e-6);
+}
+
+.utility-section {
+  min-width: 0;
+  padding: var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+
+.utility-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+  margin-bottom: var(--e-3);
+}
+
+.utility-section-heading h3,
+.utility-subsection h4 {
+  margin: 0;
+}
+
+.utility-count {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--t-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.utility-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.utility-actions-wrap {
+  margin-top: var(--e-2);
+}
+
+.utility-help {
+  margin: var(--e-3) 0 0;
+}
+
+.utility-list,
+.utility-status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.utility-list > li,
+.utility-status-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-5);
+  padding: var(--e-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.utility-list > li:first-child,
+.utility-status-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.utility-list > li:last-child,
+.utility-status-row:last-child {
+  padding-bottom: 0;
+}
+
+.utility-item-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.utility-item-copy > span {
+  overflow-wrap: anywhere;
+}
+
+.utility-item-action {
+  flex: none;
+  max-width: 100%;
+}
+
+.utility-subsection {
+  margin-top: var(--e-5);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 69.999rem) {
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .shell-rail {
+    flex: none;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--e-3);
+    padding: var(--e-3) var(--e-4);
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .shell-brand {
+    min-width: 0;
+  }
+
+  .shell-brand .brand-mark {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .shell-navigation {
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .shell-navigation-list {
+    flex-direction: row;
+    gap: var(--e-1);
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .shell-navigation-list li {
+    display: flex;
+  }
+
+  .shell-nav-item {
+    width: auto;
+    white-space: nowrap;
+  }
+
+  .shell-utility-trigger {
+    width: auto;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .shell-content {
+    flex: 1;
+  }
+
+  .shell-workspace {
+    padding: var(--e-4);
+  }
+
+  .shell-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--e-2);
+  }
+
+  .workspace-summary {
+    text-align: left;
+  }
+
+  .shell-activity-slot {
+    padding: var(--e-3) var(--e-4) 0;
+  }
+
+  .utility-header,
+  .utility-content {
+    padding-left: var(--e-4);
+    padding-right: var(--e-4);
+  }
+}
+
+@media (max-width: 48rem) {
+  .shell-brand-copy {
+    display: none;
+  }
+
+  .shell-rail {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .shell-nav-item,
+  .shell-utility-trigger {
+    padding-left: var(--e-3);
+    padding-right: var(--e-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-nav-item,
+  .shell-utility-trigger {
+    transition: none;
+  }
+}
+
+
+/* Phase 3 archive artwork. The component supplies the source; these selectors
+   supply the shared crop, fallback identity, and collection depth. */
+.game-artwork {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-m);
+  background: var(--placeholder);
+}
+
+.game-artwork--fallback {
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--text);
+  font-size: var(--t-xl);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.game-artwork--fallback::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  opacity: 0.65;
+  z-index: -1;
+}
+
+.game-artwork--fallback > span {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+}
+
+.game-artwork--pattern-a {
+  background-image: linear-gradient(135deg, var(--art-pattern-a) 0 50%, var(--art-pattern-b) 50% 100%);
+}
+
+.game-artwork--pattern-b {
+  background-image: linear-gradient(90deg, var(--art-pattern-b) 0 28%, var(--art-pattern-c) 28% 70%, var(--art-pattern-d) 70% 100%);
+}
+
+.game-artwork--pattern-c {
+  background-image: radial-gradient(circle at 28% 28%, var(--art-pattern-a) 0 18%, var(--art-pattern-c) 18% 52%, var(--art-pattern-b) 52% 100%);
+}
+
+.game-artwork--pattern-d {
+  background-image: repeating-linear-gradient(135deg, var(--art-pattern-d) 0 18px, var(--art-pattern-a) 18px 36px, var(--art-pattern-b) 36px 54px);
+}
+
+.tile .game-artwork {
+  width: 100%;
+  height: var(--cover-height);
+}
+
+.wall > li.checked .game-artwork {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.wall > li.open .game-artwork {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.featured {
+  position: relative;
+  /* `Today` is the scroll region. Its children must keep their content height
+     and overflow through that region. Without this, `overflow: hidden` makes
+     the flex minimum height zero and the shelves can compress the proposal to
+     a narrow strip. */
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.featured.has-backdrop {
+  background: var(--surface-sunken);
+}
+
+.featured-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-l);
+  opacity: 0.18;
+}
+
+.featured > :not(.featured-backdrop) {
+  position: relative;
+  z-index: 1;
+}
+
+.featured-art .game-artwork {
+  width: 10.5rem;
+  height: 14rem;
+}
+
+.detail-art {
+  width: 100%;
+  height: 15rem;
+}
+
+.sheet-art.game-artwork {
+  width: 100%;
+  height: 15rem;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+}
+
+.sheet-art.game-artwork--fallback > span {
+  width: 5rem;
+  height: 5rem;
+  font-size: var(--t-2xl);
+}
+
+/* Phase 4 command-deck surfaces. The dense screens share one hierarchy:
+   controls first, a readable table below, and a clear state for work in
+   progress. All surfaces use the design tokens so the light and dark themes
+   keep the same meaning. */
+.command-deck {
+  min-width: 0;
+}
+
+.command-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e-4);
+  flex-wrap: wrap;
+  padding: var(--e-4) var(--e-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface-sunken);
+  box-shadow: var(--shadow-soft);
+}
+
+.command-toolbar:focus-within {
+  border-color: var(--accent);
+}
+
+.library-toolbar {
+  align-items: stretch;
+}
+
+.library-toolbar .views {
+  align-self: flex-end;
+  background: var(--surface);
+}
+
+.filters {
+  align-items: stretch;
+  gap: var(--e-4);
+  min-width: 0;
+}
+
+.filter-search {
+  display: flex;
+  flex: 1 1 15rem;
+  min-width: min(100%, 15rem);
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--e-1);
+  margin: 0;
+}
+
+.filter-set {
+  display: flex;
+  flex: 2 1 32rem;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+}
+
+.filter-field {
+  display: flex;
+  flex: 1 1 7.5rem;
+  min-width: 7.5rem;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+}
+
+.filter-label {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.filter-search input,
+.filter-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
+}
+
+.filter-count {
+  align-self: flex-end;
+  flex: none;
+  padding: var(--e-2) 0;
+  color: var(--text-muted);
+  font-size: var(--t-s);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.view {
+  min-height: 2.5rem;
+}
+
+.command-table {
+  background: var(--surface-raised);
+}
+
+.command-table thead th {
+  background: var(--surface-sunken);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.command-table tbody tr {
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.command-table tbody tr:hover td,
+.command-table tbody tr:focus-within td {
+  background: var(--surface-accent);
+}
+
+.table.command-table td {
+  height: 38px;
+}
+
+.table.command-table tr.checked td {
+  background: var(--surface-selected);
+}
+
+.command-table .num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Compact labels must obey the fixed column width just like title buttons do.
+   Without this cap, a badge can be clipped visually by the cell while its box
+   still crosses into the following column. */
+.table.command-table td > .status,
+.table.command-table td > .hint {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.command-table .link:focus-visible,
+.command-table button:focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
+.bulk.command-bar {
+  align-items: center;
+  margin-top: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--surface-raised);
+}
+
+.bulk-selection {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin-right: auto;
+}
+
+.bulk-selection strong {
+  font-size: var(--t-m);
+}
+
+.bulk-selection span {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.bulk-controls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.bulk-controls .bulk-field {
+  margin: 0;
+}
+
+.bulk-controls select {
+  min-height: 2.25rem;
+  background: var(--surface);
+}
+
+.bulk-controls .primary-action {
+  min-height: 2.25rem;
+}
+
+.wishlist-summary {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.wishlist-summary p {
+  margin: 0;
+}
+
+.wishlist-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.wishlist-actions p {
+  margin: 0;
+}
+
+.wishlist-table.command-table thead th,
+.review.command-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.wishlist-table.command-table tbody tr,
+.review.command-table tbody tr {
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.wishlist-table.command-table tbody tr:hover td {
+  background: var(--surface-accent);
+}
+
+.review-command-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.review-guidance {
+  max-width: 65rem;
+}
+
+.review.command-table .candidate {
+  min-height: 3.5rem;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  transition:
+    background var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.review.command-table .candidate:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+}
+
+.review.command-table .candidate.chosen {
+  border-color: var(--accent);
+  background: var(--surface-accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.review.command-table .source img,
+.review.command-table .cover-missing.wide {
+  border: 1px solid var(--border);
+}
+
+@media (max-width: 48rem) {
+  .command-toolbar {
+    padding: var(--e-3);
+  }
+
+  .filter-search,
+  .filter-set {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .filter-field {
+    flex-basis: calc(50% - var(--e-3));
+    min-width: 0;
+  }
+
+  .filter-count {
+    flex-basis: 100%;
+    padding: 0;
+  }
+
+  .library-toolbar .views {
+    width: 100%;
+  }
+
+  .library-toolbar .view {
+    flex: 1 1 0;
+  }
+
+  .bulk-selection,
+  .bulk-controls {
+    flex-basis: 100%;
+  }
+
+  .bulk-selection {
+    margin-right: 0;
+  }
+
+  .bulk-controls {
+    justify-content: flex-start;
+  }
+
+  .wishlist-actions {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  .review-command-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Four 7.5rem filter fields, three 0.5rem gaps, 1.5rem of workspace padding,
+   1rem of toolbar padding, and 0.5rem of border and scroll allowance need
+   34.5rem. In this range they fit on one row and leave enough height for the
+   library when a provider reports a problem. */
+@media (min-width: 34.5rem) and (max-width: 48rem) {
+  .filter-search {
+    flex-basis: calc(100% - 5rem);
+  }
+
+  .filter-count {
+    order: 1;
+    flex-basis: auto;
+  }
+
+  .filter-set {
+    order: 2;
+  }
+
+  .filter-field {
+    flex-basis: 7.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-table tbody tr,
+  .review.command-table .candidate {
+    transition: none;
+  }
+}
+
+/* Phase 5 setup, empty-state, activity, and motion treatments. */
+.setup-page {
+  align-items: stretch;
+  justify-content: center;
+}
+
+.setup-frame {
+  width: min(100%, 66rem);
+  max-height: 100%;
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--e-8);
+  padding: var(--e-7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-raised);
+  /* A stacked form can be taller than a small window. Keep its first and last
+     controls inside the window and let this surface scroll in that case. */
+  overflow-y: auto;
+  animation: setup-enter var(--motion-base) var(--motion-ease) both;
+}
+
+.setup-context,
+.setup-form-surface {
+  min-width: 0;
+}
+
+.setup-context {
+  display: flex;
+  flex-direction: column;
+}
+
+.setup-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+}
+
+.setup-brand .brand-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.setup-brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.setup-brand-copy span {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.setup-step {
+  margin: var(--e-7) 0 var(--e-2);
+  color: var(--archive-accent-strong);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.setup-context h1 {
+  max-width: 28rem;
+  font-size: var(--t-2xl);
+  line-height: var(--leading-tight);
+}
+
+.setup-description {
+  max-width: 30rem;
+  margin: var(--e-4) 0 0;
+  color: var(--text-muted);
+  line-height: var(--leading-copy);
+}
+
+.setup-trust {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e-3);
+  max-width: 34rem;
+  margin: var(--e-7) 0 0;
+  padding: var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-accent);
+}
+
+.setup-trust-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.setup-trust strong {
+  display: block;
+  margin-bottom: var(--e-1);
+}
+
+.setup-trust p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--t-m);
+  line-height: var(--leading-copy);
+}
+
+.setup-form-surface {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-left: var(--e-7);
+  border-left: 1px solid var(--border);
+}
+
+.setup-form-surface form {
+  width: 100%;
+  max-width: 32rem;
+}
+
+.setup-form-surface form h2 {
+  margin: 0;
+  font-size: var(--t-xl);
+  line-height: var(--leading-tight);
+}
+
+.setup-form-surface form > .hint {
+  margin: 0;
+  line-height: var(--leading-copy);
+}
+
+.setup-form-surface form > button[type="submit"] {
+  background: var(--command-accent);
+  border-color: var(--command-accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+
+.setup-form-surface form > button[type="submit"]:hover:not(:disabled) {
+  background: var(--command-accent-hover);
+  border-color: var(--command-accent-hover);
+}
+
+.setup-back {
+  align-self: flex-start;
+  margin-top: var(--e-5);
+}
+
+.setup-alternatives {
+  width: min(100%, 66rem);
+  margin: 0 auto var(--e-6);
+  padding-top: var(--e-5);
+  border-top: 1px solid var(--border);
+}
+
+.setup-alternatives-title {
+  margin: 0 0 var(--e-3);
+  color: var(--text-muted);
+  font-size: var(--t-m);
+}
+
+.setup-alternatives-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-4);
+}
+
+.setup-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  min-height: 4rem;
+}
+
+.setup-loading-mark {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: setup-spin var(--motion-slow) linear infinite;
+}
+
+.setup-loading-message {
+  margin: 0;
+  line-height: var(--leading-copy);
+}
+
+.empty-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-state {
+  display: grid;
+  align-content: center;
+  gap: var(--e-3);
+  max-width: 42rem;
+  min-height: 12rem;
+  padding: var(--e-7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.empty-state-title {
+  font-size: var(--t-l);
+  line-height: var(--leading-tight);
+}
+
+.empty-state p {
+  margin: 0;
+  line-height: var(--leading-copy);
+}
+
+.table-viewport > .empty-state,
+.wall-viewport > .empty-state {
+  width: min(100%, 42rem);
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.activity-strip {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+.activity-strip--progress {
+  border-color: var(--accent);
+}
+
+.activity-strip--warning {
+  border-color: var(--status-backlog);
+}
+
+.activity-strip--error {
+  border-color: var(--error);
+}
+
+.activity-strip--stopped {
+  border-color: var(--status-backlog);
+}
+
+.activity-strip--success {
+  border-color: var(--status-finished);
+}
+
+.activity-state-label {
+  padding: 0 var(--e-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.activity-status,
+.activity-error {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--e-2) var(--e-3);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.activity-status > span,
+.activity-error > span {
+  color: var(--text-muted);
+}
+
+.activity-status--success > strong {
+  color: var(--status-finished);
+}
+
+.activity-status--warning > strong,
+.activity-status--stopped > strong {
+  color: var(--status-backlog);
+}
+
+.activity-status--success,
+.activity-status--warning,
+.activity-status--stopped {
+  padding: var(--e-2) 0;
+}
+
+.activity-warning-list {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.activity-progress progress {
+  accent-color: var(--accent);
+}
+
+.activity-strip .export-path {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    box-shadow var(--motion-fast) var(--motion-ease);
+}
+
+:focus-visible {
+  transition: outline-offset var(--motion-fast) var(--motion-ease);
+}
+
+.wall-badge {
+  transition: opacity var(--motion-fast) var(--motion-ease);
+}
+
+.status,
+.activity-status {
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.utility-dialog[open] {
+  animation: dialog-enter var(--motion-base) var(--motion-ease) both;
+}
+
+@keyframes setup-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--e-3));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes setup-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--e-3)) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* The setup columns need 16rem of context, 32rem of form, a 3rem gap,
+   4rem of frame padding, and border/scroll allowance. Stack at 58rem
+   before those measured minimums make the guidance or controls unreadable. */
+@media (max-width: 58rem) {
+  .setup-frame {
+    grid-template-columns: 1fr;
+    gap: var(--e-6);
+  }
+
+  .setup-form-surface {
+    padding-top: var(--e-6);
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: none;
+  }
+}
+
+@media (max-width: 48rem) {
+  .setup-frame {
+    padding: var(--e-5);
+  }
+
+  .empty-state {
+    padding: var(--e-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

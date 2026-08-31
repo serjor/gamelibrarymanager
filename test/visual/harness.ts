@@ -67,6 +67,21 @@ export const WIDE_ART =
       "<rect width='460' height='215' fill='gray'/></svg>",
   );
 
+export const PORTRAIT_ART =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    "<svg xmlns='http://www.w3.org/2000/svg' width='150' height='200'>" +
+      "<rect width='150' height='200' fill='gray'/>" +
+      "<circle cx='75' cy='100' r='48' fill='white'/></svg>",
+  );
+
+export const LONG_PROVIDER_ERROR = "Corrective action is required to continue. Open this Epic page and connect the account again: https://www.epicgames.com/id/login/continuation?code=example";
+
+export async function openUtilities(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Utilities" }).click();
+  await page.locator("dialog[open]").waitFor();
+}
+
 export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
   const title = overrides.title ?? "Game";
   return {
@@ -97,8 +112,8 @@ export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
  */
 export function exampleLibrary(): LibraryRow[] {
   return [
-    game({ title: "Disco Elysium: The Final Cut", owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
-    game({ title: "Hades", playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: WIDE_ART }),
+    game({ title: "Disco Elysium: The Final Cut", cover_url: PORTRAIT_ART, owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
+    game({ title: "Hades", cover_url: PORTRAIT_ART, playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: WIDE_ART }),
     game({ title: "Ori and the Blind Forest: Definitive Edition", owned_stores: ["steam", "gog"], playtime_minutes: 660, status: "finished", rating: 8 }),
     game({ title: "Outer Wilds", playtime_minutes: 0, status: "backlog" }),
     game({ title: "Divinity: Original Sin 2", owned_stores: ["gog"], playtime_minutes: 0, status: "backlog" }),
@@ -257,11 +272,16 @@ async function openBrowser(): Promise<Browser> {
   }
 }
 
+export type SetupTarget = "steam" | "gog" | "epic" | "igdb" | "itad";
 export interface Options {
   /** The width of the window. The height is almost never important. */
   width?: number;
   height?: number;
   theme?: "light" | "dark";
+  setup?: SetupTarget;
+  lockedSecretStore?: boolean;
+  emptyLibrary?: boolean;
+  reducedMotion?: boolean;
   /** What the bridge answers. What you do not give is filled in. */
   answers?: Partial<Answers>;
 }
@@ -287,12 +307,39 @@ export async function withTheApp<T>(
       viewport: { width: options.width ?? 1200, height: options.height ?? 800 },
       colorScheme: options.theme ?? "light",
     });
+    await page.emulateMedia({
+      reducedMotion: options.reducedMotion ? "reduce" : "no-preference",
+    });
     page.on("pageerror", (e) => errors.push(e.message));
 
     const answers: Answers = {
       ...defaultAnswers(options.answers?.library ?? exampleLibrary()),
       ...options.answers,
     };
+
+    if (options.emptyLibrary) {
+      answers.library = [];
+      answers.prices = [];
+      answers.review_queue = [];
+      answers.library_summary = {
+        owned: 0,
+        wishlist: 0,
+        games: 0,
+        pending_review: 0,
+      };
+    }
+    if (options.lockedSecretStore) {
+      answers.app_info = {
+        ...answers.app_info,
+        secrets_backend: "passphrase",
+        unlocked: false,
+      };
+    }
+    if (options.setup === "steam" || options.setup === "gog" || options.setup === "epic") {
+      answers.list_accounts = [];
+    }
+    if (options.setup === "igdb") answers.has_igdb_credentials = false;
+    if (options.setup === "itad") answers.has_itad_credentials = false;
 
     await page.addInitScript((data: Answers) => {
       let next = 0;
@@ -314,7 +361,20 @@ export async function withTheApp<T>(
     // The application does not render until it resolves all of the load
     // commands, thus to wait for the navigation is to wait for the seven of
     // them.
-    await page.getByRole("navigation").waitFor();
+    await page.locator(".setup-frame, .shell-navigation").first().waitFor();
+    if (options.setup === "gog" || options.setup === "epic") {
+      const storeName = options.setup === "gog" ? "GOG" : "Epic";
+      await page.getByRole("button", { name: "or start with " + storeName }).click();
+      await page.locator(".setup-frame").waitFor();
+    }
+    if (options.setup === "igdb" || options.setup === "itad") {
+      const providerName = options.setup === "igdb" ? "IGDB" : "ITAD";
+      await openUtilities(page);
+      await page
+        .getByRole("button", { name: "Configure " + providerName })
+        .click();
+      await page.locator(".setup-frame").waitFor();
+    }
 
     const result = await use(page);
     if (errors.length > 0) {

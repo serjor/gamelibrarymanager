@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 const APPS_URL = "https://isthereanydeal.com/apps/";
 
@@ -25,7 +26,13 @@ function systemCountry(): string {
  * screen is short; what is not clear is the country, and thus it has a field of
  * its own and the application does not assume it.
  */
-export function ItadSetup({ onConnected }: { onConnected: () => void }) {
+export function ItadSetup({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const [key, setKey] = useState("");
   const [country, setCountry] = useState(systemCountry);
   const [busy, setBusy] = useState(false);
@@ -46,7 +53,14 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Optional provider · Prices"
+      title="Bring price context to your wishlist"
+      description="ITAD can show the best current price and the historical low for each wished-for game."
+      trust="The ITAD key stays on this computer. Prices are optional, so the wishlist remains available without them."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Prices: IsThereAnyDeal</h2>
       <p className="hint">
         It gives a price to your wishlist: what each store asks today and the
@@ -104,6 +118,7 @@ export function ItadSetup({ onConnected }: { onConnected: () => void }) {
       <button type="submit" disabled={busy || !key || !country}>
         {busy ? "Examining…" : "Save"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

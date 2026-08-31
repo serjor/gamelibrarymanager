@@ -68,64 +68,74 @@ export function Wishlist({
   };
 
   return (
-    <section className="wishlist">
+    <section className="wishlist command-deck">
       {/* The bar is always shown, also with an empty list. It is where the only
           door to the ITAD key lives, and to hide it until there were wished-for
           games left a user who had not yet synchronised with no way to configure
           it. */}
-      <div className="wishlist-bar">
-        <p className="hint">
-          {list.length} wished for
-          {withPrice > 0 && ` · ${withPrice} with a price`}
-          {captured > 0 && ` · read on ${new Date(captured * 1000).toLocaleString()}`}
-        </p>
-        {hasItad ? (
-          // With an empty list there is nothing to ask about, thus the button
-          // does not appear: a button that can do nothing is a false promise.
-          list.length > 0 && (
-            <button disabled={busy} onClick={onRefresh}>
-              {busy ? "Reading prices…" : "Update the prices"}
-            </button>
-          )
-        ) : (
-          // With no key the list operates in the same way, only with no prices.
-          // The interface says that, and not as an error: it is not an error, in
-          // the same way as no IGDB is not an error.
-          <p className="hint">
-            No prices: an ITAD key is necessary, and it is free.{" "}
-            <button className="link" onClick={onSetup}>
-              Configure ITAD
-            </button>
+      <div className="wishlist-bar command-toolbar">
+        <div className="wishlist-summary">
+          <p className="hint" role="status">
+            {list.length} wished for
+            {withPrice > 0 && ` · ${withPrice} with a price`}
+            {captured > 0 && ` · read on ${new Date(captured * 1000).toLocaleString()}`}
           </p>
-        )}
+        </div>
+        <div className="wishlist-actions">
+          {hasItad ? (
+            // With an empty list there is nothing to ask about, thus the button
+            // does not appear: a button that can do nothing is a false promise.
+            list.length > 0 && (
+              <button disabled={busy} onClick={onRefresh}>
+                {busy ? "Reading prices…" : "Update the prices"}
+              </button>
+            )
+          ) : (
+            // With no key the list operates in the same way, only with no prices.
+            // The interface says that, and not as an error: it is not an error, in
+            // the same way as no IGDB is not an error.
+            <p className="hint">
+              No prices: an ITAD key is necessary, and it is free.{" "}
+              <button className="link" onClick={onSetup}>
+                Configure ITAD
+              </button>
+            </p>
+          )}
+        </div>
       </div>
 
       {error && <p role="alert">{error}</p>}
 
-      {list.length === 0 &&
-        (copies > 0 ? (
+      {list.length === 0 && (
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">
+            {copies > 0 ? "Records need matching" : "Wishlist is empty"}
+          </strong>
+          {copies > 0 ? (
           <p className="hint">
             The stores gave {copies} wished-for copies, but none of them has a
             record yet: this screen shows records, thus it is empty. Click
             "Match" and let it finish; then come back here.
           </p>
-        ) : (
+          ) : (
           <p className="hint">
             There is no game in your wishlist. Synchronise a store and this screen
             will show what you must still buy, with its price.
           </p>
-        ))}
+          )}
+        </div>
+      )}
 
       {list.length > 0 && (
         <div className="wishlist-viewport">
-          <table className="wishlist-table">
+          <table className="wishlist-table command-table" aria-label="Wishlist prices">
             <colgroup>
               <col />
               <col style={{ width: "9rem" }} />
               <col style={{ width: "7rem" }} />
               <col style={{ width: "9rem" }} />
               <col style={{ width: "8rem" }} />
-              <col style={{ width: "7rem" }} />
+              <col style={{ width: "8rem" }} />
             </colgroup>
             <thead>
               <tr>

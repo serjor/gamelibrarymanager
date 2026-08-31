@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 /**
  * Where the client credentials come from. GOG has no application registry: the
@@ -16,7 +17,13 @@ const GOGDL_AUTH_URL =
  * the program does not have to carry it inside, which is the only reason that
  * this screen exists and it is correct to say it clearly.
  */
-export function GogSetup({ onConnected }: { onConnected: () => void }) {
+export function GogSetup({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +44,14 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Step 1 · Connect a store"
+      title="Add GOG to the archive"
+      description="Use GOG's own sign-in page to bring another part of your collection into the local archive."
+      trust="Your GOG password stays on GOG's page. This application receives only the permission that GOG gives back."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Connect GOG</h2>
       <p className="hint">
         Your GOG password does not come through here: the GOG page will open for
@@ -89,6 +103,7 @@ export function GogSetup({ onConnected }: { onConnected: () => void }) {
       <button type="submit" disabled={busy || !clientId || !clientSecret}>
         {busy ? "Waiting for you to sign in…" : "Sign in to GOG"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

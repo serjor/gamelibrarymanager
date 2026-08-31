@@ -109,7 +109,14 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
   };
 
   if (items.length === 0) {
-    return <p className="hint">There is nothing to review.</p>;
+    return (
+      <section className="review-screen command-deck empty-screen">
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">Review queue is clear</strong>
+          <p className="hint">There is nothing to review. Synchronise a store or run Match when you have new records.</p>
+        </div>
+      </section>
+    );
   }
 
   const open = (url: string) => {
@@ -202,7 +209,7 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
 
   const table = (rows: ReviewItem[]) => (
     <div className="review-viewport">
-      <table className="review">
+      <table className="review command-table" aria-label="Review matches">
         <colgroup>
           <col />
           <col style={{ width: "5.5rem" }} />
@@ -227,13 +234,17 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
   );
 
   return (
-    <section className="review-screen">
+    <section className="review-screen command-deck">
       <h2>To review ({items.length})</h2>
       {error && <p role="alert">{error}</p>}
 
       {decisions.length > 0 && (
-        <p className="hint sticky">
-          <button disabled={busy !== null} onClick={() => void confirmBatch()}>
+        <div className="hint sticky review-command-bar" role="region" aria-label="Review actions">
+          <button
+            className="primary-action"
+            disabled={busy !== null}
+            onClick={() => void confirmBatch()}
+          >
             {busy === "batch"
               ? "Confirming…"
               : `Confirm ${decisions.length} match${decisions.length === 1 ? "" : "es"}`}
@@ -246,13 +257,13 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
           >
             clear selection
           </button>
-        </p>
+        </div>
       )}
 
       {ties.length > 0 && (
         <>
           <h3>Equal scores ({ties.length})</h3>
-          <p className="hint">
+          <p className="hint review-guidance">
             The best candidates have the same score. Almost always they are the
             same record repeated in IGDB or editions of the same game, but not
             always: two different games can have the same name, and thus the
@@ -270,7 +281,7 @@ export function ReviewQueue({ items, onResolved }: { items: ReviewItem[]; onReso
               with no words is the way to let somebody confirm one hundred and
               fifty matches while they think that they confirm only the matches
               that they touched. */}
-          <p className="hint">
+          <p className="hint review-guidance">
             Here one candidate wins clearly, thus it comes already selected.
             Examine the "will match with" column and change what is not correct:
             nothing is written until you confirm.

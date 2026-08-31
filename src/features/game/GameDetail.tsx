@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/api";
 import { STATUSES, STATUS_LABEL } from "../../lib/status";
 import { isNoLongerInStore } from "../library/filters";
+import { GameArtwork } from "./GameArtwork";
 
 /**
  * Beside the table, or on top of the covers.
@@ -78,6 +79,7 @@ export function GameDetail({
 
   const card = (
     <>
+      {variant === "inspector" && <GameArtwork row={row} className="detail-art" />}
       <header>
         <h2 id="card-title">{row.title}</h2>
         <button className="link" onClick={close} aria-label="Close record">
@@ -167,11 +169,7 @@ export function GameDetail({
             inspector does not: the Steam header or the GOG logo, cut to the same
             box so that the record always starts at the same height.
             Decoration: the title is immediately below. */}
-        {row.store_cover_url ? (
-          <img className="sheet-art" src={row.store_cover_url} alt="" />
-        ) : (
-          <div className="sheet-art sheet-art-empty" aria-hidden="true" />
-        )}
+        <GameArtwork row={row} surface="wide" className="sheet-art" />
         <div className="sheet-body card">{card}</div>
       </div>
     </dialog>

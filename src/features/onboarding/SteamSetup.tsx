@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 const KEY_URL = "https://steamcommunity.com/dev/apikey";
 const ID_URL = "https://steamid.io";
@@ -11,7 +12,13 @@ const ID_URL = "https://steamid.io";
  * each value is for and examines the values against the API immediately: you see
  * a copy-and-paste error here and not as an empty library.
  */
-export function SteamSetup({ onConnected }: { onConnected: () => void }) {
+export function SteamSetup({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const [apiKey, setApiKey] = useState("");
   const [steamId, setSteamId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +48,14 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Step 1 · Connect a store"
+      title="Bring your collection together"
+      description="Connect one store to start your local game archive. You can add the other stores later."
+      trust="Your Steam API key stays on this computer. The application never asks for your Steam password."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Connect Steam</h2>
       <p className="hint">
         The key is yours and it does not leave this computer. And because it is
@@ -81,6 +95,7 @@ export function SteamSetup({ onConnected }: { onConnected: () => void }) {
       <button type="submit" disabled={busy || !apiKey || !steamId}>
         {busy ? "Examining the key…" : "Connect"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

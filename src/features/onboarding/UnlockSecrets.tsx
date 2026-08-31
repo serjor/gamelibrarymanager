@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { api, errorMessage } from "../../lib/api";
+import { SetupFrame } from "./SetupFrame";
 
 /**
  * It appears only on machines with no keyring: containers, minimal desktops,
  * remote sessions. To find that when you keep the first key would be the worst
  * moment to find it, thus the application detects it at the start.
  */
-export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
+export function UnlockSecrets({
+  onUnlocked,
+  onBack,
+}: {
+  onUnlocked: () => void;
+  onBack?: () => void;
+}) {
   const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +33,14 @@ export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
   };
 
   return (
-    <form onSubmit={submit}>
+    <SetupFrame
+      step="Before first use · Local security"
+      title="Unlock your local secret store"
+      description="Enter the passphrase that protects credentials on this machine."
+      trust="The passphrase decrypts local credentials. It is never sent to a store and the application does not keep a copy."
+      onBack={onBack}
+    >
+      <form onSubmit={submit}>
       <h2>Passphrase of the store</h2>
       <p className="hint">
         This system has no keyring in which to keep the keys, thus they are
@@ -49,6 +63,7 @@ export function UnlockSecrets({ onUnlocked }: { onUnlocked: () => void }) {
       <button type="submit" disabled={busy || passphrase.length < 8}>
         {busy ? "Opening…" : "Open the store"}
       </button>
-    </form>
+      </form>
+    </SetupFrame>
   );
 }

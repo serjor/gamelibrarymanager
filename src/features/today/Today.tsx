@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { LibraryRow } from "../../lib/api";
 import { STATUS_LABEL } from "../../lib/status";
+import { GameArtwork } from "../game/GameArtwork";
 import { GameDetail } from "../game/GameDetail";
 import { WIDTH, COVER_HEIGHT } from "../library/LibraryWall";
 import { featured, shelves } from "./shelves";
@@ -45,10 +46,15 @@ export function Today({
 
   if (proposal === null) {
     return (
-      <p className="hint">
-        There is not yet an owned game to propose. Synchronise a store and this
-        screen will show what to play.
-      </p>
+      <section className="today empty-screen">
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">Nothing to play yet</strong>
+          <p className="hint">
+            There is not yet an owned game to propose. Synchronise a store and
+            this screen will show what to play.
+          </p>
+        </div>
+      </section>
     );
   }
 
@@ -56,17 +62,12 @@ export function Today({
 
   return (
     <section className="today">
-      <article className="featured">
+      <article className={game.store_cover_url ? "featured has-backdrop" : "featured"}>
+        {game.store_cover_url && (
+          <GameArtwork row={game} surface="wide" className="featured-backdrop" />
+        )}
         <div className="featured-art">
-          {game.cover_url ? (
-            <img src={game.cover_url} alt="" />
-          ) : (
-            // Decoration: the title is immediately beside it, and to repeat it
-            // would make a screen reader say it two times.
-            <span className="cover-placeholder" aria-hidden="true">
-              {game.title}
-            </span>
-          )}
+          <GameArtwork row={game} />
         </div>
 
         <div className="featured-text">
@@ -99,13 +100,7 @@ export function Today({
             {shelf.games.map((row) => (
               <li key={row.game_id}>
                 <button className="tile" onClick={() => setOpened(row.game_id)}>
-                  {row.cover_url ? (
-                    <img src={row.cover_url} alt="" loading="lazy" />
-                  ) : (
-                    <span className="cover-placeholder" aria-hidden="true">
-                      {row.title}
-                    </span>
-                  )}
+                  <GameArtwork row={row} loading="lazy" />
                   <span className="tile-title">{row.title}</span>
                   <span className="hint">{row.owned_stores.join(" · ")}</span>
                 </button>
