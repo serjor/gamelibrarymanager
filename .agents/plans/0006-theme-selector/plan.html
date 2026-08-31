@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Plan — Theme preference</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8fafc;--text:#172033;--muted:#667085;
+  --line:#dce2ea;--accent:#3157d5;--accent-soft:#edf1ff;--good:#16734b;
+  --good-soft:#e9f7f0;--warn:#9a6700;--warn-soft:#fff6d8;--danger:#b42318;
+  --danger-soft:#fff0ee;--code:#eef1f5;--shadow:0 12px 35px rgba(23,32,51,.08)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#10141d;--surface:#171d28;--surface-2:#1d2532;--text:#edf1f7;--muted:#a6b0c0;
+    --line:#303a49;--accent:#91a7ff;--accent-soft:#222d57;--good:#70d6aa;
+    --good-soft:#15382c;--warn:#f0c46b;--warn-soft:#3c3015;--danger:#ff9b91;
+    --danger-soft:#49231f;--code:#242d3a;--shadow:0 14px 38px rgba(0,0,0,.22)
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:clip}
+main{width:100%;max-width:74rem;min-width:0;margin:0 auto;padding:2rem 1.25rem 5rem}
+a{color:var(--accent);text-decoration-thickness:.08em;text-underline-offset:.18em}
+a:hover{text-decoration-thickness:.14em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:3px}
+header,section,.phase{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+header{padding:2rem}
+section{padding:1.5rem;margin-top:1rem}
+.phase{padding:0;margin-top:1rem;overflow:hidden}
+.eyebrow{margin:0 0 .45rem;color:var(--accent);font-size:.76rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(1.85rem,5vw,3.15rem);line-height:1.08;letter-spacing:-.035em;margin:.15rem 0 .8rem;max-width:18ch}
+h2{font-size:1.32rem;line-height:1.25;margin:0 0 .85rem;letter-spacing:-.015em}
+h3{font-size:1.03rem;line-height:1.3;margin:0 0 .45rem}
+h4{font-size:.92rem;line-height:1.35;margin:0 0 .35rem}
+p{margin:.4rem 0}
+ul,ol{margin:.55rem 0;padding-left:1.2rem}
+li{margin:.3rem 0}
+.lede{max-width:68ch;font-size:1.07rem;color:var(--muted);margin:0}
+.meta,.stat-grid,.decision-grid,.impact-grid,.phase-facts,.triptych{display:grid;gap:.75rem}
+.meta{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:1.4rem}
+.meta div,.stat,.decision,.impact,.fact,.triptych article{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+dt,.label{color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+dd{margin:.18rem 0 0;font-weight:650}
+.status{display:inline-flex;align-items:center;gap:.35rem;border:1px solid currentColor;border-radius:999px;padding:.15rem .52rem;font-size:.75rem;font-weight:750;white-space:nowrap}
+.status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:currentColor}
+.review{color:var(--warn);background:var(--warn-soft)}
+.planned{color:var(--accent);background:var(--accent-soft)}
+.active{color:var(--warn);background:var(--warn-soft)}
+.done{color:var(--good);background:var(--good-soft)}
+.blocked{color:var(--danger);background:var(--danger-soft)}
+nav{position:sticky;top:.7rem;z-index:2;max-width:74rem;margin:1rem auto;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+nav ul{display:flex;gap:.4rem .95rem;list-style:none;margin:0;padding:0;overflow-x:auto}
+nav li{margin:0;white-space:nowrap}
+nav a{color:var(--muted);font-size:.84rem;font-weight:650;text-decoration:none}
+nav a:hover{color:var(--accent)}
+.decision-grid{grid-template-columns:1.2fr .8fr;margin-top:1rem}
+.decision{padding:1rem}
+.decision.primary{background:var(--accent-soft);border-color:var(--accent)}
+.decision strong{display:block;font-size:1.18rem;margin:.15rem 0 .35rem}
+.decision p,.impact p{color:var(--muted)}
+.callout{border-left:4px solid var(--accent);border-radius:8px;background:var(--accent-soft);padding:.85rem 1rem;margin-top:1rem}
+.callout.warning{border-color:var(--warn);background:var(--warn-soft)}
+.stat-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin:.8rem 0}
+.stat strong{display:block;font-size:1.08rem;margin-top:.2rem}
+.next-action{display:flex;gap:.7rem;align-items:flex-start;margin-top:.8rem}
+.next-action strong{white-space:nowrap}
+.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.impact{padding:1rem}
+.impact h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.no-change{color:var(--good);font-size:.75rem;font-weight:750;text-transform:uppercase}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.out{border-left:3px solid var(--danger);padding-left:1rem}
+table{border-collapse:separate;border-spacing:0;width:100%;max-width:100%;display:block;overflow-x:auto;margin:.65rem 0}
+thead,tbody{display:table;width:100%;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:.62rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--surface-2);color:var(--muted);font-size:.73rem;letter-spacing:.05em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+code{background:var(--code);border-radius:4px;padding:.1rem .32rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:.8rem 1rem;overflow-x:auto;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+details{border-top:1px solid var(--line);margin-top:.9rem;padding-top:.8rem}
+summary{cursor:pointer;color:var(--accent);font-weight:700}
+summary::marker{color:var(--accent)}
+.phase-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.phase-number{color:var(--muted);font-size:.76rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.phase-header h3{font-size:1.2rem;margin:.12rem 0 0}
+.phase-body{padding:1.3rem 1.4rem}
+.phase-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:1rem}
+.fact{padding:.7rem .8rem}
+.fact strong{display:block;margin-top:.18rem}
+.plain-impact{font-size:1.02rem;margin:.85rem 0 1rem}
+.change-list td:first-child{width:30%}
+.gate{border:1px solid var(--good);background:var(--good-soft);border-radius:9px;padding:.85rem 1rem;margin:1rem 0}
+.gate h4{color:var(--good)}
+.triptych{grid-template-columns:repeat(3,minmax(0,1fr))}
+.triptych article{padding:.85rem}
+.execution-record{background:var(--surface-2);border-radius:9px;padding:0 .9rem .8rem}
+.execution-record dl{display:grid;grid-template-columns:9rem 1fr;gap:.45rem .8rem;margin:.75rem 0 0}
+.execution-record dd{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}
+.risk-high{color:var(--danger);font-weight:750}
+.risk-med{color:var(--warn);font-weight:750}
+.checks{list-style:none;padding:0}
+.checks li{position:relative;padding-left:1.55rem}
+.checks li::before{content:"□";position:absolute;left:.1rem;color:var(--accent);font-weight:800}
+.guardrails{border-left:4px solid var(--danger)}
+footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+@media(max-width:760px){
+  main{padding:1rem .75rem 3rem}
+  header,section{padding:1.15rem}
+  .meta,.stat-grid,.decision-grid,.impact-grid,.scope-grid,.phase-facts,.triptych{grid-template-columns:1fr}
+  nav{top:0;margin:.6rem .75rem;border-radius:9px}
+  .phase-header{padding:1rem;flex-direction:column}
+  .phase-body{padding:1rem}
+  .execution-record dl{grid-template-columns:1fr;gap:.1rem}
+  thead,tbody{min-width:42rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f5f5f5;--text:#111;--muted:#555;--line:#ccc;--shadow:none}
+  body{font-size:10pt}
+  main{max-width:none;padding:0}
+  nav{display:none}
+  header,section,.phase{box-shadow:none;break-inside:avoid}
+  .phase{break-before:page}
+  details{display:block}
+  details>*{display:block}
+  summary{display:none}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<main>
+
+<header id="summary">
+  <p class="eyebrow">Change plan · Size M</p>
+  <h1>Theme preference — light, dark, or system</h1>
+  <p class="lede">The application gives the user a choice of Light, Dark, or System. The choice applies at once and stays after an application restart.</p>
+  <p class="muted">Issue <a href="https://github.com/serjor/gamelibrarymanager/issues/3">#3</a>: <code>Selector de tema claro, oscuro, sistema</code>.</p>
+
+  <dl class="meta">
+    <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
+    <div><dt>Branch</dt><dd><code>t3code/implement-issue-three</code></dd></div>
+    <div><dt>Updated</dt><dd>2026-08-31</dd></div>
+    <div><dt>Status</dt><dd><span class="status done">Complete · implementation done</span></dd></div>
+  </dl>
+
+  <div class="decision-grid">
+    <article class="decision primary">
+      <span class="label">Recommendation</span>
+      <strong>Proceed with two production-safe phases</strong>
+      <p>The change stays in the React shell and the stylesheet. It needs no database change, Tauri command, or new package.</p>
+    </article>
+    <article class="decision">
+      <span class="label">Main tradeoff</span>
+      <strong>The preference stays outside library data</strong>
+      <p>The choice stays in WebView storage. It does not enter the SQLite backup, JSON export, or CSV export.</p>
+    </article>
+  </div>
+
+  <aside class="callout"><strong>Expected result.</strong> The user selects a theme in Utilities. Light and Dark stay fixed. System follows the operating system.</aside>
+</header>
+
+<nav aria-label="Plan contents">
+  <ul>
+    <li><a href="#execution-status">Status</a></li>
+    <li><a href="#impact">Impact</a></li>
+    <li><a href="#scope">Scope</a></li>
+    <li><a href="#change">Change</a></li>
+    <li><a href="#decisions">Decisions</a></li>
+    <li><a href="#phases">Phases</a></li>
+    <li><a href="#compatibility">Compatibility</a></li>
+    <li><a href="#risks">Risks</a></li>
+    <li><a href="#verification">Verification</a></li>
+  </ul>
+</nav>
+
+<section id="execution-status">
+  <p class="eyebrow">Living document</p>
+  <h2>Execution status</h2>
+  <div class="stat-grid">
+    <article class="stat"><span class="label">Progress</span><strong>2 of 2 phases</strong></article>
+    <article class="stat"><span class="label">Active phase</span><strong>None</strong></article>
+    <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
+    <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
+  </div>
+  <p class="next-action"><strong>Next action:</strong> <span>Review the pushed branch.</span></p>
+  <p class="callout warning"><strong>Planning environment.</strong> The planning session did not run <code>bun</code> or <code>cargo</code> because these commands are not installed. The implementation session must run the gates in a complete environment.</p>
+
+  <table>
+    <thead><tr><th>Phase</th><th>Status</th><th>Production state after completion</th></tr></thead>
+    <tbody>
+      <tr><td>1. Make the active theme explicit</td><td><span class="status done">Done</span></td><td>The current System behavior stays usable. The palette has one explicit active-mode source.</td></tr>
+      <tr><td>2. Expose and prove the preference</td><td><span class="status done">Done</span></td><td>Utilities gives the user three choices. The application stores and applies the choice.</td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Protocol for every implementation session</summary>
+    <ol>
+      <li>Read this entire HTML.</li>
+      <li>Examine the evidence for every done phase.</li>
+      <li>Compare the recorded repository state with the current worktree.</li>
+      <li>Select the first phase that is not done. Do not skip an active or blocked phase.</li>
+      <li>Mark the selected phase <code>in_progress</code> and record the session start.</li>
+      <li>Update the dashboard and phase record before and after the work.</li>
+      <li>Keep the approved specification unchanged. Record actual results separately.</li>
+      <li>Stop for user direction when a discovery changes scope, a contract, a risk, phase boundaries, or the outcome.</li>
+    </ol>
+  </details>
+</section>
+
+<section id="impact">
+  <p class="eyebrow">Decision context</p>
+  <h2>What changes and why it matters</h2>
+  <div class="impact-grid">
+    <article class="impact">
+      <h3>Behavior</h3>
+      <p><strong>Change:</strong> The user selects Light, Dark, or System in Utilities.</p>
+      <p><strong>Why it matters:</strong> The user controls the visual mode without changing library data.</p>
+      <p><strong>Mechanism:</strong> <code>App</code> owns the preference and gives it to <code>UtilityPanel</code>. Evidence: <code>src/App.tsx:46-70</code> and <code>src/App.tsx:326-364</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Visual system</h3>
+      <p><strong>Change:</strong> The stylesheet accepts an explicit active mode.</p>
+      <p><strong>Why it matters:</strong> An explicit choice must override the operating system without a second palette in a component.</p>
+      <p><strong>Mechanism:</strong> The root element receives <code>data-theme="light"</code> or <code>data-theme="dark"</code>. The token blocks set <code>color-scheme</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Code</h3>
+      <p><strong>Change:</strong> The shell gains one theme module and one labeled control.</p>
+      <p><strong>Why it matters:</strong> The existing shell already owns maintenance controls. The feature does not need a new settings layer.</p>
+      <p><strong>Mechanism:</strong> Add <code>src/features/shell/theme.ts</code>. Extend <code>UtilityPanelProps</code> in <code>src/features/shell/UtilityPanel.tsx:16-33</code>.</p>
+    </article>
+    <article class="impact">
+      <h3>Data and contracts <span class="no-change">No change</span></h3>
+      <p>SQLite tables, Rust commands, store credentials, library exports, and <code>LibraryRow</code> stay unchanged.</p>
+      <p>The preference uses one local WebView key. It is not library data and has no server consumer.</p>
+    </article>
+    <article class="impact">
+      <h3>Accessibility</h3>
+      <p><strong>Change:</strong> Utilities gains a native select with a visible label.</p>
+      <p><strong>Why it matters:</strong> The control keeps keyboard use, native focus, and screen-reader names.</p>
+      <p><strong>Mechanism:</strong> Use a label tied to <code>utility-theme</code>. Keep the control available while a data operation runs.</p>
+    </article>
+    <article class="impact">
+      <h3>Developer workflow</h3>
+      <p><strong>Change:</strong> Functional and visual tests cover explicit modes, storage, and System changes.</p>
+      <p><strong>Why it matters:</strong> The current visual harness tests operating-system modes but not a user choice.</p>
+      <p><strong>Mechanism:</strong> Extend <code>test/visual/harness.ts:275-312</code> and <code>test/visual/look.ts:716-830</code>.</p>
+    </article>
+  </div>
+</section>
+
+<section id="scope">
+  <p class="eyebrow">Boundaries</p>
+  <h2>Approved scope</h2>
+  <div class="scope-grid">
+    <article>
+      <h3>In</h3>
+      <ul>
+        <li>Three preferences: <code>system</code>, <code>light</code>, and <code>dark</code>.</li>
+        <li><code>system</code> as the first-use preference.</li>
+        <li>Immediate application and persistence across application restarts.</li>
+        <li>One Appearance section inside the existing Utilities dialog.</li>
+        <li>System changes that update the active mode while the application stays open.</li>
+        <li>Theme application on the library, Utilities, setup, loading, and unlock surfaces.</li>
+        <li>Functional tests, visual tests, and an update to the existing color-token convention.</li>
+      </ul>
+    </article>
+    <article class="out">
+      <h3>Out</h3>
+      <ul>
+        <li>A SQLite setting, migration, Rust command, or Tauri plugin.</li>
+        <li>Theme data in the database backup or JSON and CSV exports.</li>
+        <li>A selector on setup or unlock screens. The chosen theme still applies there.</li>
+        <li>Custom colors, custom themes, density choices, or account-specific themes.</li>
+        <li>Cloud sync, cross-device sync, and multi-window theme state.</li>
+        <li>New UI dependencies, a new settings framework, or a new palette.</li>
+        <li>Changes to storage, connectors, metadata, domain rules, or the library contract.</li>
+        <li>Edits to plans <code>0001</code> through <code>0005</code>.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section id="change">
+  <p class="eyebrow">Current to target</p>
+  <h2>What must become true</h2>
+  <table>
+    <thead><tr><th>Result</th><th>Current</th><th>Target</th><th>What moves</th></tr></thead>
+    <tbody>
+      <tr><td>User choice</td><td>The stylesheet follows <code>prefers-color-scheme</code>. No user choice exists.</td><td>The user chooses Light, Dark, or System in Utilities.</td><td><code>src/App.tsx</code>, <code>src/features/shell/UtilityPanel.tsx</code></td></tr>
+      <tr><td>Theme source</td><td>Light tokens live in <code>:root</code>. Dark tokens live in one media block.</td><td>The active mode lives in <code>html[data-theme]</code>. Each mode has one token block.</td><td><code>src/styles.css</code>, <code>src/features/shell/theme.ts</code></td></tr>
+      <tr><td>System mode</td><td>The browser applies system changes through CSS media evaluation.</td><td>The theme module observes <code>matchMedia("(prefers-color-scheme: dark)")</code> when the preference is System.</td><td><code>src/features/shell/theme.ts</code></td></tr>
+      <tr><td>Startup</td><td>The application has no preference bootstrap.</td><td><code>main.tsx</code> applies the stored preference before React creates the root.</td><td><code>src/main.tsx</code></td></tr>
+      <tr><td>Evidence</td><td>The visual harness selects only the browser color scheme.</td><td>The harness seeds a preference, selects each option, reloads, and changes the emulated system mode.</td><td><code>test/visual/harness.ts</code>, <code>test/visual/look.ts</code></td></tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>Current-state evidence</summary>
+    <table>
+      <thead><tr><th>Observed fact</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>The root defines both palettes. The dark palette is selected only by <code>prefers-color-scheme: dark</code>.</td><td><code>src/styles.css:6-9</code> and <code>src/styles.css:97-142</code> · <code>:root</code></td></tr>
+        <tr><td><code>App</code> owns application state but declares no theme preference.</td><td><code>src/App.tsx:46-70</code> · <code>App</code></td></tr>
+        <tr><td><code>App</code> returns loading, unlock, and setup surfaces before it returns <code>AppShell</code>.</td><td><code>src/App.tsx:232-275</code> and <code>src/App.tsx:280-307</code> · <code>App</code></td></tr>
+        <tr><td>The shell gives the existing utility props to the panel. The panel contains operations, accounts, providers, connectors, and export.</td><td><code>src/App.tsx:326-364</code> and <code>src/features/shell/UtilityPanel.tsx:89-280</code></td></tr>
+        <tr><td>The utility prop contract has no theme fields.</td><td><code>src/features/shell/UtilityPanel.tsx:16-33</code> · <code>UtilityPanelProps</code></td></tr>
+        <tr><td>The shell test asserts that current utility actions stay reachable.</td><td><code>src/features/shell/AppShell.test.tsx:26-87</code> · <code>AppShell</code></td></tr>
+        <tr><td>The visual harness maps its <code>theme</code> option to the browser color scheme.</td><td><code>test/visual/harness.ts:275-312</code> · <code>Options</code>, <code>withTheApp</code></td></tr>
+        <tr><td>The visual suite measures both themes for setup, contrast, and focus.</td><td><code>test/visual/look.ts:121-177</code> and <code>test/visual/look.ts:716-830</code></td></tr>
+        <tr><td>The existing UI convention says that the dark token variant lives in the media block.</td><td><code>docs/ui/tokens-as-the-only-source-of-colour.md:5-9</code></td></tr>
+        <tr><td>The completed interface plan placed a persistent theme selector outside its scope.</td><td><code>.agents/plans/0005-gamer-interface-redesign/plan.html:287-289</code> and <code>:349</code></td></tr>
+        <tr><td>The package has no theme or preference dependency.</td><td><code>package.json:15-38</code> · dependencies and devDependencies</td></tr>
+      </tbody>
+    </table>
+  </details>
+</section>
+
+<section id="decisions">
+  <p class="eyebrow">Closed decisions</p>
+  <h2>Do not relitigate</h2>
+  <table>
+    <thead><tr><th>Question</th><th>Decision</th><th>Reason</th><th>Rejected alternative</th></tr></thead>
+    <tbody>
+      <tr><td>Where does the selector live?</td><td>In the Appearance section of Utilities.</td><td>Utilities is the existing maintenance surface. This choice avoids a second settings surface. The stored mode still applies to setup and unlock screens because the theme bootstrap runs before their early returns.</td><td>A selector on every surface. It duplicates controls and expands the entry screens.</td></tr>
+      <tr><td>Where does the preference persist?</td><td>In <code>localStorage</code> under <code>gamelibrarymanager.theme</code>.</td><td>The preference changes the interface, not the library. This choice needs no migration, SQL, command, secret, or export change.</td><td>SQLite persistence. It changes the data layer for a value that the library does not use.</td></tr>
+      <tr><td>What is the first-use value?</td><td><code>system</code>.</td><td>This keeps the current first-use behavior. The user can select an explicit mode at once.</td><td>Light or Dark as the default. It ignores the operating-system choice on first use.</td></tr>
+      <tr><td>What does System do?</td><td>It follows the operating-system color scheme while the application stays open.</td><td>The theme module listens to <code>matchMedia</code>. It changes only the effective mode and does not change the stored preference.</td><td>Read the operating-system mode only at startup. That makes System stale until the next restart.</td></tr>
+      <tr><td>What control shape applies?</td><td>A native <code>&lt;select&gt;</code> with the label Theme.</td><td>Three mutually exclusive values fit a native control. The control supplies keyboard and assistive-technology behavior.</td><td>A segmented button group. It adds state styling and more narrow-window cases.</td></tr>
+      <tr><td>Where does the active mode live?</td><td>In <code>document.documentElement.dataset.theme</code> as <code>light</code> or <code>dark</code>.</td><td>The stylesheet has one active-mode source. The stored System value stays in React state and local storage.</td><td>Keep the media block and add a second explicit dark block. That duplicates the dark palette and weakens the token convention.</td></tr>
+      <tr><td>How does startup avoid a flash?</td><td>Call <code>bootstrapTheme()</code> in <code>src/main.tsx</code> before React renders.</td><td>The root receives the effective mode before the first application surface appears.</td><td>Apply the mode only in a React effect. The first paint can show the wrong mode.</td></tr>
+      <tr><td>What happens when WebView storage is unavailable?</td><td>Use System as the safe read fallback. Apply the current selection for the session if a write fails.</td><td>A storage problem must not hide or block the library. Theme selection has no data-loss consequence.</td><td>Show a blocking error. It stops a local visual preference from becoming a library problem.</td></tr>
+      <tr><td>Does this edit the completed interface plan?</td><td>No. This plan adds only the selector that issue #3 requests.</td><td>Plan <code>0005</code> remains an immutable record. The issue gives a later product decision for the previously excluded selector.</td><td>Edit plan <code>0005</code>. That would rewrite a past decision and its execution record.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="phases">
+  <p class="eyebrow">Executable plan</p>
+  <h2>Ordered production-safe phases</h2>
+  <p class="muted">Each phase leaves the repository usable. Phase 1 keeps the current System result. Phase 2 adds the user control.</p>
+
+  <article class="phase" id="phase-1">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 1 of 2</span><h3>Make the active theme explicit</h3></div>
+      <span class="status done">Done</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>None</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>None</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>Medium</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>Existing System behavior stays usable</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> The application gets one explicit source for its active theme. The user sees no new control in this phase. The existing light and dark results must stay the same.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/features/shell/theme.ts</code> · new module</td><td>Define <code>ThemePreference</code>, <code>EffectiveTheme</code>, <code>THEME_PREFERENCES</code>, and <code>THEME_STORAGE_KEY</code>. Add <code>readThemePreference</code>, <code>persistThemePreference</code>, <code>resolveEffectiveTheme</code>, <code>applyTheme</code>, <code>bootstrapTheme</code>, and <code>useThemePreference</code>. Treat a missing, invalid, or unavailable stored value as <code>system</code>. Treat a storage write error as a session-only choice.</td></tr>
+          <tr><td><code>src/main.tsx</code> · startup</td><td>Call <code>bootstrapTheme()</code> before <code>ReactDOM.createRoot</code>. This gives the root element an effective <code>data-theme</code> before React shows a surface.</td></tr>
+          <tr><td><code>src/styles.css</code> · token blocks at <code>:6-142</code></td><td>Keep the light values in <code>:root</code>. Set <code>color-scheme: light</code> there. Move the dark values to <code>:root[data-theme="dark"]</code> and set <code>color-scheme: dark</code> there. Remove the palette selection from <code>@media (prefers-color-scheme: dark)</code>. Keep the reduced-motion media rules.</td></tr>
+          <tr><td><code>src/features/shell/theme.test.ts</code> · new tests</td><td>Test accepted preferences, invalid storage, safe storage fallback, effective-mode resolution, root attribute application, and System updates from a changed media query.</td></tr>
+          <tr><td><code>docs/ui/tokens-as-the-only-source-of-colour.md</code></td><td>Update the convention and its examples. State that the active theme module resolves System and that the root data attribute selects the token block. Keep the rule that components use tokens and do not declare colors.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>With no stored preference, a light operating-system mode gives <code>data-theme="light"</code>. A dark operating-system mode gives <code>data-theme="dark"</code>.</li>
+          <li>An explicit stored value resolves before the first React render.</li>
+          <li><code>color-scheme</code> matches the active mode. Existing contrast and focus measurements stay green in both modes.</li>
+          <li>Run <code>bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test</code>.</li>
+          <li>Run <code>bun run build &amp;&amp; bun run visual</code>.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Merge the foundation after the frontend and visual gates pass. No migration runs.</p></article>
+        <article><h4>Observe</h4><p>Open the application with light and dark operating-system modes. Examine the first visible surface and the native control colors.</p></article>
+        <article><h4>Rollback</h4><p>Revert this phase before Phase 2 starts. The previous media-based palette returns with no data change.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · done</summary>
+        <dl>
+          <dt>Started</dt><dd>2026-08-31T19:14:52Z.</dd>
+          <dt>Completed</dt><dd>2026-08-31T19:38:01Z.</dd>
+          <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
+          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Actual files</dt><dd><code>src/features/shell/theme.ts</code>, <code>src/features/shell/theme.test.ts</code>, <code>src/main.tsx</code>, <code>src/styles.css</code>, and <code>docs/ui/tokens-as-the-only-source-of-colour.md</code>.</dd>
+          <dt>Commands / results</dt><dd>Type-check, lint, 99 frontend tests, build, and the visual suite passed. The commands used the temporary <code>npx --yes bun</code> wrapper because Bun is not installed globally.</dd>
+          <dt>Deviations</dt><dd>None.</dd>
+          <dt>New decisions</dt><dd>None.</dd>
+          <dt>Remaining risks</dt><dd>The selector, storage across restart, System changes, and native control colors need the Phase 2 gate.</dd>
+          <dt>Handoff</dt><dd>Phase 2 is active. Add the Utilities control and integration coverage.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+
+  <article class="phase" id="phase-2">
+    <div class="phase-header">
+      <div><span class="phase-number">Phase 2 of 2</span><h3>Expose and prove the preference</h3></div>
+      <span class="status done">Done</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-facts">
+        <div class="fact"><span class="label">Depends on</span><strong>Phase 1</strong></div>
+        <div class="fact"><span class="label">Visible effect</span><strong>User theme selector</strong></div>
+        <div class="fact"><span class="label">Risk</span><strong>Medium</strong></div>
+        <div class="fact"><span class="label">Production</span><strong>All existing library paths stay usable</strong></div>
+      </div>
+
+      <p class="plain-impact"><strong>Impact:</strong> The user can control the theme without leaving the collection workflow. System remains live after a change to the operating-system mode. The preference does not affect sync, matching, prices, or exports.</p>
+
+      <h4>Exact changes</h4>
+      <table class="change-list">
+        <thead><tr><th>File / symbol</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>src/App.tsx</code> · <code>App</code></td><td>Call <code>useThemePreference</code> at the top of <code>App</code>, before the loading, unlock, and setup returns. Pass <code>theme</code> and <code>onThemeChange</code> inside the existing <code>utility</code> object.</td></tr>
+          <tr><td><code>src/features/shell/UtilityPanel.tsx</code> · <code>UtilityPanelProps</code>, <code>UtilityPanel</code></td><td>Add the theme value and callback. Add an Appearance section with a visible <code>Theme</code> label and a native <code>select</code> with <code>System</code>, <code>Light</code>, and <code>Dark</code>. Keep this select enabled while another operation runs because it does not change data.</td></tr>
+          <tr><td><code>src/features/shell/AppShell.test.tsx</code> · <code>AppShell</code> test</td><td>Give the utility fixture the new props. Assert that the dialog has the labeled theme select and that a selection calls the parent callback.</td></tr>
+          <tr><td><code>src/App.test.tsx</code> · application tests</td><td>Clear the theme key and root attribute in test setup. Test the first-use System value, explicit selection, root-mode update, persisted selection, invalid-storage fallback, and the fact that theme selection does not call a library command.</td></tr>
+          <tr><td><code>test/visual/harness.ts</code> · <code>Options</code>, <code>withTheApp</code></td><td>Keep <code>theme</code> as the operating-system color scheme. Add <code>themePreference?: ThemePreference</code>. Seed <code>THEME_STORAGE_KEY</code> before the bundle loads when a preference is given.</td></tr>
+          <tr><td><code>test/visual/look.ts</code> · theme scenarios</td><td>Add checks for explicit Light under a dark system mode and explicit Dark under a light system mode. Open Utilities, select all three options, reload the page, and make sure the stored value remains. After System is selected, change the emulated media mode and measure the root attribute and native <code>color-scheme</code>. Keep the existing contrast, focus, setup, and narrow-dialog checks.</td></tr>
+        </tbody>
+      </table>
+
+      <aside class="gate">
+        <h4>Production gate</h4>
+        <ul class="checks">
+          <li>The Utilities dialog exposes one accessible select named <code>Theme</code> with the three approved values.</li>
+          <li>Selecting Light or Dark changes the active mode at once and stores the selected value.</li>
+          <li>Selecting System stores <code>system</code> and changes the active mode when the operating-system media query changes.</li>
+          <li>A missing, invalid, or unavailable storage value does not block the library. The application uses System.</li>
+          <li>The setup, loading, and unlock surfaces use the selected active mode even though they do not show the selector.</li>
+          <li>Run the repository gates:</li>
+        </ul>
+        <pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual</code></pre>
+        <ul class="checks">
+          <li>Run <code>bun run tauri dev</code> and open the window in light and dark desktop modes.</li>
+        </ul>
+      </aside>
+
+      <div class="triptych">
+        <article><h4>Deploy</h4><p>Merge the selector after all gates pass. The release has no schema step and no secret change.</p></article>
+        <article><h4>Observe</h4><p>Change the selector, restart the application, and change the operating-system mode while System is selected. Examine the setup and main surfaces.</p></article>
+        <article><h4>Rollback</h4><p>Revert Phase 2 first if the selector fails. Phase 1 can remain as a System-only implementation. Revert Phase 1 only after Phase 2 is gone.</p></article>
+      </div>
+
+      <details class="execution-record">
+        <summary>Execution record · done</summary>
+        <dl>
+          <dt>Started</dt><dd>2026-08-31T19:38:01Z.</dd>
+          <dt>Completed</dt><dd>2026-08-31T20:06:40Z.</dd>
+          <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
+          <dt>Commit / change</dt><dd>Final implementation commit: <code>feat: add theme preference selector</code>.</dd>
+          <dt>Actual files</dt><dd><code>src/App.tsx</code>, <code>src/App.test.tsx</code>, <code>src/features/shell/UtilityPanel.tsx</code>, <code>src/features/shell/AppShell.test.tsx</code>, <code>src/features/shell/theme.ts</code>, <code>src/features/shell/theme.test.ts</code>, <code>src/main.tsx</code>, <code>src/styles.css</code>, <code>test/visual/harness.ts</code>, <code>test/visual/look.ts</code>, and <code>docs/ui/tokens-as-the-only-source-of-colour.md</code>.</dd>
+          <dt>Commands / results</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, and <code>cargo test --workspace</code> passed. <code>npx --yes bunx tsc --noEmit</code>, <code>npx --yes bun run lint</code>, <code>npx --yes bun test</code> (102 tests), <code>npx --yes bun run build</code>, and <code>npx --yes bun run visual</code> passed. <code>tauri dev</code> compiled and started under Xvfb; the timed development process was then stopped. The ignored real keyring test was run and reported no desktop <code>secret-service</code> because this environment has no keyring session.</dd>
+          <dt>Deviations</dt><dd>Bun was run through the temporary <code>npx --yes bun</code> wrapper. A temporary stable Rust toolchain and the Linux Tauri development packages were installed because the environment did not provide them. The physical-display Tauri run cannot pass without a desktop session; the Xvfb run reached the application process.</dd>
+          <dt>New decisions</dt><dd>None recorded.</dd>
+          <dt>Remaining risks</dt><dd>No implementation risk remains. Native keyring behavior still needs a desktop session with <code>secret-service</code>; visual coverage verifies both theme modes and the Xvfb run verifies Tauri startup.</dd>
+          <dt>Handoff</dt><dd>Phase 2 is complete. Review the pushed branch.</dd>
+        </dl>
+      </details>
+    </div>
+  </article>
+</section>
+
+<section id="compatibility">
+  <p class="eyebrow">Compatibility</p>
+  <h2>Data and contracts</h2>
+  <table>
+    <thead><tr><th>Change</th><th>Up</th><th>Compatibility</th><th>Backfill</th><th>Down</th></tr></thead>
+    <tbody>
+      <tr><td><code>localStorage["gamelibrarymanager.theme"]</code></td><td>New local key. Values are <code>system</code>, <code>light</code>, or <code>dark</code>.</td><td>Older versions ignore the key and use their existing system behavior. A newer version treats invalid values as System.</td><td>None.</td><td>Reverting the code leaves an ignored local key. Removing the key returns the next version to System.</td></tr>
+      <tr><td><code>document.documentElement.dataset.theme</code></td><td>New runtime attribute. It contains the effective value <code>light</code> or <code>dark</code>.</td><td>No external process reads it. The attribute disappears with the application document.</td><td>None.</td><td>Reverting the theme code stops writing the attribute.</td></tr>
+      <tr><td><code>UtilityPanelProps</code></td><td>Adds <code>theme</code> and <code>onThemeChange</code> inside the same TypeScript application.</td><td>All call sites compile in one build. No public API or Tauri command changes.</td><td>None.</td><td>Remove the fields and the Appearance section with the Phase 2 code.</td></tr>
+      <tr><td>SQLite, Rust commands, and exports</td><td>No change.</td><td>Existing databases, backups, JSON files, and CSV files need no migration or version window.</td><td>None.</td><td>None.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="risks">
+  <p class="eyebrow">Problems that can occur</p>
+  <h2>Risks and response</h2>
+  <table>
+    <thead><tr><th>Level</th><th>Risk</th><th>Signal</th><th>Response</th><th>Rollback</th></tr></thead>
+    <tbody>
+      <tr><td class="risk-med">Medium</td><td>The first paint shows Light before a stored Dark preference applies.</td><td>A dark preference gives a light flash at startup or on a setup surface.</td><td>Call <code>bootstrapTheme</code> in <code>main.tsx</code> before React creates the root. Measure the first loaded document in the visual harness.</td><td>Revert Phase 2 first. If the foundation still has a startup problem, revert Phase 1.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>System stops following a desktop color-scheme change.</td><td>The select still says System but <code>data-theme</code> does not change after a media event.</td><td>Keep the <code>matchMedia</code> listener active only for System. Remove it when the preference changes. Add a visual media-change scenario.</td><td>System uses its last active mode until the application restarts. Light and Dark stay independent.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>The token mode and native control mode disagree.</td><td>The select or a dialog control uses dark native colors on the light palette, or contrast falls below the existing limits.</td><td>Set <code>color-scheme</code> in the same root token blocks. Keep all interface colors in <code>src/styles.css</code>. Run both contrast suites.</td><td>Restore the previous palette block and remove explicit mode selection.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>WebView storage is unavailable or contains an invalid value.</td><td>Storage access throws, or the root receives an unknown value.</td><td>Catch storage errors. Use System for reads. Apply the selected mode for the current session if persistence fails. Test both paths.</td><td>Remove the stored key. The application returns to System.</td></tr>
+      <tr><td class="risk-med">Medium</td><td>The persistent selector expands into a second settings system.</td><td>A change adds density, custom colors, database settings, or a selector to every setup screen.</td><td>Keep the scope to one select, three values, one local key, and the existing Utilities dialog. Stop for user direction if a new preference appears.</td><td>Revert the extra control or code. Keep only the approved theme selector.</td></tr>
+      <tr><td class="risk-low">Low</td><td>The preference is not included in a library export.</td><td>A user expects JSON, CSV, or a database backup to restore the visual mode.</td><td>Keep this limitation visible in the plan and in the implementation handoff. The preference is UI-local by decision.</td><td>No data rollback exists. Select the mode again after import or restore.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="verification">
+  <p class="eyebrow">Completion evidence</p>
+  <h2>How to verify the result</h2>
+  <div class="scope-grid">
+    <article>
+      <h3>Commands</h3>
+      <pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev</code></pre>
+      <p class="muted">The ignored keyring test still needs a desktop session with secret-service: <code>cargo test -p secrets --test keyring_real -- --ignored</code>.</p>
+    </article>
+    <article>
+      <h3>Acceptance criteria</h3>
+      <ul class="checks">
+        <li>Utilities has an accessible Theme select with System, Light, and Dark.</li>
+        <li>System is the first-use value and follows operating-system changes while the application stays open.</li>
+        <li>Light and Dark override the operating-system mode immediately.</li>
+        <li>The selected value remains after an application restart.</li>
+        <li>Invalid or unavailable storage falls back to System without blocking the library.</li>
+        <li>Setup, loading, unlock, library, and dialog surfaces use the active theme.</li>
+        <li>Existing light/dark contrast, focus, layout, and reduced-motion checks stay green.</li>
+        <li>No SQLite, Tauri command, export, connector, or domain change appears in the diff.</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Unresolved</p>
+  <h2>Unknowns</h2>
+  <table>
+    <thead><tr><th>Unknown</th><th>How to resolve</th><th>Fallback</th></tr></thead>
+    <tbody>
+      <tr><td>Whether Tauri keeps <code>localStorage</code> across restarts on Linux, Windows, and macOS.</td><td>Set Dark, close the application, reopen it, and repeat the action on each desktop target.</td><td>Use System when the value is absent. A session-only choice remains safe and does not affect library data.</td></tr>
+      <tr><td>Whether native select colors match the active palette on each WebView.</td><td>Run <code>bun run tauri dev</code> in both explicit modes and examine the focused and unfocused select.</td><td>Keep the native control and the explicit <code>color-scheme</code>. Adjust token values only if the existing contrast gate identifies a real problem.</td></tr>
+      <tr><td>Whether the desktop WebView sends a media-query change event after an operating-system theme change.</td><td>Use the visual media-change scenario and repeat it in the desktop window.</td><td>Apply the last active mode until restart. Record the platform result and stop before adding a second theme mechanism.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="guardrails">
+  <p class="eyebrow">Limits for the agent</p>
+  <h2>Do not</h2>
+  <ul>
+    <li>Do not add a SQLite table, migration, Rust command, Tauri plugin, or preference export.</li>
+    <li>Do not add a selector to setup or unlock screens. Apply the selected theme there without adding a second control.</li>
+    <li>Do not add custom themes, custom colors, density settings, account settings, or cloud sync.</li>
+    <li>Do not add a package. Use React, the DOM, CSS tokens, and the existing test tools.</li>
+    <li>Do not put a color literal in a component or outside the token blocks of <code>src/styles.css</code>.</li>
+    <li>Do not remove the existing contrast, focus, layout, setup, or reduced-motion tests.</li>
+    <li>Do not edit the historical plans <code>0001</code> through <code>0005</code>. Record a new decision here if discovery changes the approved scope.</li>
+    <li>Do not start Phase 2 while Phase 1 is active or blocked.</li>
+  </ul>
+</section>
+
+<footer>Self-contained plan · No JavaScript · No external resources · Ready for zero-context sessions</footer>
+
+</main>
+</body>
+</html>

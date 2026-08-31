@@ -28,6 +28,7 @@ import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
 import { ActivityStrip } from "./features/shell/ActivityStrip";
 import { AppShell, type AppTab } from "./features/shell/AppShell";
+import { useThemePreference } from "./features/shell/theme";
 import { Wishlist } from "./features/wishlist/Wishlist";
 
 /** The stores that the application can read, with the name that it shows. */
@@ -44,6 +45,7 @@ function nameOf(store: string): string {
 }
 
 export function App() {
+  const { theme, onThemeChange } = useThemePreference();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
@@ -350,6 +352,8 @@ export function App() {
         hasIgdb,
         hasItad,
         busy,
+        theme,
+        onThemeChange,
         summary,
         storeName: nameOf,
         onSetup: (target) => setSetup(target),

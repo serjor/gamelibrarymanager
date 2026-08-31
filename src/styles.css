@@ -6,7 +6,7 @@
 :root {
   /* Native controls use this value. The tokens below cover what the application
      draws. */
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Ink and surfaces. The page is warm paper in the light theme and deep ink
      in the dark theme. Raised and sunken surfaces make later screens readable
@@ -94,8 +94,8 @@
   font-family: var(--font);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+:root[data-theme="dark"] {
+  color-scheme: dark;
     --background: #0f141d;
     --surface: #171f2c;
     --surface-raised: #202a3a;
@@ -139,7 +139,6 @@
     --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.18);
     --shadow-raised: 0 14px 36px rgba(0, 0, 0, 0.28);
   }
-}
 
 /* The `padding` and the border go inside the width declared. Without this, a
    cover with a height of 168 px plus padding is 184, and a virtual grid — which
@@ -1595,6 +1594,31 @@ button.link {
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   background: var(--surface);
+}
+
+.utility-preferences {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-5);
+}
+
+.utility-preferences label {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.utility-preferences select {
+  min-width: 10rem;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+  color: inherit;
+  font: inherit;
 }
 
 .utility-section-heading {

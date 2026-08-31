@@ -3,10 +3,12 @@
 ## 💡 Convention
 
 All of the colours of the interface are defined **one time**, as CSS variables in
-the `:root` of [`src/styles.css`](../../src/styles.css). Their dark variant is
-defined **in the same place**, in the one `@media (prefers-color-scheme: dark)`
-block. After that, no rule and no component writes a colour: it writes
-`var(--token)`.
+the `:root` of [`src/styles.css`](../../src/styles.css). The light tokens stay in
+`:root`. The dark tokens are in `:root[data-theme="dark"]`.
+
+The theme module resolves `System` with `matchMedia` and puts the active mode on
+`html[data-theme]`. After that, no rule and no component writes a colour: it
+writes `var(--token)`.
 
 A colour that is not a token does not exist. That includes the colours that look
 harmless:
@@ -32,7 +34,7 @@ colour — but the dark token is not the same in each theme.
 You can examine the rule quickly:
 
 ```sh
-grep -nE '#[0-9a-fA-F]{3,6}' src/styles.css
+rg -nE '#[0-9a-fA-F]{3,6}' src/styles.css
 ```
 
 It must give back lines only in the block where the tokens are defined.
@@ -40,9 +42,9 @@ It must give back lines only in the block where the tokens are defined.
 ## 🏆 Benefits
 
 - **You change the dark theme in one place.** A `#b3261e` in the middle of the
-  sheet makes you find it by hand on the day that you adjust the dark theme, and
-  makes sure that you do not adjust one of them. With tokens, the dark block is
-  the complete list of what to decide.
+  sheet makes you find it by hand when you adjust the dark theme, and makes sure
+  that you do not adjust one of them. With tokens, the dark token block is the
+  complete list of what to decide.
 - **You can measure the contrast.** If the colour of the text and the colour of
   its background come from tokens, a test can read the two and calculate the
   ratio. With colours in many places, each place is a new condition.
@@ -59,15 +61,15 @@ It must give back lines only in the block where the tokens are defined.
 
 ```css
 :root {
+  color-scheme: light;
   --error: #b3261e;
   --status-playing: #1f6b86;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --error: #f2857b;
-    --status-playing: #79c0dd;
-  }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --error: #f2857b;
+  --status-playing: #79c0dd;
 }
 
 [role="alert"] {
@@ -108,9 +110,11 @@ the bar covers with a colour that is not the colour of the page.
 
 ## 🧐 Real world examples
 
-- [`src/styles.css`](../../src/styles.css) defines all of the palette in `:root`
-  and its dark variant in one block. That includes the semantic colours of the
-  game status and the scrim of the record sheet.
+- [`src/styles.css`](../../src/styles.css) defines the light palette in `:root`
+  and the dark palette in `:root[data-theme="dark"]`. That includes the semantic
+  colours of the game status and the scrim of the record sheet.
+- [`src/features/shell/theme.ts`](../../src/features/shell/theme.ts) resolves the
+  stored preference and the operating-system mode before the interface starts.
 - [`test/visual/look.ts`](../../test/visual/look.ts) measures the real contrast
   of the text and of the muted text against its background, in the light theme
   and in the dark theme, and against the background of the sheet, which is the

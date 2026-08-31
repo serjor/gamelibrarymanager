@@ -117,6 +117,106 @@ const utilityState = await withTheApp(
 check("utility dialog stays inside the window", utilityState.inside);
 check("utility dialog has a content region", utilityState.hasContent);
 
+console.log("\nThe theme preference");
+for (const scenario of [
+  { system: "dark", preference: "light", expected: "light" },
+  { system: "light", preference: "dark", expected: "dark" },
+] as const) {
+  const r = await withTheApp(
+    (page) =>
+      page.evaluate(() => ({
+        active: document.documentElement.dataset.theme,
+        colorScheme: getComputedStyle(document.documentElement).colorScheme,
+      })),
+    { theme: scenario.system, themePreference: scenario.preference, answers: ALL },
+  );
+  check(
+    `${scenario.preference} overrides ${scenario.system} system mode`,
+    r.active === scenario.expected && r.colorScheme === scenario.expected,
+  );
+}
+
+const themeFlow = await withTheApp(
+  async (page) => {
+    await openUtilities(page);
+    const readTheme = () =>
+      page.evaluate(() => {
+        const select = document.getElementById("utility-theme") as HTMLSelectElement;
+        return {
+          preference: select.value,
+          active: document.documentElement.dataset.theme,
+          colorScheme: getComputedStyle(document.documentElement).colorScheme,
+          stored: window.localStorage.getItem("gamelibrarymanager.theme"),
+        };
+      });
+    const select = page.getByRole("combobox", { name: "Theme" });
+    const options = await select
+      .locator("option")
+      .evaluateAll((items) => items.map((item) => item.textContent).join("|"));
+
+    await select.selectOption("dark");
+    const dark = await readTheme();
+
+    await page.reload();
+    await page.locator(".shell-navigation").waitFor();
+    await openUtilities(page);
+    const persistedSelect = page.getByRole("combobox", { name: "Theme" });
+    const persisted = await readTheme();
+
+    await persistedSelect.selectOption("light");
+    const light = await readTheme();
+    await persistedSelect.selectOption("system");
+    const system = await readTheme();
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+    const systemDark = await readTheme();
+
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
+    const systemLight = await readTheme();
+
+    return { options, dark, persisted, light, system, systemDark, systemLight };
+  },
+  { theme: "light", answers: ALL },
+);
+check("theme selector exposes System, Light, and Dark", themeFlow.options === "System|Light|Dark");
+check(
+  "theme selector applies and stores Dark",
+  themeFlow.dark.preference === "dark" &&
+    themeFlow.dark.active === "dark" &&
+    themeFlow.dark.colorScheme === "dark" &&
+    themeFlow.dark.stored === "dark",
+);
+check(
+  "theme preference survives a reload",
+  themeFlow.persisted.preference === "dark" &&
+    themeFlow.persisted.active === "dark" &&
+    themeFlow.persisted.stored === "dark",
+);
+check(
+  "theme selector applies and stores Light",
+  themeFlow.light.preference === "light" &&
+    themeFlow.light.active === "light" &&
+    themeFlow.light.colorScheme === "light" &&
+    themeFlow.light.stored === "light",
+);
+check(
+  "System stores its preference",
+  themeFlow.system.preference === "system" &&
+    themeFlow.system.active === "light" &&
+    themeFlow.system.colorScheme === "light" &&
+    themeFlow.system.stored === "system",
+);
+check(
+  "System follows a dark system mode",
+  themeFlow.systemDark.active === "dark" && themeFlow.systemDark.colorScheme === "dark",
+);
+check(
+  "System follows a light system mode",
+  themeFlow.systemLight.active === "light" && themeFlow.systemLight.colorScheme === "light",
+);
+
 console.log("\nSetup surfaces");
 for (const theme of ["light", "dark"] as const) {
   for (const setup of SETUP_TARGETS) {

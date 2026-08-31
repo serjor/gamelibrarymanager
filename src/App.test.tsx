@@ -12,6 +12,7 @@ import type {
   StateUpdate,
   SyncReport,
 } from "./lib/api";
+import { THEME_STORAGE_KEY } from "./features/shell/theme";
 
 const state = {
   info: { version: "0.1.0", secrets_backend: "keyring", unlocked: true } as AppInfo,
@@ -336,6 +337,8 @@ describe("App", () => {
     // Wide by default: that is where all of the library is visible, and the
     // narrow window is tested separately.
     width(1600);
+    window.localStorage.removeItem(THEME_STORAGE_KEY);
+    document.documentElement.removeAttribute("data-theme");
     state.info = { version: "0.1.0", secrets_backend: "keyring", unlocked: true };
     state.accounts = [];
     state.connectors = [];
@@ -554,6 +557,40 @@ describe("App", () => {
 
     await waitFor(() => expect(state.exports).toEqual([["/tmp/game-library.json", "json"]]));
     expect(screen.getByText("Written to /tmp/game-library.json")).toBeDefined();
+  });
+
+  it("changes and persists the theme without starting a library operation", async () => {
+    state.accounts = [steamAccount];
+    render(<App />);
+    const dialog = await openUtilities();
+    const theme = within(dialog).getByRole("combobox", { name: "Theme" }) as HTMLSelectElement;
+    expect(theme.value).toBe("system");
+    const libraryRequests = state.libraryRequests;
+    fireEvent.change(theme, { target: { value: "dark" } });
+    expect(theme.value).toBe("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    expect(state.libraryRequests).toBe(libraryRequests);
+    expect(state.saveCalls).toBe(0);
+  });
+
+  it("uses System for invalid stored theme data", async () => {
+    state.accounts = [steamAccount];
+    window.localStorage.setItem(THEME_STORAGE_KEY, "solarized");
+    render(<App />);
+    const dialog = await openUtilities();
+    const theme = within(dialog).getByRole("combobox", { name: "Theme" }) as HTMLSelectElement;
+    expect(theme.value).toBe("system");
+    const expected = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    expect(document.documentElement.dataset.theme).toBe(expected);
+  });
+
+  it("applies the saved theme before a setup surface renders", async () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    render(<App />);
+    expect(await screen.findByText("Connect Steam")).toBeDefined();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(screen.queryByRole("combobox", { name: "Theme" })).toBeNull();
   });
 
   it("a healthy connector can be switched off from Utilities", async () => {
