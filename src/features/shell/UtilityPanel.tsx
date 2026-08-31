@@ -5,6 +5,7 @@ import type {
   ExportFormat,
   LibrarySummary,
 } from "../../lib/api";
+import { THEME_PREFERENCES, type ThemePreference } from "./theme";
 
 export type SetupTarget = "steam" | "gog" | "epic" | "igdb" | "itad";
 
@@ -22,6 +23,8 @@ export interface UtilityPanelProps {
   hasIgdb: boolean;
   hasItad: boolean;
   busy: string | null;
+  theme: ThemePreference;
+  onThemeChange: (preference: ThemePreference) => void;
   summary: LibrarySummary | null;
   storeName: (store: string) => string;
   onSetup: (target: SetupTarget) => void;
@@ -54,6 +57,8 @@ export function UtilityPanel({
   hasIgdb,
   hasItad,
   busy,
+  theme,
+  onThemeChange,
   summary,
   storeName,
   onSetup,
@@ -136,6 +141,33 @@ export function UtilityPanel({
               Synchronise store copies first. Match records when metadata needs an
               update.
             </p>
+          </section>
+
+          <section className="utility-section" aria-labelledby="utility-appearance">
+            <div className="utility-section-heading">
+              <div>
+                <p className="shell-kicker">Interface</p>
+                <h3 id="utility-appearance">Appearance</h3>
+              </div>
+            </div>
+            <div className="utility-preferences">
+              <label htmlFor="utility-theme">Theme</label>
+              <select
+                id="utility-theme"
+                value={theme}
+                onChange={(event) => {
+                  const next = event.currentTarget.value as ThemePreference;
+                  if (THEME_PREFERENCES.includes(next)) onThemeChange(next);
+                }}
+              >
+                {THEME_PREFERENCES.map((preference) => (
+                  <option key={preference} value={preference}>
+                    {preference[0]!.toUpperCase() + preference.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="hint utility-help">System follows the operating-system theme.</p>
           </section>
 
           <section className="utility-section" aria-labelledby="utility-accounts">

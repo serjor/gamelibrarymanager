@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { Account, ConnectorState, LibrarySummary } from "../../lib/api";
 import { AppShell } from "./AppShell";
+import type { ThemePreference } from "./theme";
 
 const account: Account = {
   store: "steam",
@@ -25,6 +26,7 @@ const connector: ConnectorState = {
 
 describe("AppShell", () => {
   it("keeps navigation and maintenance actions reachable", async () => {
+    const selectedTheme = { value: null as ThemePreference | null };
     render(
       <AppShell
         tab="library"
@@ -43,6 +45,10 @@ describe("AppShell", () => {
           hasIgdb: false,
           hasItad: false,
           busy: null,
+          theme: "system",
+          onThemeChange: (preference) => {
+            selectedTheme.value = preference;
+          },
           summary,
           storeName: (store) => store,
           onSetup: () => {},
@@ -78,6 +84,11 @@ describe("AppShell", () => {
     ]) {
       expect(within(dialog).getByRole("button", { name })).toBeDefined();
     }
+    const theme = within(dialog).getByRole("combobox", { name: "Theme" }) as HTMLSelectElement;
+    expect(theme.value).toBe("system");
+    expect(theme.disabled).toBe(false);
+    fireEvent.change(theme, { target: { value: "dark" } });
+    expect(selectedTheme.value).toBe("dark");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close Utilities" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

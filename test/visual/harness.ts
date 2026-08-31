@@ -33,6 +33,7 @@ import type {
   PriceRow,
   ReviewItem,
 } from "../../src/lib/api";
+import { THEME_STORAGE_KEY, type ThemePreference } from "../../src/features/shell/theme";
 
 /**
  * What Rust would answer. Each key is the name of a Tauri command.
@@ -278,6 +279,7 @@ export interface Options {
   width?: number;
   height?: number;
   theme?: "light" | "dark";
+  themePreference?: ThemePreference;
   setup?: SetupTarget;
   lockedSecretStore?: boolean;
   emptyLibrary?: boolean;
@@ -339,6 +341,14 @@ export async function withTheApp<T>(
       answers.list_accounts = [];
     }
     if (options.setup === "igdb") answers.has_igdb_credentials = false;
+    await page.addInitScript(
+      ({ preference, storageKey }: { preference?: ThemePreference; storageKey: string }) => {
+        if (preference !== undefined) {
+          window.localStorage.setItem(storageKey, preference);
+        }
+      },
+      { preference: options.themePreference, storageKey: THEME_STORAGE_KEY },
+    );
     if (options.setup === "itad") answers.has_itad_credentials = false;
 
     await page.addInitScript((data: Answers) => {
