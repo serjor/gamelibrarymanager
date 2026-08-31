@@ -899,13 +899,27 @@ button.link {
   width: 100%;
 }
 
+/* Store badges share a fixed table column. Let them shrink as a group so
+   two stores never extend beyond the cell while preserving both labels. */
+.store-list {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--e-1);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
 .store {
-  font-size: var(--t-xs);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-s);
   padding: 0 var(--e-1);
-  margin-right: var(--e-1);
   color: var(--text-muted);
+  font-size: var(--t-xs);
+  text-overflow: ellipsis;
 }
 
 .status {

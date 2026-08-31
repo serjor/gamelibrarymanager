@@ -188,11 +188,13 @@ export function LibraryTable({
                 <td>{row.genres[0] ?? "—"}</td>
                 <td>
                   {row.owned_stores.length > 0 ? (
-                    row.owned_stores.map((store) => (
-                      <span key={store} className="store">
-                        {store}
-                      </span>
-                    ))
+                    <span className="store-list">
+                      {row.owned_stores.map((store) => (
+                        <span key={store} className="store">
+                          {store}
+                        </span>
+                      ))}
+                    </span>
                   ) : isNoLongerInStore(row) ? (
                     <span className="status gone">Not in a store</span>
                   ) : (
