@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// El puerto es fijo porque tauri.conf.json apunta a él en desarrollo.
+// The port is fixed because tauri.conf.json points to it during development.
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,

@@ -125,7 +125,7 @@ fn account(store: StoreId, account_ref: &str) -> StoreAccount {
 
 #[tokio::test]
 async fn a_game_in_steam_and_in_gog_is_one_record_with_two_badges() {
-    let dir = tempfile::tempdir().expect("directorio temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");
@@ -135,15 +135,15 @@ async fn a_game_in_steam_and_in_gog_is_one_record_with_two_badges() {
     // --- two accounts, one for each store ---
     let repo = StoreAccountRepository(&db);
     let mut steam = account(StoreId::Steam, STEAM_ID);
-    steam.id = repo.upsert(&steam).await.expect("alta de Steam");
+    steam.id = repo.upsert(&steam).await.expect("add the Steam account");
     let mut gog = account(StoreId::Gog, GOG_USER_ID);
-    gog.id = repo.upsert(&gog).await.expect("alta de GOG");
+    gog.id = repo.upsert(&gog).await.expect("add the GOG account");
 
     secrets
-        .set(&credential_key(&steam), r#"{"api_key":"CLAVE"}"#)
+        .set(&credential_key(&steam), r#"{"api_key":"TEST_API_KEY"}"#)
         .expect("the Steam credential");
     secrets
-        .set(&credential_key(&gog), &credencial_gog())
+        .set(&credential_key(&gog), &gog_credential())
         .expect("the GOG credential");
 
     // --- synchronise the two ---
@@ -157,32 +157,32 @@ async fn a_game_in_steam_and_in_gog_is_one_record_with_two_badges() {
     let mut report = SyncReport::default();
     sync_account(&db, &secrets, &conector_steam, &steam, &mut report)
         .await
-        .expect("sincronizar Steam");
+        .expect("synchronize Steam");
     sync_account(&db, &secrets, &conector_gog, &gog, &mut report)
         .await
-        .expect("sincronizar GOG");
+        .expect("synchronize GOG");
 
     assert_eq!(report.owned, 5, "3 Steam copies and 2 GOG copies");
 
-    // --- emparejar contra IGDB ---
+    // --- match against IGDB ---
     let igdb_server = igdb_mock().await;
     let igdb = IgdbClient::new(reqwest::Client::new())
         .with_bases(igdb_server.uri(), format!("{}/token", igdb_server.uri()));
 
-    resolve(&db, &igdb, &credenciales_igdb(), &token_igdb(), &Silent)
+    resolve(&db, &igdb, &igdb_credentials(), &igdb_token(), &Silent)
         .await
         .expect("match");
 
     // --- and what must be visible: ONE record with TWO badges ---
-    let biblioteca = LibraryRepository(&db).all().await.expect("library");
+    let library = LibraryRepository(&db).all().await.expect("library");
 
     assert_eq!(
-        biblioteca.len(),
+        library.len(),
         1,
         "only The Witcher 3 has a record; the others stay unmatched deliberately"
     );
 
-    let witcher = &biblioteca[0];
+    let witcher = &library[0];
     assert_eq!(witcher.title, "The Witcher 3: Wild Hunt");
     assert_eq!(
         witcher.owned_stores,
@@ -196,7 +196,7 @@ async fn a_second_match_does_not_split_the_record() {
     // The deduplication must be idempotent: if a second record appeared at the
     // second match, the user would see their game two times and would lose the
     // status attached to the first record.
-    let dir = tempfile::tempdir().expect("directorio temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");
@@ -205,14 +205,14 @@ async fn a_second_match_does_not_split_the_record() {
 
     let repo = StoreAccountRepository(&db);
     let mut steam = account(StoreId::Steam, STEAM_ID);
-    steam.id = repo.upsert(&steam).await.expect("alta de Steam");
+    steam.id = repo.upsert(&steam).await.expect("add the Steam account");
     let mut gog = account(StoreId::Gog, GOG_USER_ID);
-    gog.id = repo.upsert(&gog).await.expect("alta de GOG");
+    gog.id = repo.upsert(&gog).await.expect("add the GOG account");
     secrets
-        .set(&credential_key(&steam), r#"{"api_key":"CLAVE"}"#)
+        .set(&credential_key(&steam), r#"{"api_key":"TEST_API_KEY"}"#)
         .expect("the Steam credential");
     secrets
-        .set(&credential_key(&gog), &credencial_gog())
+        .set(&credential_key(&gog), &gog_credential())
         .expect("the GOG credential");
 
     let steam_server = steam_server_mock().await;
@@ -229,40 +229,40 @@ async fn a_second_match_does_not_split_the_record() {
         let mut report = SyncReport::default();
         sync_account(&db, &secrets, &conector_steam, &steam, &mut report)
             .await
-            .expect("sincronizar Steam");
+            .expect("synchronize Steam");
         sync_account(&db, &secrets, &conector_gog, &gog, &mut report)
             .await
-            .expect("sincronizar GOG");
-        resolve(&db, &igdb, &credenciales_igdb(), &token_igdb(), &Silent)
+            .expect("synchronize GOG");
+        resolve(&db, &igdb, &igdb_credentials(), &igdb_token(), &Silent)
             .await
             .expect("match");
     }
 
-    let biblioteca = LibraryRepository(&db).all().await.expect("library");
-    assert_eq!(biblioteca.len(), 1, "two passes still give one record");
+    let library = LibraryRepository(&db).all().await.expect("library");
+    assert_eq!(library.len(), 1, "two passes still give one record");
     assert_eq!(
-        biblioteca[0].owned_stores,
+        library[0].owned_stores,
         vec!["gog".to_owned(), "steam".to_owned()]
     );
 }
 
-fn credencial_gog() -> String {
-    let futuro = OffsetDateTime::now_utc().unix_timestamp() + 3600;
+fn gog_credential() -> String {
+    let future = OffsetDateTime::now_utc().unix_timestamp() + 3600;
     format!(
-        r#"{{"client_id":"46899977096215655","client_secret":"SECRETO_DEL_USUARIO",
-             "access_token":"ACCESO","refresh_token":"REFRESCO",
-             "user_id":"{GOG_USER_ID}","expires_at":{futuro}}}"#
+        r#"{{"client_id":"46899977096215655","client_secret":"USER_CLIENT_SECRET",
+             "access_token":"ACCESS_TOKEN","refresh_token":"REFRESH_TOKEN",
+             "user_id":"{GOG_USER_ID}","expires_at":{future}}}"#
     )
 }
 
-fn credenciales_igdb() -> IgdbCredentials {
+fn igdb_credentials() -> IgdbCredentials {
     IgdbCredentials {
-        client_id: "CLIENTE".to_owned(),
-        client_secret: "SECRETO".to_owned(),
+        client_id: "CLIENT_ID".to_owned(),
+        client_secret: "CLIENT_SECRET".to_owned(),
     }
 }
 
-fn token_igdb() -> IgdbToken {
+fn igdb_token() -> IgdbToken {
     IgdbToken {
         access_token: "TOKEN".to_owned(),
         expires_at: OffsetDateTime::now_utc().unix_timestamp() + 3600,

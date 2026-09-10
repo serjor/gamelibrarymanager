@@ -28,19 +28,19 @@ fn it_detects_the_keyring_and_keeps_and_reads() {
     );
 
     let store = KeyringStore::new(SERVICE);
-    let key = "prueba:credencial";
+    let key = "test:credential";
     let value = "a-value-that-goes-and-comes-back";
 
-    store.set(key, value).expect("guardar en el keyring");
+    store.set(key, value).expect("write to the keyring");
     assert_eq!(
-        store.get(key).expect("leer del keyring").as_deref(),
+        store.get(key).expect("read from the keyring").as_deref(),
         Some(value),
         "what is read must be exactly what was saved"
     );
 
-    store.delete(key).expect("borrar del keyring");
+    store.delete(key).expect("delete from the keyring");
     assert_eq!(
-        store.get(key).expect("leer tras borrar"),
+        store.get(key).expect("read after delete"),
         None,
         "a delete must leave the entry with no value, not fail"
     );

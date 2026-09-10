@@ -15,7 +15,7 @@ const GAME: &str = include_str!("fixtures/igdb_game.json");
 fn credentials() -> IgdbCredentials {
     IgdbCredentials {
         client_id: "MI_CLIENT_ID".to_owned(),
-        client_secret: "MI_SECRETO".to_owned(),
+        client_secret: "MY_CLIENT_SECRET".to_owned(),
     }
 }
 
@@ -85,7 +85,7 @@ async fn the_steam_appid_gives_the_exact_record() {
             &["632470".to_owned()],
         )
         .await
-        .expect("consulta");
+        .expect("query");
 
     assert_eq!(cruces.get("632470"), Some(&115653));
 }
@@ -110,7 +110,7 @@ async fn each_store_asks_for_its_own_source() {
             &["632470".to_owned()],
         )
         .await
-        .expect("consulta");
+        .expect("query");
 
     assert_eq!(cruces.len(), 1);
 }
@@ -133,7 +133,7 @@ async fn an_unknown_appid_is_not_an_error() {
                 &["999999".to_owned()],
             )
             .await
-            .expect("consulta")
+            .expect("query")
             .is_empty()
     );
 }
@@ -154,7 +154,7 @@ async fn one_thousand_identifiers_fit_in_two_requests() {
     client(&server)
         .by_external_ids(&credentials(), &token(), ExternalSource::Steam, &uids)
         .await
-        .expect("consulta");
+        .expect("query");
 
     // `expect(2)` is examined when the server is dropped.
     drop(server);
@@ -195,7 +195,7 @@ async fn the_record_carries_a_cover_built_from_the_image_id() {
     let game = client(&server)
         .game(&credentials(), &token(), 115653)
         .await
-        .expect("consulta")
+        .expect("query")
         .expect("the record exists");
 
     assert_eq!(game.name, "Disco Elysium");

@@ -467,7 +467,7 @@ describe("App", () => {
     state.hasIgdb = false;
     render(<App />);
     await openUtilities();
-    (await screen.findByRole("button", { name: "Configure IGDB" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "Configure IGDB" }));
     expect(await screen.findByText("Metadata: IGDB")).toBeDefined();
     expect(document.querySelector(".setup-frame")).not.toBeNull();
     expect(screen.getByRole("heading", { name: "Add richer game records" })).toBeDefined();
@@ -480,7 +480,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     render(<App />);
     await openUtilities();
-    (await screen.findByRole("button", { name: "Connect GOG" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "Connect GOG" }));
     // The search uses something that is only in the setup screen: the heading has
     // the same name as the button that goes to it and would tell nothing apart.
     expect(await screen.findByLabelText("Client ID")).toBeDefined();
@@ -493,7 +493,7 @@ describe("App", () => {
     state.accounts = [gogAccount];
     render(<App />);
     await openUtilities();
-    (await screen.findByRole("button", { name: "Connect Steam" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "Connect Steam" }));
     expect(await screen.findByLabelText("Steam API key")).toBeDefined();
   });
 
@@ -501,7 +501,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     render(<App />);
     await openUtilities();
-    (await screen.findByRole("button", { name: "Connect Epic" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "Connect Epic" }));
     // The search uses something that is only in the setup screen: the heading has
     // the same name as the button that goes to it and would tell nothing apart.
     expect(await screen.findByLabelText("Client ID")).toBeDefined();
@@ -616,7 +616,7 @@ describe("App", () => {
     const activity = await screen.findByRole("region", { name: "Activity" });
     expect(within(activity).getByText(/invalid or expired credentials/)).toBeDefined();
     await openUtilities();
-    (await screen.findByRole("button", { name: "Switch Epic off" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "Switch Epic off" }));
 
     expect(await screen.findByRole("button", { name: "Switch Epic on" })).toBeDefined();
     // And what is important: the others stay where they were.
@@ -633,7 +633,7 @@ describe("App", () => {
 
   it("with no account you can start with GOG and not with Steam", async () => {
     render(<App />);
-    (await screen.findByRole("button", { name: "or start with GOG" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "or start with GOG" }));
     expect(await screen.findByRole("button", { name: /Sign in to GOG/ })).toBeDefined();
   });
 
@@ -641,7 +641,7 @@ describe("App", () => {
     // A user who has only Epic cannot be in a dead end on the first screen, which
     // is exactly what occurred to a user who had only GOG.
     render(<App />);
-    (await screen.findByRole("button", { name: "or start with Epic" })).click();
+    fireEvent.click(await screen.findByRole("button", { name: "or start with Epic" }));
     expect(await screen.findByRole("button", { name: /Sign in to Epic/ })).toBeDefined();
   });
 
@@ -1146,7 +1146,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(2\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(2\)/ }));
 
     await screen.findByText("Equal scores (1)");
     expect(matchesWith("LIMBO")).toBe("not chosen");
@@ -1159,7 +1159,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(1\)/ }));
 
     // The other record is selected: the chosen one and the other one exchange.
     fireEvent.click(await screen.findByRole("button", { name: /^Another game, but of 2009/ }));
@@ -1176,7 +1176,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(1\)/ }));
 
     // The chosen candidate comes with no year and no similarity — the two have a
     // column of their own — thus its accessible name is the title alone and it is
@@ -1217,7 +1217,7 @@ describe("App", () => {
       },
     ];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(1\)/ }));
     expect(await screen.findByText(/Disco Elysium: The Final Cut/)).toBeDefined();
     expect(screen.getByText(/make a record with the title of the store/)).toBeDefined();
   });
@@ -1229,7 +1229,7 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE, CLEAR];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(2\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(2\)/ }));
     expect(await screen.findByText(/Equal scores \(1\)/)).toBeDefined();
     expect(screen.getByText(/The remainder \(1\)/)).toBeDefined();
     // The year is what tells two records with the same name apart.
@@ -1245,11 +1245,11 @@ describe("App", () => {
     state.accounts = [steamAccount];
     state.queue = [TIE];
     render(<App />);
-    (await screen.findByRole("button", { name: /Review \(1\)/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Review \(1\)/ }));
     // With nothing selected there is no batch button: there is nothing to
     // confirm.
     expect(screen.queryByRole("button", { name: /Confirm 1 match/ })).toBeNull();
-    (await screen.findByRole("button", { name: /Limbo · 2010/ })).click();
+    fireEvent.click(await screen.findByRole("button", { name: /Limbo · 2010/ }));
     expect(await screen.findByRole("button", { name: /Confirm 1 match/ })).toBeDefined();
   });
 });

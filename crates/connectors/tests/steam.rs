@@ -22,7 +22,7 @@ fn session() -> StoreSession {
         store: StoreId::Steam,
         account_ref: "76561197960287930".to_owned(),
         display_name: Some("serjor".to_owned()),
-        credential: r#"{"api_key":"CLAVE_DE_PRUEBA"}"#.to_owned(),
+        credential: r#"{"api_key":"TEST_API_KEY"}"#.to_owned(),
         expires_at: None,
     }
 }
@@ -47,7 +47,7 @@ async fn it_reads_the_library() {
     let entries = connector(&server)
         .owned(&session(), StoreAccountId::new())
         .await
-        .expect("leer biblioteca");
+        .expect("read the library");
 
     assert_eq!(entries.len(), 3);
     let disco = &entries[0];
@@ -79,7 +79,7 @@ async fn it_asks_for_the_necessary_parameters() {
     connector(&server)
         .owned(&session(), StoreAccountId::new())
         .await
-        .expect("leer biblioteca");
+        .expect("read the library");
 }
 
 #[tokio::test]
@@ -121,7 +121,7 @@ async fn it_reads_the_wishlist_and_completes_the_titles() {
     let entries = connector(&server)
         .wishlist(&session(), StoreAccountId::new())
         .await
-        .expect("leer wishes");
+        .expect("read the wishlist");
 
     assert_eq!(entries.len(), 2);
     assert_eq!(entries[0].title, "Hades");
@@ -138,7 +138,7 @@ async fn it_reads_the_wishlist_and_completes_the_titles() {
         let appids = request
             .url
             .query_pairs()
-            .find(|(clave, _)| clave == "appids")
+            .find(|(key, _)| key == "appids")
             .map(|(_, value)| value.to_string())
             .unwrap_or_default();
         assert!(
@@ -174,7 +174,7 @@ async fn it_examines_the_key_at_the_connection() {
 
     let session = connector(&server)
         .authenticate(&AuthContext::ApiKey {
-            key: "CLAVE_DE_PRUEBA".to_owned(),
+            key: "TEST_API_KEY".to_owned(),
             account_ref: "76561197960287930".to_owned(),
         })
         .await
@@ -183,7 +183,7 @@ async fn it_examines_the_key_at_the_connection() {
     assert_eq!(session.display_name.as_deref(), Some("serjor"));
     assert_eq!(session.store, StoreId::Steam);
     assert!(
-        session.credential.contains("CLAVE_DE_PRUEBA"),
+        session.credential.contains("TEST_API_KEY"),
         "the key goes inside the opaque block of credentials"
     );
 }

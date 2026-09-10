@@ -12,7 +12,7 @@ use time::OffsetDateTime;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-const API_KEY: &str = "CLAVE_SECRETA_DEL_USUARIO";
+const API_KEY: &str = "USER_SECRET_API_KEY";
 const OWNED: &str = include_str!("../../crates/connectors/tests/fixtures/steam_owned_games.json");
 const WISHLIST: &str = include_str!("../../crates/connectors/tests/fixtures/steam_wishlist.json");
 const DETAILS: &str = include_str!("../../crates/connectors/tests/fixtures/steam_app_details.json");
@@ -35,7 +35,7 @@ async fn steam_server() -> MockServer {
 
 #[tokio::test]
 async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_database() {
-    let dir = tempfile::tempdir().expect("directorio temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let db_path = dir.path().join("library.db");
     let db = Database::open(&db_path).await.expect("open the database");
 
@@ -63,7 +63,7 @@ async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_da
             &credential_key(&account),
             &format!(r#"{{"api_key":"{API_KEY}"}}"#),
         )
-        .expect("guardar credencial");
+        .expect("save the credential");
 
     let server = steam_server().await;
     let connector =
@@ -103,7 +103,7 @@ async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_da
 
     // And the important part: the key is not in the database.
     drop(db);
-    let bytes = std::fs::read(&db_path).expect("leer el fichero de la base");
+    let bytes = std::fs::read(&db_path).expect("read the database file");
     assert!(
         !bytes
             .windows(API_KEY.len())
@@ -114,7 +114,7 @@ async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_da
 
 #[tokio::test]
 async fn with_no_credential_kept_it_fails_with_a_message_you_can_act_on() {
-    let dir = tempfile::tempdir().expect("directorio temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");

@@ -28,7 +28,7 @@ fn begin(state: &AppState) -> Result<OperationGuard<'_>, AppError> {
 
 #[tokio::test]
 async fn a_second_long_operation_is_told_that_the_application_is_busy() {
-    let dir = tempfile::tempdir().expect("temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let state = state(dir.path()).await;
 
     let first = begin(&state).expect("the first operation takes the right");
@@ -54,7 +54,7 @@ async fn a_second_long_operation_is_told_that_the_application_is_busy() {
 /// A cancel belongs to the operation that runs, and to no other.
 #[tokio::test]
 async fn the_next_operation_does_not_inherit_the_cancel_of_the_operation_before() {
-    let dir = tempfile::tempdir().expect("temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let state = state(dir.path()).await;
 
     let first = begin(&state).expect("the first operation");
@@ -87,7 +87,7 @@ async fn the_next_operation_does_not_inherit_the_cancel_of_the_operation_before(
 /// assertions are about the state after it.
 #[tokio::test]
 async fn a_command_that_goes_away_frees_the_right_and_the_flag() {
-    let dir = tempfile::tempdir().expect("temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let state = state(dir.path()).await;
 
     let command = async {

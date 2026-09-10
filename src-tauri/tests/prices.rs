@@ -91,7 +91,7 @@ async fn itad_server() -> MockServer {
 
 fn credentials() -> ItadCredentials {
     ItadCredentials {
-        key: "clave".to_owned(),
+        key: "test-key".to_owned(),
         country: "GB".to_owned(),
     }
 }
@@ -154,18 +154,18 @@ async fn wished(db: &Database, store: StoreId, app_id: &str, title: &str) -> Gam
     GameLinkRepository(db)
         .rebuild_auto(&links)
         .await
-        .expect("enlace");
+        .expect("link");
 
     game.id
 }
 
-async fn requests(server: &MockServer, ruta: &str) -> usize {
+async fn requests(server: &MockServer, path: &str) -> usize {
     server
         .received_requests()
         .await
         .expect("requests")
         .iter()
-        .filter(|peticion| peticion.url.path() == ruta)
+        .filter(|request| request.url.path() == path)
         .count()
 }
 
@@ -185,11 +185,11 @@ async fn each_wished_for_game_ends_with_its_best_price_and_its_all_time_low() {
     assert_eq!(report.priced, 2);
     assert_eq!(report.unknown, 0);
 
-    let rows = PriceRepository(&db).all().await.expect("consultar prices");
+    let rows = PriceRepository(&db).all().await.expect("read prices");
     let de = |game_id: GameId| {
         rows.iter()
             .find(|row| row.game_id == game_id)
-            .expect("el game tiene price")
+            .expect("the game has a price")
     };
 
     assert_eq!(de(disco).shop, "GOG");
@@ -231,7 +231,7 @@ async fn a_second_refresh_does_not_repeat_the_searches() {
     );
     assert_eq!(requests(&server, "/games/prices/v3").await, 3);
 
-    let rows = PriceRepository(&db).all().await.expect("consultar prices");
+    let rows = PriceRepository(&db).all().await.expect("read prices");
     assert_eq!(rows.len(), 1, "a refresh does not duplicate the price");
     assert_eq!(rows[0].shops, 1);
 }
@@ -254,11 +254,7 @@ async fn a_game_that_itad_does_not_know_does_not_leave_the_others_with_no_price(
     assert_eq!(report.unknown, 1);
     assert_eq!(report.priced, 1);
     assert_eq!(
-        PriceRepository(&db)
-            .all()
-            .await
-            .expect("consultar prices")
-            .len(),
+        PriceRepository(&db).all().await.expect("read prices").len(),
         1
     );
 }

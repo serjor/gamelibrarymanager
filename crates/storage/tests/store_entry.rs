@@ -180,7 +180,7 @@ async fn a_store_with_nothing_deletes_all_of_the_copies_of_that_account() {
 /// it.
 #[tokio::test]
 async fn a_file_database_uses_wal_and_the_one_in_memory_does_not() {
-    let dir = tempfile::tempdir().expect("temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let file = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the file database");

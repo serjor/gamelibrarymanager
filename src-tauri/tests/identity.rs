@@ -27,7 +27,7 @@ const SEARCH_AMBIGUO: &str = r#"[{"id":250,"name":"Doom","first_release_date":75
 fn credentials() -> IgdbCredentials {
     IgdbCredentials {
         client_id: "id".to_owned(),
-        client_secret: "secreto".to_owned(),
+        client_secret: "secret".to_owned(),
     }
 }
 
@@ -113,10 +113,10 @@ async fn the_steam_appid_links_with_no_question_and_the_unsure_title_goes_to_the
     let steam = account(&db, StoreId::Steam).await;
     let gog = account(&db, StoreId::Gog).await;
 
-    let exacto = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    let exact = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
     let unsure = entry(gog, StoreId::Gog, "1234", "Doom");
     StoreEntryRepository(&db)
-        .upsert_many(&[exacto.clone(), unsure.clone()])
+        .upsert_many(&[exact.clone(), unsure.clone()])
         .await
         .expect("write the entries");
 
@@ -136,7 +136,7 @@ async fn the_steam_appid_links_with_no_question_and_the_unsure_title_goes_to_the
 
     let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 1);
-    assert_eq!(links[0].store_entry_id, exacto.id);
+    assert_eq!(links[0].store_entry_id, exact.id);
     assert_eq!(
         links[0].confidence, 1.0,
         "an external identifier accepts no degrees of confidence"
@@ -146,7 +146,7 @@ async fn the_steam_appid_links_with_no_question_and_the_unsure_title_goes_to_the
     let games = GameRepository(&db).all().await.expect("records");
     assert_eq!(games.len(), 1);
     assert_eq!(games[0].igdb_id, Some(115653));
-    assert!(games[0].cover_url.is_some(), "la portada viene de IGDB");
+    assert!(games[0].cover_url.is_some(), "the cover comes from IGDB");
 
     // And the unsure entry stayed in the queue with its candidates, for the user.
     let candidates = MatchCandidateRepository(&db)
@@ -170,7 +170,7 @@ async fn a_new_match_does_not_change_a_manual_link() {
     let igdb = IgdbClient::new(reqwest::Client::new())
         .with_bases(server.uri(), format!("{}/token", server.uri()));
 
-    // Primera pasada: a la cola.
+    // First pass: send the entry to the queue.
     resolve(&db, &igdb, &credentials(), &token(), &Silent)
         .await
         .expect("match");
@@ -202,7 +202,7 @@ async fn a_new_match_does_not_change_a_manual_link() {
             method: LinkMethod::Manual,
         })
         .await
-        .expect("enlace manual");
+        .expect("manual link");
 
     // It matches again, two more times.
     for _ in 0..2 {
@@ -234,10 +234,10 @@ async fn a_stop_from_igdb_does_not_lose_the_matches_already_made() {
 
     // "Disco Elysium" goes before "Doom" by title, which is the order in which
     // they come: the first matches by appid and the second stops the pass.
-    let exacto = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    let exact = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
     let que_corta = entry(gog, StoreId::Gog, "1234", "Doom");
     StoreEntryRepository(&db)
-        .upsert_many(&[exacto.clone(), que_corta.clone()])
+        .upsert_many(&[exact.clone(), que_corta.clone()])
         .await
         .expect("write the entries");
 
@@ -288,7 +288,7 @@ async fn a_stop_from_igdb_does_not_lose_the_matches_already_made() {
     // And the work before the stop is written, which is all of the point.
     let links = GameLinkRepository(&db).all().await.expect("links");
     assert_eq!(links.len(), 1);
-    assert_eq!(links[0].store_entry_id, exacto.id);
+    assert_eq!(links[0].store_entry_id, exact.id);
 }
 
 #[tokio::test]
@@ -331,23 +331,23 @@ async fn gog_and_epic_link_by_identifier_and_never_search_by_title() {
 
     let from_gog = entry(gog, StoreId::Gog, "1207658930", "The Witcher 3");
     let mut from_epic = entry(epic, StoreId::Epic, "Heron", "Alan Wake");
-    from_epic.raw = serde_json::json!({ "offerId": "OFERTA_ALAN_WAKE" });
+    from_epic.raw = serde_json::json!({ "offerId": "OFFER_ALAN_WAKE" });
     StoreEntryRepository(&db)
         .upsert_many(&[from_gog.clone(), from_epic.clone()])
         .await
         .expect("write the entries");
 
     let server = MockServer::start().await;
-    for (fuente, cuerpo) in [
+    for (source, body) in [
         (5, r#"[{"id":1,"uid":"1207658930","game":1942}]"#),
-        (26, r#"[{"id":2,"uid":"OFERTA_ALAN_WAKE","game":548}]"#),
+        (26, r#"[{"id":2,"uid":"OFFER_ALAN_WAKE","game":548}]"#),
     ] {
         Mock::given(method("POST"))
             .and(path("/external_games"))
             .and(body_string_contains(format!(
-                "external_game_source = {fuente}"
+                "external_game_source = {source}"
             )))
-            .respond_with(ResponseTemplate::new(200).set_body_raw(cuerpo, "application/json"))
+            .respond_with(ResponseTemplate::new(200).set_body_raw(body, "application/json"))
             .mount(&server)
             .await;
     }

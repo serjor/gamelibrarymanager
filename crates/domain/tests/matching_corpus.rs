@@ -19,7 +19,7 @@ struct Case {
 }
 
 fn corpus() -> Vec<Case> {
-    serde_json::from_str(include_str!("fixtures/corpus.json")).expect("corpus ilegible")
+    serde_json::from_str(include_str!("fixtures/corpus.json")).expect("the corpus is unreadable")
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn no_false_positive_and_sufficient_precision() {
 
     let precision = hits as f64 / cases.len() as f64;
     println!(
-        "corpus: {hits}/{} correctos ({:.1}%), {} sin emparejar, 0 falsos positivos",
+        "corpus: {hits}/{} correct ({:.1}%), {} unmatched, 0 false positives",
         cases.len(),
         precision * 100.0,
         unmatched.len()
@@ -78,7 +78,7 @@ fn the_candidates_of_the_queue_come_sorted_and_limited() {
     let candidates: Vec<Candidate> = (1..=10)
         .map(|i| Candidate {
             igdb_id: i,
-            name: format!("Juego {i}"),
+            name: format!("Game {i}"),
             alternative_names: vec![],
             release_year: None,
             cover_url: None,
@@ -86,20 +86,20 @@ fn the_candidates_of_the_queue_come_sorted_and_limited() {
         })
         .collect();
 
-    let MatchDecision::Review { candidates: shown } = decide_by_title("Juego", None, &candidates)
+    let MatchDecision::Review { candidates: shown } = decide_by_title("Game", None, &candidates)
     else {
-        panic!("diez candidates parecidos no pueden resolverse solos");
+        panic!("ten similar candidates must not resolve automatically");
     };
 
-    assert!(shown.len() <= 5, "la queue no puede escupir diez opciones");
+    assert!(shown.len() <= 5, "the queue must not show ten options");
     assert!(
         shown.windows(2).all(|w| w[0].score >= w[1].score),
-        "el mejor candidate va primero"
+        "the best candidate comes first"
     );
 }
 
 #[test]
-fn normalizacion() {
+fn normalization() {
     // The packaging goes away.
     assert_eq!(
         normalize("BioShock Infinite: Complete Edition"),
@@ -170,7 +170,7 @@ fn an_incompatible_year_sends_to_review_even_with_an_identical_title() {
 }
 
 #[test]
-fn los_nombres_alternativos_cuentan() {
+fn alternative_names_count() {
     let candidates = vec![Candidate {
         igdb_id: 19686,
         name: "NieR: Automata".to_owned(),
