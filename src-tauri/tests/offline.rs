@@ -26,7 +26,7 @@ const OWNED: &str = include_str!("../../crates/connectors/tests/fixtures/steam_o
 const WISHLIST: &str = include_str!("../../crates/connectors/tests/fixtures/steam_wishlist.json");
 const DETAILS: &str = include_str!("../../crates/connectors/tests/fixtures/steam_app_details.json");
 
-async fn escenario(dir: &std::path::Path) -> (Database, EncryptedFileStore, StoreAccount) {
+async fn scenario(dir: &std::path::Path) -> (Database, EncryptedFileStore, StoreAccount) {
     let db = Database::open(&dir.join("library.db"))
         .await
         .expect("open the database");
@@ -48,8 +48,8 @@ async fn escenario(dir: &std::path::Path) -> (Database, EncryptedFileStore, Stor
     let store =
         EncryptedFileStore::open(&dir.join("secrets.bin"), "a long passphrase").expect("store");
     store
-        .set(&credential_key(&account), r#"{"api_key":"CLAVE"}"#)
-        .expect("credencial");
+        .set(&credential_key(&account), r#"{"api_key":"TEST_API_KEY"}"#)
+        .expect("credential");
 
     (db, store, account)
 }
@@ -72,8 +72,8 @@ async fn steam_server() -> MockServer {
 
 #[tokio::test]
 async fn the_user_status_survives_a_complete_synchronisation() {
-    let dir = tempfile::tempdir().expect("temporal");
-    let (db, secrets, account) = escenario(dir.path()).await;
+    let dir = tempfile::tempdir().expect("temporary directory");
+    let (db, secrets, account) = scenario(dir.path()).await;
     let server = steam_server().await;
     let connector =
         SteamConnector::new(reqwest::Client::new()).with_bases(server.uri(), server.uri());
@@ -116,7 +116,7 @@ async fn the_user_status_survives_a_complete_synchronisation() {
             method: LinkMethod::Manual,
         })
         .await
-        .expect("enlace");
+        .expect("link");
 
     UserStateRepository(&db)
         .save(&UserState {
@@ -156,8 +156,8 @@ async fn the_user_status_survives_a_complete_synchronisation() {
 
 #[tokio::test]
 async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fails() {
-    let dir = tempfile::tempdir().expect("temporal");
-    let (db, secrets, account) = escenario(dir.path()).await;
+    let dir = tempfile::tempdir().expect("temporary directory");
+    let (db, secrets, account) = scenario(dir.path()).await;
 
     // The library is filled while the network is available.
     let server = steam_server().await;
@@ -196,7 +196,7 @@ async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fai
             method: LinkMethod::Auto,
         }])
         .await
-        .expect("enlace");
+        .expect("link");
 
     // The network goes down: the server stops existing.
     drop(server);
@@ -205,7 +205,7 @@ async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fai
 
     let error = sync_account(&db, &secrets, &down, &account, &mut SyncReport::default())
         .await
-        .expect_err("sin red, sincronizar falla");
+        .expect_err("the network is down and synchronization fails");
     assert!(
         error.to_string().contains("could not contact"),
         "the error must say that it is the network: {error}"
@@ -238,8 +238,8 @@ async fn with_no_network_the_library_is_visible_and_only_the_synchronisation_fai
 /// holds, the synchronisation succeeds, and `expect_err` fails.
 #[tokio::test]
 async fn a_store_that_answers_nothing_does_not_hold_the_synchronisation() {
-    let dir = tempfile::tempdir().expect("temporal");
-    let (db, secrets, account) = escenario(dir.path()).await;
+    let dir = tempfile::tempdir().expect("temporary directory");
+    let (db, secrets, account) = scenario(dir.path()).await;
 
     // The library of the account is the first request of the synchronisation,
     // and it is the request that never arrives.

@@ -76,7 +76,7 @@ async fn game(db: &Database, store: StoreId, app_id: &str, kind: EntryKind) -> G
     GameLinkRepository(db)
         .rebuild_auto(&links)
         .await
-        .expect("enlace");
+        .expect("link");
 
     game.id
 }
@@ -88,7 +88,7 @@ fn euros(cents: i64) -> Money {
     }
 }
 
-fn oferta(shop: &str, cents: i64, cut: i64) -> Deal {
+fn deal(shop: &str, cents: i64, cut: i64) -> Deal {
     Deal {
         shop: shop.to_owned(),
         price: euros(cents),
@@ -112,7 +112,7 @@ async fn only_the_wished_for_games_go_into_the_price_query() {
     let wished = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
     game(&db, StoreId::Gog, "1207658930", EntryKind::Owned).await;
 
-    let targets = PriceRepository(&db).targets().await.expect("objetivos");
+    let targets = PriceRepository(&db).targets().await.expect("targets");
 
     assert_eq!(targets.len(), 1, "an owned game has no price to look at");
     assert_eq!(targets[0].game_id, wished);
@@ -130,7 +130,7 @@ async fn the_itad_identifier_is_kept_and_survives_the_metadata_of_the_record() {
     GameRepository(&db)
         .set_itad(game_id, "018d937f", "disco-elysium")
         .await
-        .expect("anotar itad");
+        .expect("save the ITAD identifier");
 
     // A match with IGDB writes all of the record again. The price identifier
     // cannot go with it: the next query would spend one search for each
@@ -139,12 +139,15 @@ async fn the_itad_identifier_is_kept_and_survives_the_metadata_of_the_record() {
         .find(game_id)
         .await
         .expect("record")
-        .expect("existe");
+        .expect("the record exists");
     game.igdb_id = Some(115653);
     game.canonical_title = "Disco Elysium".to_owned();
-    GameRepository(&db).upsert(&game).await.expect("enriquecer");
+    GameRepository(&db)
+        .upsert(&game)
+        .await
+        .expect("enrich the record");
 
-    let targets = PriceRepository(&db).targets().await.expect("objetivos");
+    let targets = PriceRepository(&db).targets().await.expect("targets");
     assert_eq!(targets[0].itad_id.as_deref(), Some("018d937f"));
 }
 
@@ -157,15 +160,15 @@ async fn the_price_shown_is_the_least_expensive_with_its_store() {
     repo.save(
         game_id,
         &prices(vec![
-            oferta("Steam", 1799, 55),
-            oferta("GOG", 1599, 60),
-            oferta("Fanatical", 2099, 47),
+            deal("Steam", 1799, 55),
+            deal("GOG", 1599, 60),
+            deal("Fanatical", 2099, 47),
         ]),
     )
     .await
-    .expect("guardar prices");
+    .expect("save prices");
 
-    let rows = repo.all().await.expect("consultar prices");
+    let rows = repo.all().await.expect("read prices");
 
     assert_eq!(
         rows.len(),
@@ -190,13 +193,13 @@ async fn a_tie_at_the_cent_always_resolves_in_the_same_way() {
 
     repo.save(
         game_id,
-        &prices(vec![oferta("Steam", 1599, 60), oferta("GOG", 1599, 60)]),
+        &prices(vec![deal("Steam", 1599, 60), deal("GOG", 1599, 60)]),
     )
     .await
-    .expect("guardar prices");
+    .expect("save prices");
 
     for _ in 0..5 {
-        let rows = repo.all().await.expect("consultar prices");
+        let rows = repo.all().await.expect("read prices");
         assert_eq!(rows[0].shop, "GOG");
     }
 }
@@ -211,15 +214,15 @@ async fn a_refresh_replaces_the_offers_and_does_not_accumulate_them() {
 
     repo.save(
         game_id,
-        &prices(vec![oferta("Steam", 1799, 55), oferta("GOG", 1599, 60)]),
+        &prices(vec![deal("Steam", 1799, 55), deal("GOG", 1599, 60)]),
     )
     .await
     .expect("first pass");
-    repo.save(game_id, &prices(vec![oferta("Steam", 3999, 0)]))
+    repo.save(game_id, &prices(vec![deal("Steam", 3999, 0)]))
         .await
         .expect("second pass");
 
-    let rows = repo.all().await.expect("consultar prices");
+    let rows = repo.all().await.expect("read prices");
     assert_eq!(
         rows[0].shops, 1,
         "the GOG discount ended and cannot stay there"
@@ -231,19 +234,21 @@ async fn a_refresh_replaces_the_offers_and_does_not_accumulate_them() {
 #[tokio::test]
 async fn a_game_that_leaves_the_list_stops_having_a_price() {
     let db = Database::in_memory().await.expect("database");
-    let comprado = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
+    let bought = game(&db, StoreId::Steam, "632470", EntryKind::Wishlist).await;
     let stays = game(&db, StoreId::Gog, "1207658930", EntryKind::Wishlist).await;
     let repo = PriceRepository(&db);
 
-    for game_id in [comprado, stays] {
-        repo.save(game_id, &prices(vec![oferta("Steam", 1799, 55)]))
+    for game_id in [bought, stays] {
+        repo.save(game_id, &prices(vec![deal("Steam", 1799, 55)]))
             .await
-            .expect("guardar prices");
+            .expect("save prices");
     }
 
-    repo.forget_missing(&[stays]).await.expect("olvidar");
+    repo.forget_missing(&[stays])
+        .await
+        .expect("forget missing prices");
 
-    let rows = repo.all().await.expect("consultar prices");
+    let rows = repo.all().await.expect("read prices");
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].game_id, stays);
 }
@@ -260,7 +265,7 @@ async fn the_prices_touch_neither_the_copy_nor_the_user_status() {
             game_id,
             status: Some(PlayStatus::Backlog),
             rating: Some(9),
-            notes: Some("esperando rebaja".to_owned()),
+            notes: Some("waiting for a sale".to_owned()),
             started_at: None,
             finished_at: None,
         })
@@ -268,23 +273,23 @@ async fn the_prices_touch_neither_the_copy_nor_the_user_status() {
         .expect("status");
 
     let repo = PriceRepository(&db);
-    repo.save(game_id, &prices(vec![oferta("Steam", 1799, 55)]))
+    repo.save(game_id, &prices(vec![deal("Steam", 1799, 55)]))
         .await
-        .expect("guardar prices");
-    repo.forget_missing(&[]).await.expect("olvidarlo todo");
+        .expect("save prices");
+    repo.forget_missing(&[]).await.expect("forget all prices");
 
     let state = UserStateRepository(&db)
         .find(game_id)
         .await
-        .expect("consultar state")
+        .expect("read state")
         .expect("the status stays there");
-    assert_eq!(state.notes.as_deref(), Some("esperando rebaja"));
+    assert_eq!(state.notes.as_deref(), Some("waiting for a sale"));
     assert_eq!(state.rating, Some(9));
     assert_eq!(
         StoreEntryRepository(&db)
             .active(EntryKind::Wishlist)
             .await
-            .expect("copias")
+            .expect("copies")
             .len(),
         1
     );

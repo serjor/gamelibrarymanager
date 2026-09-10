@@ -1,6 +1,6 @@
 [package]
 name = "gamelibrarymanager"
-description = "Biblioteca unificada de juegos"
+description = "Unified game library"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -32,8 +32,8 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt", "time"] }
-# Para comprobar los patrones de alcance de la capacidad con la misma
-# implementación que usa tauri-plugin-opener en tiempo de ejecución.
+# To examine the capability scope patterns with the same implementation that
+# tauri-plugin-opener uses at runtime.
 glob = "0.3"
 wiremock = "0.6"
 tempfile = "3"

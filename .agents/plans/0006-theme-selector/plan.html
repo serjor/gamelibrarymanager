@@ -146,7 +146,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <dl class="meta">
     <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
     <div><dt>Branch</dt><dd><code>t3code/implement-issue-three</code></dd></div>
-    <div><dt>Updated</dt><dd>2026-08-31</dd></div>
+    <div><dt>Updated</dt><dd>2026-09-10</dd></div>
     <div><dt>Status</dt><dd><span class="status done">Complete · implementation done</span></dd></div>
   </dl>
 
@@ -189,7 +189,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>Review the pushed branch.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>No implementation action remains.</span></p>
   <p class="callout warning"><strong>Planning environment.</strong> The planning session did not run <code>bun</code> or <code>cargo</code> because these commands are not installed. The implementation session must run the gates in a complete environment.</p>
 
   <table>
@@ -479,6 +479,15 @@ bun run build &amp;&amp; bun run visual</code></pre>
           <dt>Handoff</dt><dd>Phase 2 is complete. Review the pushed branch.</dd>
         </dl>
       </details>
+
+      <details class="execution-record">
+        <summary>Post-implementation audit · 2026-09-10</summary>
+        <dl>
+          <dt>Checks</dt><dd>The Rust format, lint, and test gates passed. TypeScript, lint, Bun tests, build, and the GitHub visual job passed. Bun tests passed with 102 tests.</dd>
+          <dt>Keyring</dt><dd>The ignored real keyring test passed in the available desktop secret-service session. The earlier execution record describes the previous environment.</dd>
+          <dt>Result</dt><dd>No implementation blocker remains. The preference stays in WebView storage by the approved decision.</dd>
+        </dl>
+      </details>
     </div>
   </article>
 </section>
@@ -525,7 +534,7 @@ cargo test --workspace
 bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
 bun run build &amp;&amp; bun run visual
 bun run tauri dev</code></pre>
-      <p class="muted">The ignored keyring test still needs a desktop session with secret-service: <code>cargo test -p secrets --test keyring_real -- --ignored</code>.</p>
+      <p class="muted">The ignored keyring test passed in the available desktop session. Repeat it with <code>cargo test -p secrets --test keyring_real -- --ignored</code> when checking another desktop environment.</p>
     </article>
     <article>
       <h3>Acceptance criteria</h3>

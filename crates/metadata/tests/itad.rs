@@ -17,7 +17,7 @@ const PRICES: &str = include_str!("fixtures/itad_prices.json");
 
 fn credentials() -> ItadCredentials {
     ItadCredentials {
-        key: "MI_CLAVE".to_owned(),
+        key: "MY_API_KEY".to_owned(),
         country: "GB".to_owned(),
     }
 }
@@ -33,7 +33,7 @@ async fn the_steam_appid_gives_the_itad_game() {
         .and(path("/games/lookup/v1"))
         // The key goes in the header and not in the URL: a key in the address
         // goes into each log through which the request passes.
-        .and(header("ITAD-API-Key", "MI_CLAVE"))
+        .and(header("ITAD-API-Key", "MY_API_KEY"))
         .and(query_param("appid", "632470"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(LOOKUP, "application/json"))
         .mount(&server)
@@ -42,7 +42,7 @@ async fn the_steam_appid_gives_the_itad_game() {
     let game = client(&server)
         .lookup_by_steam_app_id(&credentials(), "632470")
         .await
-        .expect("consulta")
+        .expect("query")
         .expect("the game exists");
 
     assert_eq!(game.id, "018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c");
@@ -54,16 +54,16 @@ async fn a_game_that_itad_does_not_know_is_not_an_error() {
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/games/lookup/v1"))
-        .and(query_param("title", "Juego inventado"))
+        .and(query_param("title", "Invented game"))
         .respond_with(ResponseTemplate::new(200).set_body_raw(NOT_FOUND, "application/json"))
         .mount(&server)
         .await;
 
     assert_eq!(
         client(&server)
-            .lookup_by_title(&credentials(), "Juego inventado")
+            .lookup_by_title(&credentials(), "Invented game")
             .await
-            .expect("consulta"),
+            .expect("query"),
         None
     );
 }
@@ -84,7 +84,7 @@ async fn the_prices_come_in_cents_with_the_all_time_low() {
             &["018d937f-0e3f-72d4-a1a2-6d0e0b0f9d2c".to_owned()],
         )
         .await
-        .expect("consulta");
+        .expect("query");
 
     let disco = &prices[0];
     assert_eq!(disco.deals.len(), 2);
@@ -110,9 +110,9 @@ async fn a_game_with_no_offer_comes_with_no_price_and_no_lows() {
         .await;
 
     let prices = client(&server)
-        .prices(&credentials(), &["da-igual".to_owned()])
+        .prices(&credentials(), &["irrelevant".to_owned()])
         .await
-        .expect("consulta");
+        .expect("query");
 
     let with_no_offer = &prices[1];
     assert!(with_no_offer.deals.is_empty());
@@ -127,9 +127,13 @@ async fn a_long_list_is_divided_into_batches_of_two_hundred() {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/games/prices/v3"))
-        .respond_with(|peticion: &Request| {
-            let ids: Vec<String> = serde_json::from_slice(&peticion.body).expect("cuerpo");
-            assert!(ids.len() <= 200, "ITAD no admite lotes de {}", ids.len());
+        .respond_with(|request: &Request| {
+            let ids: Vec<String> = serde_json::from_slice(&request.body).expect("body");
+            assert!(
+                ids.len() <= 200,
+                "ITAD must not receive batches of {}",
+                ids.len()
+            );
             ResponseTemplate::new(200).set_body_raw("[]", "application/json")
         })
         .mount(&server)
@@ -139,7 +143,7 @@ async fn a_long_list_is_divided_into_batches_of_two_hundred() {
     client(&server)
         .prices(&credentials(), &ids)
         .await
-        .expect("consulta");
+        .expect("query");
 
     assert_eq!(server.received_requests().await.expect("requests").len(), 3);
 }
@@ -173,7 +177,7 @@ async fn the_429_has_an_error_of_its_own() {
 
     assert!(matches!(
         client(&server)
-            .prices(&credentials(), &["da-igual".to_owned()])
+            .prices(&credentials(), &["irrelevant".to_owned()])
             .await,
         Err(MetadataError::RateLimited)
     ));

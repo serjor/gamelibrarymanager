@@ -16,7 +16,7 @@ use wiremock::matchers::{method, path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 const TOKEN: &str = include_str!("fixtures/gog_token.json");
-const TOKEN_REFRESCADO: &str = include_str!("fixtures/gog_token_refreshed.json");
+const TOKEN_REFRESHED: &str = include_str!("fixtures/gog_token_refreshed.json");
 const RELEASES: &str = include_str!("fixtures/gog_releases.json");
 const RELEASES_2: &str = include_str!("fixtures/gog_releases_page2.json");
 const PRODUCTS: &str = include_str!("fixtures/gog_products.json");
@@ -36,7 +36,7 @@ fn connector(server: &MockServer) -> GogConnector {
 }
 
 /// A credential already kept, with the expiry that the test asks for.
-fn credencial(expires_at: i64) -> String {
+fn credential(expires_at: i64) -> String {
     format!(
         r#"{{"client_id":"46899977096215655","client_secret":"SECRET_THAT_THE_USER_SUPPLIES",
              "access_token":"TEST_ACCESS_TOKEN","refresh_token":"TEST_REFRESH_TOKEN",
@@ -49,7 +49,7 @@ fn session(expires_at: i64) -> StoreSession {
         store: StoreId::Gog,
         account_ref: USER_ID.to_owned(),
         display_name: Some("serjor".to_owned()),
-        credential: credencial(expires_at),
+        credential: credential(expires_at),
         expires_at: None,
     }
 }
@@ -63,7 +63,7 @@ async fn mock(server: &MockServer, route: &str, body: &'static str) {
 }
 
 /// The library in pages: page 1 with a token, page 2 with no token.
-async fn mock_biblioteca(server: &MockServer) {
+async fn mock_library(server: &MockServer) {
     let route = format!("/users/{USER_ID}/releases");
     Mock::given(method("GET"))
         .and(path(route.clone()))
@@ -135,12 +135,12 @@ async fn an_expired_code_asks_you_to_connect_again() {
 #[tokio::test]
 async fn it_reads_the_library_in_pages_and_drops_what_is_not_its_own() {
     let server = MockServer::start().await;
-    mock_biblioteca(&server).await;
+    mock_library(&server).await;
 
     let entries = connector(&server)
-        .owned(&session(futuro()), StoreAccountId::new())
+        .owned(&session(future()), StoreAccountId::new())
         .await
-        .expect("leer biblioteca");
+        .expect("read the library");
 
     // Of the four entries in the two pages only two are owned GOG games: Galaxy
     // lists the Steam one because the user has that store connected, and the
@@ -162,7 +162,7 @@ async fn it_reads_the_library_in_pages_and_drops_what_is_not_its_own() {
         entries[1].title,
         "The Witcher 2: Assassins of Kings Enhanced Edition"
     );
-    assert!(entries[0].acquired_at.is_some(), "owned_since se conserva");
+    assert!(entries[0].acquired_at.is_some(), "owned_since stays");
 
     // The cover and the store page are what let you compare against the IGDB
     // record when you examine an unsure match.
@@ -205,7 +205,7 @@ async fn with_no_title_the_copy_still_comes() {
         .await;
 
     let entries = connector(&server)
-        .owned(&session(futuro()), StoreAccountId::new())
+        .owned(&session(future()), StoreAccountId::new())
         .await
         .expect("a failure of the titles does not make the synchronisation invalid");
 
@@ -227,7 +227,7 @@ async fn with_the_token_still_live_it_uses_no_request() {
 
     let session = connector(&server)
         .authenticate(&AuthContext::Stored {
-            credential: credencial(futuro()),
+            credential: credential(future()),
         })
         .await
         .expect("build the session again");
@@ -242,17 +242,17 @@ async fn it_refreshes_the_token_when_the_access_token_expires() {
         .and(path("/token"))
         .and(query_param("grant_type", "refresh_token"))
         .and(query_param("refresh_token", "TEST_REFRESH_TOKEN"))
-        .respond_with(ResponseTemplate::new(200).set_body_raw(TOKEN_REFRESCADO, "application/json"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TOKEN_REFRESHED, "application/json"))
         .expect(1)
         .mount(&server)
         .await;
 
     let session = connector(&server)
         .authenticate(&AuthContext::Stored {
-            credential: credencial(pasado()),
+            credential: credential(past()),
         })
         .await
-        .expect("refrescar el token caducado");
+        .expect("refresh the expired token");
 
     assert!(
         session.credential.contains("RENEWED_ACCESS_TOKEN"),
@@ -261,7 +261,7 @@ async fn it_refreshes_the_token_when_the_access_token_expires() {
     assert!(
         session.credential.contains("ROTATED_REFRESH_TOKEN"),
         "GOG changes the refresh token: to keep the old one would leave the \
-         muerta en la siguiente caducidad"
+         make the next refresh fail"
     );
     assert!(
         session.credential.contains("SECRET_THAT_THE_USER_SUPPLIES"),
@@ -280,7 +280,7 @@ async fn a_refused_refresh_asks_you_to_connect_again() {
 
     let error = connector(&server)
         .authenticate(&AuthContext::Stored {
-            credential: credencial(pasado()),
+            credential: credential(past()),
         })
         .await
         .expect_err("a revoked refresh_token cannot recover alone");
@@ -293,7 +293,7 @@ async fn the_gog_wishlist_is_not_accessible_and_is_not_invented() {
     let server = MockServer::start().await;
 
     let entries = connector(&server)
-        .wishlist(&session(futuro()), StoreAccountId::new())
+        .wishlist(&session(future()), StoreAccountId::new())
         .await
         .expect("the wishes cannot make the synchronisation fail");
 
@@ -304,10 +304,10 @@ async fn the_gog_wishlist_is_not_accessible_and_is_not_invented() {
     );
 }
 
-fn futuro() -> i64 {
+fn future() -> i64 {
     OffsetDateTime::now_utc().unix_timestamp() + 3600
 }
 
-fn pasado() -> i64 {
+fn past() -> i64 {
     OffsetDateTime::now_utc().unix_timestamp() - 10
 }

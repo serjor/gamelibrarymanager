@@ -27,7 +27,7 @@ const IGDB_SEARCH: &str = include_str!("fixtures/igdb_search_witcher3.json");
 const IGDB_GAME: &str = include_str!("fixtures/igdb_game_witcher3.json");
 
 async fn base() -> (tempfile::TempDir, Database) {
-    let dir = tempfile::tempdir().expect("directorio temporal");
+    let dir = tempfile::tempdir().expect("temporary directory");
     let db = Database::open(&dir.path().join("library.db"))
         .await
         .expect("open the database");
@@ -35,7 +35,7 @@ async fn base() -> (tempfile::TempDir, Database) {
 }
 
 /// Adds an account and attaches to it a copy with the title given.
-async fn copia(db: &Database, store: StoreId, app_id: &str, title: &str) -> StoreEntryId {
+async fn store_entry(db: &Database, store: StoreId, app_id: &str, title: &str) -> StoreEntryId {
     let account = StoreAccount {
         id: StoreAccountId::new(),
         store,
@@ -65,11 +65,11 @@ async fn copia(db: &Database, store: StoreId, app_id: &str, title: &str) -> Stor
     StoreEntryRepository(db)
         .upsert_many(std::slice::from_ref(&entry))
         .await
-        .expect("volcar copia");
+        .expect("write the store entry");
     entry.id
 }
 
-async fn servidor_igdb() -> MockServer {
+async fn igdb_server() -> MockServer {
     let server = MockServer::start().await;
     Mock::given(method("POST"))
         .and(path("/external_games"))
@@ -102,15 +102,15 @@ async fn servidor_igdb() -> MockServer {
     server
 }
 
-fn cliente(server: &MockServer) -> IgdbClient {
+fn client(server: &MockServer) -> IgdbClient {
     IgdbClient::new(reqwest::Client::new())
         .with_bases(server.uri(), format!("{}/token", server.uri()))
 }
 
-fn credenciales() -> IgdbCredentials {
+fn credentials() -> IgdbCredentials {
     IgdbCredentials {
-        client_id: "CLIENTE".to_owned(),
-        client_secret: "SECRETO".to_owned(),
+        client_id: "CLIENT_ID".to_owned(),
+        client_secret: "CLIENT_SECRET".to_owned(),
     }
 }
 
@@ -124,15 +124,15 @@ fn token() -> IgdbToken {
 #[tokio::test]
 async fn with_no_igdb_the_library_is_visible_and_deduplicates_by_title() {
     let (_dir, db) = base().await;
-    copia(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
-    copia(
+    store_entry(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
+    store_entry(
         &db,
         StoreId::Gog,
         "1495134320",
         "The Witcher 3: Wild Hunt - Complete Edition",
     )
     .await;
-    copia(&db, StoreId::Steam, "105600", "Terraria").await;
+    store_entry(&db, StoreId::Steam, "105600", "Terraria").await;
 
     let report = resolve_local(&db, &Silent)
         .await
@@ -160,8 +160,8 @@ async fn with_no_igdb_the_library_is_visible_and_deduplicates_by_title() {
 #[tokio::test]
 async fn when_igdb_is_configured_the_record_gets_metadata_and_keeps_the_status() {
     let (_dir, db) = base().await;
-    copia(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
-    copia(
+    store_entry(&db, StoreId::Steam, "292030", "The Witcher 3: Wild Hunt").await;
+    store_entry(
         &db,
         StoreId::Gog,
         "1495134320",
@@ -189,8 +189,8 @@ async fn when_igdb_is_configured_the_record_gets_metadata_and_keeps_the_status()
         .expect("keep the status");
 
     // --- and later they configure IGDB ---
-    let server = servidor_igdb().await;
-    resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
+    let server = igdb_server().await;
+    resolve(&db, &client(&server), &credentials(), &token(), &Silent)
         .await
         .expect("match with IGDB");
 
@@ -228,7 +228,7 @@ async fn when_igdb_is_configured_the_record_gets_metadata_and_keeps_the_status()
 async fn what_igdb_does_not_recognise_does_not_go_out_of_the_library() {
     let (_dir, db) = base().await;
     // Terraria has no join in the IGDB fixtures: the search comes back empty.
-    copia(&db, StoreId::Steam, "105600", "Terraria").await;
+    store_entry(&db, StoreId::Steam, "105600", "Terraria").await;
 
     resolve_local(&db, &Silent)
         .await
@@ -238,8 +238,8 @@ async fn what_igdb_does_not_recognise_does_not_go_out_of_the_library() {
         1
     );
 
-    let server = servidor_igdb().await;
-    resolve(&db, &cliente(&server), &credenciales(), &token(), &Silent)
+    let server = igdb_server().await;
+    resolve(&db, &client(&server), &credentials(), &token(), &Silent)
         .await
         .expect("match with IGDB");
 

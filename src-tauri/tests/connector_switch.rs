@@ -83,7 +83,7 @@ async fn a_broken_epic_leaves_a_reason_behind_and_does_not_touch_steam() {
     let epic = account(&db, StoreId::Epic, "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7").await;
 
     secrets
-        .set(&credential_key(&steam), r#"{"api_key":"CLAVE"}"#)
+        .set(&credential_key(&steam), r#"{"api_key":"TEST_API_KEY"}"#)
         .expect("Steam credential");
     // Already expired, so rebuilding the session goes for a refresh, which is
     // where Epic says no.
@@ -92,7 +92,7 @@ async fn a_broken_epic_leaves_a_reason_behind_and_does_not_touch_steam() {
         .set(
             &credential_key(&epic),
             &format!(
-                r#"{{"client_id":"34a02cf8f4414e29b15921876da36f9a","client_secret":"SECRETO",
+                r#"{{"client_id":"34a02cf8f4414e29b15921876da36f9a","client_secret":"CLIENT_SECRET",
                      "access_token":"VIEJO","refresh_token":"REVOCADO",
                      "account_id":"a1b2c3d4e5f64788b0c1d2e3f4a5b6c7","expires_at":{expired}}}"#
             ),
@@ -170,7 +170,7 @@ async fn a_switched_off_epic_is_not_even_asked_and_steam_carries_on() {
     let steam = account(&db, StoreId::Steam, "76561197960287930").await;
     account(&db, StoreId::Epic, "a1b2c3d4e5f64788b0c1d2e3f4a5b6c7").await;
     secrets
-        .set(&credential_key(&steam), r#"{"api_key":"CLAVE"}"#)
+        .set(&credential_key(&steam), r#"{"api_key":"TEST_API_KEY"}"#)
         .expect("Steam credential");
 
     ConnectorStateRepository(&db)

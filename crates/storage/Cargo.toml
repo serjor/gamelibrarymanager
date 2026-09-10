@@ -22,7 +22,7 @@ sqlx = { version = "0.8", default-features = false, features = [
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt"] }
-# Para contar las sentencias que ejecuta sqlx: las registra en `sqlx::query`.
+# To count the statements that sqlx runs: it records them in `sqlx::query`.
 log = "0.4"
 serde_json.workspace = true
 tempfile = "3"
