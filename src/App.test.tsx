@@ -11,6 +11,8 @@ import type {
   ReviewItem,
   StateUpdate,
   SyncReport,
+  WishTarget,
+  PlatformFamily,
 } from "./lib/api";
 import { THEME_STORAGE_KEY } from "./features/shell/theme";
 
@@ -47,6 +49,7 @@ const state = {
   matchingStopped: null as string | null,
   exportPath: null as string | null,
   exports: [] as [string, "json" | "csv"][],
+  wishTargets: [] as WishTarget[],
 };
 
 /**
@@ -150,6 +153,29 @@ mock.module("./lib/api", () => ({
       state.saveCalls += 1;
       return Promise.resolve(write(updates));
     },
+    searchManualWishGames: () => Promise.resolve([{ igdb_id: 42, name: "Hades", release_year: 2020, cover_url: null }]),
+    addManualWish: (target: WishTarget, family: PlatformFamily, model: string) => {
+      state.wishTargets.push(target);
+      const existing = target.kind === "existing" ? state.rows.find((item) => item.game_id === target.game_id)
+        : target.kind === "igdb" ? state.rows.find((item) => item.title === "Hades") : null;
+      const title = target.kind === "title" ? target.title : target.kind === "igdb" ? "Hades" : existing?.title ?? "Game";
+      const base = existing ?? row({ title, sort_title: title.toLowerCase(), owned_stores: [] });
+      const saved = { ...base, manual_wishes: [...base.manual_wishes, { id: crypto.randomUUID(), game_id: base.game_id, family, model }] };
+      state.rows = [...state.rows.filter((item) => item.game_id !== base.game_id), saved];
+      return Promise.resolve(saved);
+    },
+    updateManualWish: (wishId: string, family: PlatformFamily, model: string) => {
+      const base = state.rows.find((item) => item.manual_wishes.some((wish) => wish.id === wishId))!;
+      const saved = { ...base, manual_wishes: base.manual_wishes.map((wish) => wish.id === wishId ? { ...wish, family, model } : wish) };
+      state.rows = state.rows.map((item) => item.game_id === base.game_id ? saved : item);
+      return Promise.resolve(saved);
+    },
+    removeManualWish: (wishId: string) => {
+      const base = state.rows.find((item) => item.manual_wishes.some((wish) => wish.id === wishId))!;
+      const saved = { ...base, manual_wishes: base.manual_wishes.filter((wish) => wish.id !== wishId) };
+      state.rows = state.rows.map((item) => item.game_id === base.game_id ? saved : item);
+      return Promise.resolve(saved);
+    },
   },
   errorMessage: (cause: unknown) => String(cause),
 }));
@@ -188,6 +214,7 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
     genres: [],
     owned_stores: ["steam"],
     wishlist_stores: [],
+    manual_wishes: [],
     store_cover_url: null,
     store_url: null,
     playtime_minutes: 0,
@@ -365,6 +392,7 @@ describe("App", () => {
     state.syncError = null;
     state.exportPath = null;
     state.exports = [];
+    state.wishTargets = [];
   });
 
   it("gives the product mark a stable accessible name", async () => {
@@ -425,6 +453,52 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "Bring your collection together" })).toBeDefined();
     expect(screen.getByText("Private by design")).toBeDefined();
     expect(screen.getByRole("button", { name: "or start with GOG" })).toBeDefined();
+  });
+
+  it("adds, edits, and removes manual devices without a store or IGDB", async () => {
+    state.hasIgdb = false;
+    state.hasItad = false;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Continue with a manual wishlist" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Add wanted game" }));
+    expect(screen.queryByRole("radio", { name: "Search IGDB" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Game title"), { target: { value: "Celeste" } });
+    fireEvent.change(screen.getByLabelText("Device family"), { target: { value: "nintendo" } });
+    fireEvent.change(screen.getByLabelText(/Model/), { target: { value: "Switch" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to wishlist" }));
+    expect(await screen.findByText("Celeste")).toBeDefined();
+    expect(state.wishTargets).toEqual([{ kind: "title", title: "Celeste" }]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Add wanted game" }));
+    fireEvent.change(screen.getByLabelText("Game"), { target: { value: state.rows[0]!.game_id } });
+    fireEvent.change(screen.getByLabelText("Device family"), { target: { value: "playstation" } });
+    fireEvent.change(screen.getByLabelText(/Model/), { target: { value: "PS5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to wishlist" }));
+    await waitFor(() => expect(state.rows[0]?.manual_wishes).toHaveLength(2));
+    expect(screen.getAllByText("Celeste")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit PS5 wish for Celeste" }));
+    fireEvent.change(screen.getByLabelText("Device model for Celeste"), { target: { value: "PS4" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("PS4")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Remove PS4 wish for Celeste" }));
+    await waitFor(() => expect(state.rows[0]?.manual_wishes).toHaveLength(1));
+    expect(screen.getByText("Switch")).toBeDefined();
+    expect(screen.getByText("Celeste")).toBeDefined();
+  });
+
+  it("selects an IGDB game explicitly when IGDB is configured", async () => {
+    state.accounts = [steamAccount];
+    state.hasItad = false;
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Wishlist" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add wanted game" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Search IGDB" }));
+    fireEvent.change(screen.getByLabelText("Search title"), { target: { value: "Hades" } });
+    fireEvent.click(screen.getByRole("button", { name: "Search" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Hades (2020)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to wishlist" }));
+    await waitFor(() => expect(state.wishTargets).toEqual([{ kind: "igdb", igdb_id: 42 }]));
   });
 
   it("with no keyring in the system it asks for the passphrase first", async () => {

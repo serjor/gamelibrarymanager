@@ -198,7 +198,7 @@ export function LibraryTable({
                   ) : isNoLongerInStore(row) ? (
                     <span className="status gone">Not in a store</span>
                   ) : (
-                    <span className="hint">wished for</span>
+                    <span className="hint">wished for{row.manual_wishes.length > 0 ? ` · ${row.manual_wishes.map((wish) => wish.model || wish.family).join(", ")}` : ""}</span>
                   )}
                 </td>
                 <td className="num">{hours(row.playtime_minutes)}</td>

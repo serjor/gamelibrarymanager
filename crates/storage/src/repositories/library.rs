@@ -1,10 +1,10 @@
-use domain::{GameId, PlayStatus};
+use domain::{GameId, ManualWish, PlayStatus};
 use serde::Serialize;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 
 use crate::mapping::{game_id_from_text, game_id_to_text, status_from_str};
-use crate::{Database, Result};
+use crate::{Database, Result, StorageError};
 
 /// A row of the library: the game record and all of the data to show with it.
 ///
@@ -24,6 +24,8 @@ pub struct LibraryRow {
     pub genres: Vec<String>,
     pub owned_stores: Vec<String>,
     pub wishlist_stores: Vec<String>,
+    /// Wishes written by the user, not copies reported by a store.
+    pub manual_wishes: Vec<ManualWish>,
     /// The horizontal image of the store, which is different from `cover_url`:
     /// IGDB gives 3:4 covers and the store gives wide headers.
     pub store_cover_url: Option<String>,
@@ -93,6 +95,13 @@ const SQL: &str = "SELECT
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.kind = 'wishlist' AND e.deleted_at IS NULL
                  ) AS wishlist_stores,
+                 (SELECT json_group_array(json_object(
+                       'id', m.id, 'game_id', m.game_id,
+                       'family', m.family, 'model', m.model))
+                    FROM (SELECT id, game_id, family, model FROM manual_wish
+                           WHERE game_id = g.id AND deleted_at IS NULL
+                           ORDER BY family, model_key) m
+                 ) AS manual_wishes,
                  (SELECT COALESCE(SUM(e.playtime_minutes), 0) FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.deleted_at IS NULL
@@ -137,6 +146,11 @@ const SQL: &str = "SELECT
 fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
     let status: Option<String> = row.get("status");
     let released: Option<time::OffsetDateTime> = row.get("released_at");
+    let manual_json: String = row.get("manual_wishes");
+    let manual_wishes = serde_json::from_str(&manual_json).map_err(|_| StorageError::Corrupt {
+        column: "manual_wishes",
+        value: manual_json,
+    })?;
 
     Ok(LibraryRow {
         game_id: game_id_from_text(&row.get::<String, _>("id"))?,
@@ -148,6 +162,7 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         genres: serde_json::from_str(&row.get::<String, _>("genres")).unwrap_or_default(),
         owned_stores: split(row.get("owned_stores")),
         wishlist_stores: split(row.get("wishlist_stores")),
+        manual_wishes,
         store_cover_url: row.get("store_cover_url"),
         store_url: row.get("store_url"),
         playtime_minutes: row.get("playtime_minutes"),

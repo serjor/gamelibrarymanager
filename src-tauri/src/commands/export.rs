@@ -63,7 +63,7 @@ pub async fn export_library_for(
 }
 
 fn csv(rows: &[LibraryRow]) -> String {
-    let mut output = String::from("game_id,title,status,score,notes\n");
+    let mut output = String::from("game_id,title,status,score,notes,manual_platforms\n");
     for row in rows {
         let status = row.status.map(status_name).unwrap_or("");
         let score = row
@@ -79,6 +79,20 @@ fn csv(rows: &[LibraryRow]) -> String {
         output.push_str(&score);
         output.push(',');
         output.push_str(&csv_field(row.notes.as_deref().unwrap_or("")));
+        output.push(',');
+        let platforms = row
+            .manual_wishes
+            .iter()
+            .map(|wish| {
+                if wish.model.is_empty() {
+                    wish.family.as_str().to_owned()
+                } else {
+                    format!("{}: {}", wish.family.as_str(), wish.model)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        output.push_str(&csv_field(&platforms));
         output.push('\n');
     }
     output

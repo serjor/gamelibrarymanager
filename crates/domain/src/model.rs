@@ -21,6 +21,30 @@ impl StoreId {
     }
 }
 
+/// A device family is not a connected store. A free model distinguishes PS4
+/// from PS5 without changing this enum for every new console.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PlatformFamily {
+    Pc,
+    Playstation,
+    Xbox,
+    Nintendo,
+    Other,
+}
+
+impl PlatformFamily {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Pc => "pc",
+            Self::Playstation => "playstation",
+            Self::Xbox => "xbox",
+            Self::Nintendo => "nintendo",
+            Self::Other => "other",
+        }
+    }
+}
+
 /// Whether a store connector is on, and what went wrong the last time it ran.
 ///
 /// Epic is the reason this exists. Its authentication rests on the private API
@@ -84,6 +108,7 @@ macro_rules! id_type {
 id_type!(GameId);
 id_type!(StoreEntryId);
 id_type!(StoreAccountId);
+id_type!(ManualWishId);
 
 #[cfg(test)]
 mod tests {

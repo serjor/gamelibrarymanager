@@ -12,9 +12,11 @@ import {
   type LibraryRow,
   type LibrarySummary,
   type PriceRow,
+  type PlatformFamily,
   type ReviewItem,
   type SyncProgress,
   type SyncReport,
+  type WishTarget,
 } from "./lib/api";
 import { SteamSetup } from "./features/onboarding/SteamSetup";
 import { GogSetup } from "./features/onboarding/GogSetup";
@@ -71,6 +73,7 @@ export function App() {
   const [busy, setBusy] = useState<string | null>(null);
   const [stoppedPass, setStoppedPass] = useState<string | null>(null);
   const [exportedPath, setExportedPath] = useState<string | null>(null);
+  const [localStart, setLocalStart] = useState(false);
 
   // `alive` prevents a load in progress from writing state on a component that
   // is already removed, which is the usual race of this pattern.
@@ -129,8 +132,29 @@ export function App() {
   const patchRows = useCallback((saved: LibraryRow[]) => {
     if (saved.length === 0) return;
     const byId = new Map(saved.map((row) => [row.game_id, row]));
-    setRows((previous) => previous.map((row) => byId.get(row.game_id) ?? row));
+    setRows((previous) => [
+      ...previous.map((row) => byId.get(row.game_id) ?? row),
+      ...saved.filter((row) => !previous.some((old) => old.game_id === row.game_id)),
+    ]);
   }, []);
+
+  const changeWish = async (action: () => Promise<LibraryRow>) => {
+    const saved = await action();
+    patchRows([saved]);
+    try {
+      setSummary(await api.librarySummary());
+    } catch (cause) {
+      setError(`The wish was saved, but the summary could not be updated: ${errorMessage(cause)}`);
+    }
+    if (hasItad) {
+      try {
+        await api.refreshPrices();
+        setPrices(await api.prices());
+      } catch (cause) {
+        setError(`The wish was saved, but prices could not be updated: ${errorMessage(cause)}`);
+      }
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -280,7 +304,7 @@ export function App() {
   // method. But a user with no Steam cannot be in a dead end, and that applies
   // to all of the other stores: the list comes from STORES so that a new store
   // does not forget this screen.
-  if (accounts.length === 0) {
+  if (accounts.length === 0 && !localStart && rows.length === 0) {
     return (
       <main className="setup-page">
         <SteamSetup onConnected={refresh} />
@@ -292,6 +316,9 @@ export function App() {
             Or start with another store
           </p>
           <div className="setup-alternatives-actions">
+            <button type="button" className="link" onClick={() => { setLocalStart(true); setTab("wishlist"); }}>
+              Continue with a manual wishlist
+            </button>
             {STORES.filter(([store]) => store !== "steam").map(([store, name]) => (
               <button
                 key={store}
@@ -323,7 +350,7 @@ export function App() {
   // Records and not copies: the summary counts what the stores say — the same
   // wished-for game in two stores counts two times — and the tab must say the
   // same as the screen that it opens.
-  const wished = rows.filter((row) => row.wishlist_stores.length > 0).length;
+  const wished = rows.filter((row) => row.wishlist_stores.length > 0 || row.manual_wishes.length > 0).length;
 
   return (
     <AppShell
@@ -377,9 +404,13 @@ export function App() {
           prices={prices}
           copies={summary?.wishlist ?? 0}
           hasItad={hasItad}
+          hasIgdb={hasIgdb}
           busy={busy !== null}
           onRefresh={() => void run("prices", api.refreshPrices)}
           onSetup={() => setSetup("itad")}
+          onAdd={(target: WishTarget, family: PlatformFamily, model: string) => changeWish(() => api.addManualWish(target, family, model))}
+          onUpdate={(wishId: string, family: PlatformFamily, model: string) => changeWish(() => api.updateManualWish(wishId, family, model))}
+          onRemove={(wishId: string) => changeWish(() => api.removeManualWish(wishId))}
         />
       )}
       {tab === "review" && <ReviewQueue items={queue} onResolved={refresh} />}

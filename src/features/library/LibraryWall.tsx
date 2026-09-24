@@ -119,7 +119,7 @@ export function LibraryWall({
                     <span className="status gone">Not in a store</span>
                   ) : (
                     <span className="hint">
-                      {row.owned_stores.join(" · ") || "only in the wishlist"}
+                      {row.owned_stores.join(" · ") || (row.manual_wishes.length > 0 ? `Wanted for ${row.manual_wishes.map((wish) => wish.model || wish.family).join(", ")}` : "only in the wishlist")}
                     </span>
                   )}
                   {/* A person who uses a screen reader does not see the colour

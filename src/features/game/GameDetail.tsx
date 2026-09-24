@@ -101,6 +101,7 @@ export function GameDetail({
           "You do not have it in a store"
         )}
         {row.wishlist_stores.length > 0 && ` · Wished for in: ${row.wishlist_stores.join(", ")}`}
+        {row.manual_wishes.length > 0 && ` · Wanted for: ${row.manual_wishes.map((wish) => wish.model || wish.family).join(", ")}`}
       </p>
 
       {/* The summary comes from IGDB, thus it is absent exactly in the records

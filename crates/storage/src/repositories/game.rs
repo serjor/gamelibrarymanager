@@ -96,6 +96,10 @@ impl GameRepository<'_> {
             "SELECT id, canonical_title, sort_title, igdb_id, cover_url, summary, released_at, genres
              FROM game
              WHERE sort_title = ? AND igdb_id IS NULL AND deleted_at IS NULL
+               AND NOT (
+                   EXISTS (SELECT 1 FROM manual_wish w WHERE w.game_id = game.id)
+                   AND NOT EXISTS (SELECT 1 FROM game_link l WHERE l.game_id = game.id)
+               )
              ORDER BY id
              LIMIT 1",
         )
@@ -119,7 +123,8 @@ impl GameRepository<'_> {
             "UPDATE game SET deleted_at = ?, updated_at = ?
              WHERE deleted_at IS NULL
                AND NOT EXISTS (SELECT 1 FROM game_link l WHERE l.game_id = game.id)
-               AND NOT EXISTS (SELECT 1 FROM user_state u WHERE u.game_id = game.id)",
+               AND NOT EXISTS (SELECT 1 FROM user_state u WHERE u.game_id = game.id)
+               AND NOT EXISTS (SELECT 1 FROM manual_wish w WHERE w.game_id = game.id)",
         )
         .bind(now)
         .bind(now)

@@ -19,6 +19,7 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
     genres: [],
     owned_stores: ["steam"],
     wishlist_stores: [],
+    manual_wishes: [],
     store_cover_url: null,
     store_url: null,
     playtime_minutes: 0,

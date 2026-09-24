@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { errorMessage, type LibraryRow, type PriceRow } from "../../lib/api";
+import { errorMessage, type LibraryRow, type PlatformFamily, type PriceRow, type WishTarget } from "../../lib/api";
 import { wishes, money, atAllTimeLow, type Wish } from "./prices";
+import { ManualWishForm, FAMILIES, deviceLabel } from "./ManualWishForm";
 
 /**
  * The base of the ITAD pages. It is written as a constant and the slug is added
@@ -34,9 +35,13 @@ export function Wishlist({
   prices,
   copies,
   hasItad,
+  hasIgdb,
   busy,
   onRefresh,
   onSetup,
+  onAdd,
+  onUpdate,
+  onRemove,
 }: {
   rows: LibraryRow[];
   prices: PriceRow[];
@@ -50,13 +55,25 @@ export function Wishlist({
    */
   copies: number;
   hasItad: boolean;
+  hasIgdb: boolean;
   busy: boolean;
   onRefresh: () => void;
   onSetup: () => void;
+  onAdd: (target: WishTarget, family: PlatformFamily, model: string) => Promise<void>;
+  onUpdate: (wishId: string, family: PlatformFamily, model: string) => Promise<void>;
+  onRemove: (wishId: string) => Promise<void>;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [editFamily, setEditFamily] = useState<PlatformFamily>("pc");
+  const [editModel, setEditModel] = useState("");
+  const [saving, setSaving] = useState(false);
   const list = useMemo(() => wishes(rows, prices), [rows, prices]);
   const withPrice = list.filter((wish) => wish.price !== null).length;
+  const hasPriceTargets = list.some(({ game }) =>
+    game.wishlist_stores.length > 0 || game.manual_wishes.some((wish) => wish.family === "pc"),
+  );
   // When the prices were read. A price from one week ago is no longer a price,
   // and with no date there is no way to know whether what you see still applies.
   const captured = prices.reduce((last, price) => Math.max(last, price.captured_at), 0);
@@ -65,6 +82,19 @@ export function Wishlist({
     openUrl(url).catch((cause: unknown) =>
       setError(`Could not open ${url}: ${errorMessage(cause)}`),
     );
+  };
+
+  const change = async (action: () => Promise<void>) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await action();
+      setEditing(null);
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -82,10 +112,13 @@ export function Wishlist({
           </p>
         </div>
         <div className="wishlist-actions">
+          <button type="button" disabled={busy || saving} onClick={() => setAdding((value) => !value)}>
+            {adding ? "Close form" : "Add wanted game"}
+          </button>
           {hasItad ? (
             // With an empty list there is nothing to ask about, thus the button
             // does not appear: a button that can do nothing is a false promise.
-            list.length > 0 && (
+            hasPriceTargets && (
               <button disabled={busy} onClick={onRefresh}>
                 {busy ? "Reading prices…" : "Update the prices"}
               </button>
@@ -106,6 +139,8 @@ export function Wishlist({
 
       {error && <p role="alert">{error}</p>}
 
+      {adding && <ManualWishForm rows={rows} hasIgdb={hasIgdb} onAdd={onAdd} onClose={() => setAdding(false)} />}
+
       {list.length === 0 && (
         <div className="empty-state" role="status">
           <strong className="empty-state-title">
@@ -119,8 +154,8 @@ export function Wishlist({
           </p>
           ) : (
           <p className="hint">
-            There is no game in your wishlist. Synchronise a store and this screen
-            will show what you must still buy, with its price.
+            There is no game in your wishlist. Add a wanted game for a device,
+            or synchronise a store.
           </p>
           )}
         </div>
@@ -149,7 +184,12 @@ export function Wishlist({
             </thead>
             <tbody>
               {list.map((wish) => (
-                <Row key={wish.game.game_id} wish={wish} onOpen={open} />
+                <Row key={wish.game.game_id} wish={wish} onOpen={open}
+                  editing={editing} editFamily={editFamily} editModel={editModel} saving={saving}
+                  onStartEdit={(id, family, model) => { setEditing(id); setEditFamily(family); setEditModel(model); setError(null); }}
+                  onFamily={setEditFamily} onModel={setEditModel} onCancelEdit={() => setEditing(null)}
+                  onSaveEdit={(id) => void change(() => onUpdate(id, editFamily, editModel))}
+                  onRemove={(id) => void change(() => onRemove(id))} />
               ))}
             </tbody>
           </table>
@@ -159,7 +199,20 @@ export function Wishlist({
   );
 }
 
-function Row({ wish, onOpen }: { wish: Wish; onOpen: (url: string) => void }) {
+function Row({ wish, onOpen, editing, editFamily, editModel, saving, onStartEdit, onFamily, onModel, onCancelEdit, onSaveEdit, onRemove }: {
+  wish: Wish;
+  onOpen: (url: string) => void;
+  editing: string | null;
+  editFamily: PlatformFamily;
+  editModel: string;
+  saving: boolean;
+  onStartEdit: (id: string, family: PlatformFamily, model: string) => void;
+  onFamily: (family: PlatformFamily) => void;
+  onModel: (model: string) => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
   const { game, price } = wish;
 
   return (
@@ -167,12 +220,28 @@ function Row({ wish, onOpen }: { wish: Wish; onOpen: (url: string) => void }) {
       <td>
         <strong className="wish-title">{game.title}</strong>
         <span className="hint">
-          {game.wishlist_stores.join(" · ")}
+          {game.wishlist_stores.length > 0 && `Store wishlist: ${game.wishlist_stores.join(" · ")}`}
           {/* You have it and you still want it: that occurs when you want it in
               a different store, and to see it here with no explanation looks
               like a defect. */}
           {game.owned_stores.length > 0 && ` · you already have it in ${game.owned_stores.join(", ")}`}
         </span>
+        {game.manual_wishes.length > 0 && <div className="manual-wish-list" aria-label={`Devices wanted for ${game.title}`}>
+          {game.manual_wishes.map((manual) => <div className="manual-wish-device" key={manual.id}>
+            {editing === manual.id ? <>
+              <select aria-label={`Device family for ${game.title}`} value={editFamily} onChange={(event) => onFamily(event.target.value as PlatformFamily)}>
+                {FAMILIES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+              <input aria-label={`Device model for ${game.title}`} value={editModel} onChange={(event) => onModel(event.target.value)} maxLength={80} />
+              <button type="button" disabled={saving || (editFamily === "other" && !editModel.trim())} onClick={() => onSaveEdit(manual.id)}>Save</button>
+              <button type="button" className="link" onClick={onCancelEdit}>Cancel</button>
+            </> : <>
+              <span>{deviceLabel(manual.family, manual.model)}</span>
+              <button type="button" className="link" disabled={saving} aria-label={`Edit ${deviceLabel(manual.family, manual.model)} wish for ${game.title}`} onClick={() => onStartEdit(manual.id, manual.family, manual.model)}>Edit</button>
+              <button type="button" className="link" disabled={saving} aria-label={`Remove ${deviceLabel(manual.family, manual.model)} wish for ${game.title}`} onClick={() => onRemove(manual.id)}>Remove</button>
+            </>}
+          </div>)}
+        </div>}
       </td>
 
       {price === null ? (

@@ -5,7 +5,10 @@
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-use crate::model::{EntryKind, GameId, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
+use crate::model::{
+    EntryKind, GameId, ManualWishId, PlatformFamily, PlayStatus, StoreAccountId, StoreEntryId,
+    StoreId,
+};
 
 /// A connected account. The credentials do not live here: they go to the
 /// keyring, and this row only keeps a record of who owns them.
@@ -85,4 +88,13 @@ pub struct UserState {
     pub notes: Option<String>,
     pub started_at: Option<OffsetDateTime>,
     pub finished_at: Option<OffsetDateTime>,
+}
+
+/// A wish that the user wrote. A store sync does not add, edit, or remove it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ManualWish {
+    pub id: ManualWishId,
+    pub game_id: GameId,
+    pub family: PlatformFamily,
+    pub model: String,
 }

@@ -73,11 +73,14 @@ impl PriceRepository<'_> {
                     ) AS steam_app_id
              FROM game g
              WHERE g.deleted_at IS NULL
-               AND EXISTS (
+               AND (EXISTS (
                    SELECT 1 FROM game_link l
                      CROSS JOIN store_entry e ON e.id = l.store_entry_id
                     WHERE l.game_id = g.id AND e.kind = 'wishlist' AND e.deleted_at IS NULL
-               )
+               ) OR EXISTS (
+                   SELECT 1 FROM manual_wish w
+                   WHERE w.game_id = g.id AND w.family = 'pc' AND w.deleted_at IS NULL
+               ))
              ORDER BY g.sort_title",
         )
         .fetch_all(self.0.pool())

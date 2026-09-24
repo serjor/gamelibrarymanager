@@ -1,7 +1,10 @@
 //! The translation between the domain and the SQLite representation. The
 //! spelling that the database expects lives here and not in the domain.
 
-use domain::{EntryKind, GameId, LinkMethod, PlayStatus, StoreAccountId, StoreEntryId, StoreId};
+use domain::{
+    EntryKind, GameId, LinkMethod, ManualWishId, PlatformFamily, PlayStatus, StoreAccountId,
+    StoreEntryId, StoreId,
+};
 use uuid::Uuid;
 
 use crate::StorageError;
@@ -12,6 +15,17 @@ pub(crate) fn store_from_str(value: &str) -> Result<StoreId, StorageError> {
         "gog" => Ok(StoreId::Gog),
         "epic" => Ok(StoreId::Epic),
         other => Err(corrupt("store", other)),
+    }
+}
+
+pub(crate) fn family_from_str(value: &str) -> Result<PlatformFamily, StorageError> {
+    match value {
+        "pc" => Ok(PlatformFamily::Pc),
+        "playstation" => Ok(PlatformFamily::Playstation),
+        "xbox" => Ok(PlatformFamily::Xbox),
+        "nintendo" => Ok(PlatformFamily::Nintendo),
+        "other" => Ok(PlatformFamily::Other),
+        other => Err(corrupt("family", other)),
     }
 }
 
@@ -90,6 +104,12 @@ id_mapping!(
     account_id_from_text,
     StoreAccountId,
     "account_id"
+);
+id_mapping!(
+    wish_id_to_text,
+    wish_id_from_text,
+    ManualWishId,
+    "manual_wish_id"
 );
 
 fn corrupt(column: &'static str, value: &str) -> StorageError {
