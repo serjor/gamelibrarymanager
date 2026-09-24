@@ -753,6 +753,25 @@ for (const width of WIDTHS) {
   check(`${width} px · the page does not go sideways`, !r.sideways);
 }
 
+for (const width of [620, 1000]) {
+  const r = await withTheApp(
+    async (page) => {
+      await page.getByRole("button", { name: "Continue with a manual wishlist" }).click();
+      await page.getByRole("button", { name: "Add wanted game" }).click();
+      await page.locator(".manual-wish-form").waitFor();
+      return page.evaluate(() => {
+        const form = document.querySelector(".manual-wish-form")!.getBoundingClientRect();
+        return {
+          inside: form.left >= 0 && form.right <= window.innerWidth + 0.5,
+          sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        };
+      });
+    },
+    { width, answers: { list_accounts: [], library: [], has_igdb_credentials: false } },
+  );
+  check(`${width} px · manual wishlist form stays inside the window`, r.inside && !r.sideways);
+}
+
 console.log("\nThe review queue");
 for (const width of WIDTHS) {
   const r = await withTheApp(

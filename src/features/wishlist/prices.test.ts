@@ -14,6 +14,7 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
     genres: [],
     owned_stores: [],
     wishlist_stores: ["steam"],
+    manual_wishes: [],
     store_cover_url: null,
     store_url: null,
     playtime_minutes: 0,
@@ -53,6 +54,44 @@ describe("the wishlist", () => {
     const list = wishes([owned, wished, both], []);
 
     expect(list.map((d) => d.game.title).sort()).toEqual(["Doom", "Silksong"]);
+  });
+
+  it("shows manual wishes for several devices as one game", () => {
+    const wished = row({
+      game_id: "game-1",
+      title: "Metroid Prime 4",
+      wishlist_stores: [],
+      manual_wishes: [
+        { id: "wish-switch", game_id: "game-1", family: "nintendo", model: "Switch 2" },
+        { id: "wish-pc", game_id: "game-1", family: "pc", model: "PC" },
+      ],
+    });
+
+    const list = wishes([wished], []);
+
+    expect(list).toHaveLength(1);
+    expect(list[0]?.game.manual_wishes).toHaveLength(2);
+  });
+
+  it("uses ITAD prices for PC wishes and hides them for console-only wishes", () => {
+    const pc = row({
+      game_id: "pc-game",
+      title: "Hades II",
+      wishlist_stores: [],
+      manual_wishes: [{ id: "wish-pc", game_id: "pc-game", family: "pc", model: "Windows PC" }],
+    });
+    const console = row({
+      game_id: "console-game",
+      title: "The Last of Us Part II",
+      wishlist_stores: [],
+      manual_wishes: [{ id: "wish-ps5", game_id: "console-game", family: "playstation", model: "PS5" }],
+    });
+
+    const list = wishes([pc, console], [price("pc-game"), price("console-game")]);
+    const byTitle = new Map(list.map((entry) => [entry.game.title, entry.price]));
+
+    expect(byTitle.get("Hades II")?.shop).toBe("GOG");
+    expect(byTitle.get("The Last of Us Part II")).toBeNull();
   });
 
   it("sorts by discount and puts last the games with no price", () => {

@@ -18,7 +18,7 @@ export const EMPTY_FILTERS: Filters = {
 
 /** A record with no owned copy and no wishlist copy left the stores. */
 export function isNoLongerInStore(row: LibraryRow): boolean {
-  return row.owned_stores.length === 0 && row.wishlist_stores.length === 0;
+  return row.owned_stores.length === 0 && row.wishlist_stores.length === 0 && row.manual_wishes.length === 0;
 }
 
 /** No accents and no capitals: a search for "pokemon" must find "Pokémon". */

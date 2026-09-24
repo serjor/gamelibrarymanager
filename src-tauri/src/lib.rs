@@ -9,6 +9,9 @@ mod sync;
 /// it exists so that you can test the complete use case without you start
 /// Tauri.
 pub mod testing {
+    pub use crate::commands::manual_wish::{
+        WishTarget, add_manual_wish_for, remove_manual_wish_for, update_manual_wish_for,
+    };
     pub use crate::commands::{
         LibrarySummary, StateUpdate, disconnect_account_for, export::ExportFormat,
         export::export_library_for, save_states, summary,
@@ -66,6 +69,10 @@ pub fn run() {
             commands::review_without_metadata,
             commands::cancel_operation,
             commands::library,
+            commands::manual_wish::search_manual_wish_games,
+            commands::manual_wish::add_manual_wish,
+            commands::manual_wish::update_manual_wish,
+            commands::manual_wish::remove_manual_wish,
             commands::set_user_state,
             commands::set_user_state_many,
         ])

@@ -10,10 +10,11 @@ pub mod model;
 pub mod ports;
 pub mod prices;
 
-pub use library::{Game, GameLink, LinkMethod, StoreAccount, StoreEntry, UserState};
+pub use library::{Game, GameLink, LinkMethod, ManualWish, StoreAccount, StoreEntry, UserState};
 pub use matching::{Candidate, MatchDecision, ScoredCandidate};
 pub use model::{
-    ConnectorState, EntryKind, GameId, PlayStatus, StoreAccountId, StoreEntryId, StoreId,
+    ConnectorState, EntryKind, GameId, ManualWishId, PlatformFamily, PlayStatus, StoreAccountId,
+    StoreEntryId, StoreId,
 };
 pub use ports::{AuthContext, ClientCredentials, ConnectorError, StoreConnector, StoreSession};
 pub use prices::{Deal, GamePrices, Money};

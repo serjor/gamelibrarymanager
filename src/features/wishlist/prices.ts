@@ -25,8 +25,13 @@ export function wishes(rows: LibraryRow[], prices: PriceRow[]): Wish[] {
   const byGame = new Map(prices.map((price) => [price.game_id, price]));
 
   return rows
-    .filter((row) => row.wishlist_stores.length > 0)
-    .map((game) => ({ game, price: byGame.get(game.game_id) ?? null }))
+    .filter((row) => row.wishlist_stores.length > 0 || row.manual_wishes.length > 0)
+    .map((game) => ({
+      game,
+      price: game.wishlist_stores.length > 0 || game.manual_wishes.some((wish) => wish.family === "pc")
+        ? byGame.get(game.game_id) ?? null
+        : null,
+    }))
     .sort(byDiscount);
 }
 

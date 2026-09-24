@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Plan — Deseados manuales por dispositivo</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8fafc;--text:#172033;--muted:#667085;
+  --line:#dce2ea;--accent:#3157d5;--accent-solid:#3157d5;--on-accent:#fff;--accent-soft:#edf1ff;--good:#16734b;
+  --accent-strong:#233fa6;--good-soft:#e9f7f0;--warn:#9a6700;--warn-soft:#fff6d8;--danger:#b42318;
+  --danger-soft:#fff0ee;--code:#eef1f5;--shadow:0 12px 35px rgba(23,32,51,.08)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#10141d;--surface:#171d28;--surface-2:#1d2532;--text:#edf1f7;--muted:#a6b0c0;
+    --line:#303a49;--accent:#91a7ff;--accent-strong:#bec9ff;--accent-soft:#222d57;--good:#70d6aa;
+    --good-soft:#15382c;--warn:#f0c46b;--warn-soft:#3c3015;--danger:#ff9b91;
+    --danger-soft:#49231f;--code:#242d3a;--shadow:0 14px 38px rgba(0,0,0,.22)
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:clip}
+main{width:100%;max-width:74rem;min-width:0;margin:0 auto;padding:2rem 1.25rem 5rem}
+a{color:var(--accent);text-decoration-thickness:.08em;text-underline-offset:.18em}
+a:hover{text-decoration-thickness:.14em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+header,section,.phase{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+header{padding:2rem}
+section{padding:1.5rem;margin-top:1rem}
+.phase{padding:0;margin-top:1rem;overflow:hidden}
+.eyebrow{margin:0 0 .45rem;color:var(--accent);font-size:.76rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(1.85rem,5vw,3.15rem);line-height:1.08;letter-spacing:-.035em;margin:.15rem 0 .8rem;max-width:18ch}
+h2{font-size:1.32rem;line-height:1.25;margin:0 0 .85rem;letter-spacing:-.015em}
+h3{font-size:1.03rem;line-height:1.3;margin:0 0 .45rem}
+h4{font-size:.92rem;line-height:1.35;margin:0 0 .35rem}
+p{margin:.4rem 0}
+ul,ol{margin:.55rem 0;padding-left:1.2rem}
+li{margin:.3rem 0}
+.lede{max-width:68ch;font-size:1.07rem;color:var(--muted);margin:0}
+.meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.phase-facts,.triptych{display:grid;gap:.75rem}
+.meta{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:1.4rem}
+.meta div,.stat,.decision,.decision-fact,.option,.impact,.fact,.triptych article{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+dt,.label{color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+dd{margin:.18rem 0 0;font-weight:650}
+.status{display:inline-flex;align-items:center;gap:.35rem;border:1px solid currentColor;border-radius:999px;padding:.15rem .52rem;font-size:.75rem;font-weight:750;white-space:nowrap}
+.status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:currentColor}
+.review{color:var(--warn);background:var(--warn-soft)}
+.planned{color:var(--accent);background:var(--accent-soft)}
+.active{color:var(--warn);background:var(--warn-soft)}
+.done{color:var(--good);background:var(--good-soft)}
+.blocked{color:var(--danger);background:var(--danger-soft)}
+nav{position:sticky;top:.7rem;z-index:2;max-width:74rem;margin:1rem auto;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+nav ul{display:flex;gap:.4rem .95rem;list-style:none;margin:0;padding:0;overflow-x:auto}
+nav li{margin:0;white-space:nowrap}
+nav a{color:var(--muted);font-size:.84rem;font-weight:650;text-decoration:none}
+nav a:hover{color:var(--accent)}
+.decision-grid{grid-template-columns:1.2fr .8fr;margin-top:1rem}
+.decision{padding:1rem}
+.decision.primary{background:var(--accent-soft);border-color:var(--accent)}
+.decision strong{display:block;font-size:1.18rem;margin:.15rem 0 .35rem}
+.decision p,.impact p{color:var(--muted)}
+.decision-request{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1.15rem;padding:.9rem 1rem;border:2px solid var(--accent);border-radius:11px;background:var(--surface)}
+.decision-request strong{font-size:1.08rem}
+.decision-request a{white-space:nowrap;font-weight:750}
+.decision-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:.75rem}
+.decision-fact strong{display:block;margin-top:.18rem}
+.confidence{display:flex;align-items:center;gap:.45rem}
+.confidence::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--muted)}
+.confidence.high::before{background:var(--good)}
+.confidence.medium::before{background:var(--warn)}
+.confidence.low::before{background:var(--danger)}
+.callout{border-left:4px solid var(--accent);border-radius:8px;background:var(--accent-soft);padding:.85rem 1rem;margin-top:1rem}
+.callout.warning{border-color:var(--warn);background:var(--warn-soft)}
+.stat-grid{grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));margin:.8rem 0}
+.stat strong{display:block;font-size:1.08rem;margin-top:.2rem}
+.next-action{display:flex;gap:.7rem;align-items:flex-start;margin-top:.8rem}
+.next-action strong{white-space:nowrap}
+.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.impact{padding:1rem}
+.impact h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.no-change{color:var(--good);font-size:.75rem;font-weight:750;text-transform:uppercase}
+.option-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.option{position:relative;padding:1rem;display:flex;flex-direction:column}
+.option.recommended{border:2px solid var(--accent);background:var(--accent-soft)}
+.option-tag{align-self:flex-start;border-radius:999px;padding:.12rem .48rem;background:var(--accent-solid);color:var(--on-accent);font-size:.7rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.option h3{margin:.6rem 0 .25rem}
+.option>p{color:var(--muted)}
+.option dl{display:grid;grid-template-columns:5.6rem 1fr;gap:.35rem .6rem;margin:.7rem 0 1rem}
+.option dd{font-weight:600}
+.choose-when{margin-top:auto;padding-top:.65rem;border-top:1px solid var(--line);color:var(--text)!important}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.out{border-left:3px solid var(--danger);padding-left:1rem}
+.diagram-card{margin:1rem 0 0;padding:1rem;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.figure-heading{display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:.75rem}
+.figure-heading p{color:var(--muted);max-width:68ch}
+.diagram{display:block;width:100%;height:auto;min-height:15rem;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.diagram .node-box{fill:var(--surface-2);stroke:var(--line);stroke-width:2}
+.diagram .node-box.focus{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3}
+.diagram .node-title{fill:var(--text);font:700 16px ui-sans-serif,system-ui,sans-serif}
+.diagram .node-copy{fill:var(--muted);font:13px ui-sans-serif,system-ui,sans-serif}
+.diagram .edge{fill:none;stroke:var(--muted);stroke-width:2.5}
+.diagram .edge.risk{stroke:var(--danger);stroke-dasharray:7 6}
+.diagram .flow{stroke-dasharray:10 7;animation:flow 1.4s linear 2}
+.diagram-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;list-style:none;padding:0;margin:.7rem 0 0;color:var(--muted);font-size:.84rem}
+.diagram-key li{display:flex;align-items:center;gap:.35rem;margin:0}
+.key-line{width:1.7rem;border-top:3px solid var(--muted)}
+.key-line.risk{border-color:var(--danger);border-top-style:dashed}
+.timeline{display:flex;list-style:none;padding:0;margin:1rem 0;counter-reset:step}
+.timeline li{position:relative;flex:1;min-width:0;margin:0;padding:2.6rem .8rem .8rem;border:1px solid var(--line);background:var(--surface)}
+.timeline li:first-child{border-radius:10px 0 0 10px}
+.timeline li:last-child{border-radius:0 10px 10px 0}
+.timeline li::before{counter-increment:step;content:counter(step);position:absolute;top:.65rem;left:.8rem;width:1.45rem;height:1.45rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:.75rem;font-weight:800}
+.timeline li+li{border-left:0}
+.timeline strong,.timeline span{display:block}
+.timeline span{color:var(--muted);font-size:.84rem;margin-top:.25rem}
+.timeline .critical{box-shadow:inset 0 3px 0 var(--warn)}
+figcaption{margin-top:.75rem;color:var(--text);font-weight:650}
+@keyframes flow{to{stroke-dashoffset:-34}}
+table{border-collapse:separate;border-spacing:0;width:100%;max-width:100%;display:block;overflow-x:auto;margin:.65rem 0}
+thead,tbody{display:table;width:100%;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:.62rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--surface-2);color:var(--muted);font-size:.73rem;letter-spacing:.05em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+code{background:var(--code);border-radius:4px;padding:.1rem .32rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:.8rem 1rem;overflow-x:auto;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+details{border-top:1px solid var(--line);margin-top:.9rem;padding-top:.8rem}
+summary{cursor:pointer;color:var(--accent);font-weight:700}
+summary::marker{color:var(--accent)}
+.phase-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.phase-number{color:var(--muted);font-size:.76rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.phase-header h3{font-size:1.2rem;margin:.12rem 0 0}
+.phase-body{padding:1.3rem 1.4rem}
+.phase-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:1rem}
+.fact{padding:.7rem .8rem}
+.fact strong{display:block;margin-top:.18rem}
+.plain-impact{font-size:1.02rem;margin:.85rem 0 1rem}
+.change-list td:first-child{width:30%}
+.gate{border:1px solid var(--good);background:var(--good-soft);border-radius:9px;padding:.85rem 1rem;margin:1rem 0}
+.gate h4{color:var(--good)}
+.triptych{grid-template-columns:repeat(3,minmax(0,1fr))}
+.triptych article{padding:.85rem}
+.execution-record{background:var(--surface-2);border-radius:9px;padding:0 .9rem .8rem}
+.execution-record dl{display:grid;grid-template-columns:9rem 1fr;gap:.45rem .8rem;margin:.75rem 0 0}
+.execution-record dd{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}
+.risk-high{color:var(--danger);font-weight:750}
+.risk-med{color:var(--warn);font-weight:750}
+.checks{list-style:none;padding:0}
+.checks li{position:relative;padding-left:1.55rem}
+.checks li::before{content:"□";position:absolute;left:.1rem;color:var(--accent);font-weight:800}
+.guardrails{border-left:4px solid var(--danger)}
+footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+@media(max-width:760px){
+  main{padding:1rem .75rem 3rem}
+  header,section{padding:1.15rem}
+  .meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.scope-grid,.phase-facts,.triptych{grid-template-columns:1fr}
+  .decision-request,.figure-heading{align-items:flex-start;flex-direction:column}
+  .diagram-card{overflow-x:auto}
+  .diagram{min-width:46rem}
+  .timeline{flex-direction:column}
+  .timeline li{width:100%;padding:1rem 1rem 1rem 3rem}
+  .timeline li:first-child{border-radius:10px 10px 0 0}
+  .timeline li:last-child{border-radius:0 0 10px 10px}
+  .timeline li+li{border-left:1px solid var(--line);border-top:0}
+  .timeline li::before{top:.9rem;left:.85rem}
+  nav{top:0;margin:.6rem .75rem;border-radius:9px}
+  .phase-header{padding:1rem;flex-direction:column}
+  .phase-body{padding:1rem}
+  .execution-record dl{grid-template-columns:1fr;gap:.1rem}
+  thead,tbody{min-width:42rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.diagram .flow{animation:none}}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f5f5f5;--text:#111;--muted:#555;--line:#ccc;--shadow:none}
+  body{font-size:10pt}
+  main{max-width:none;padding:0}
+  nav{display:none}
+  header,section,.phase{box-shadow:none;break-inside:avoid}
+  .phase{break-before:page}
+  details{display:block}
+  details>*{display:block}
+  summary{display:none}
+  a{color:inherit;text-decoration:none}
+  .diagram .flow{animation:none}
+}
+</style>
+</head>
+<body>
+<main>
+<header id="summary"><p class="eyebrow">Plan de cambio · Tamaño L</p><h1>Deseados manuales por dispositivo</h1><p class="lede">El usuario podrá desear un juego en varios dispositivos aunque no figure en ninguna tienda conectada. Cada juego conserva una sola ficha y sus notas.</p>
+<dl class="meta"><div><dt>Repositorio</dt><dd><code>gamelibrarymanager</code></dd></div><div><dt>Rama examinada</dt><dd><code>t3code/clarify-issue-seven</code></dd></div><div><dt>Actualizado</dt><dd>2026-09-24</dd></div><div><dt>Estado</dt><dd><span class="status active">Aprobado · en ejecución</span></dd></div></dl>
+<div class="decision-request"><div><span class="label">Decisión solicitada</span><strong>Aprobar el alcance y las tres fases, reducirlo o detenerlo</strong></div><a href="#options">Comparar caminos</a></div>
+<div class="decision-grid"><article class="decision primary"><span class="label">Recomendación</span><strong>Guardar deseos propios del usuario</strong><p>Una tabla separada deja a la sincronización como dueña de las copias de tienda. La ficha común reúne ambos orígenes sin mezclar su ciclo de vida.</p></article><article class="decision"><span class="label">Coste principal</span><strong>Migración e integración</strong><p>Hay que adaptar identidad, lista, precios, exportación e interfaz. ITAD seguirá dando solo precios de PC.</p></article></div>
+<div class="decision-facts"><article class="decision-fact"><span class="label">Esfuerzo</span><strong>Grande</strong></article><article class="decision-fact"><span class="label">Riesgo</span><strong>Medio</strong></article><article class="decision-fact"><span class="label">Reversibilidad</span><strong>Limitada tras crear datos</strong></article><article class="decision-fact"><span class="label">Confianza</span><strong class="confidence medium">Media-alta</strong></article></div>
+<aside class="callout"><strong>Resultado.</strong> Alta por ficha existente, resultado IGDB o título libre; varios dispositivos por juego; edición y retirada por deseo. Los deseos sincronizados permanecen. ITAD se aplica a los deseos manuales de PC.</aside>
+<aside class="callout warning"><strong>Qué cambiaría la recomendación.</strong> Si una prueba revela que un identificador IGDB une ediciones distintas con estado de usuario, detener esa unión y consultar antes de cambiar el contrato. Un título libre nunca se une por nombre de forma implícita.</aside></header>
+<nav aria-label="Contenido"><ul><li><a href="#execution-status">Estado</a></li><li><a href="#options">Opciones</a></li><li><a href="#impact">Impacto</a></li><li><a href="#change">Cambio</a></li><li><a href="#decisions">Decisiones</a></li><li><a href="#phases">Fases</a></li><li><a href="#risks">Riesgos</a></li><li><a href="#verification">Comprobación</a></li></ul></nav>
+<section id="execution-status"><p class="eyebrow">Documento vivo</p><h2>Estado de ejecución</h2><div class="stat-grid"><article class="stat"><span class="label">Documento</span><strong>Pendiente de aprobación</strong></article><article class="stat"><span class="label">Avance</span><strong>1 de 3 fases</strong></article><article class="stat"><span class="label">Fase activa o bloqueada</span><strong>2 · Casos de uso</strong></article><article class="stat"><span class="label">Decisiones abiertas</span><strong>0</strong></article><article class="stat"><span class="label">Última actualización</span><strong>2026-09-24 12:16 UTC</strong></article></div><p class="next-action"><strong>Siguiente acción:</strong><span>Completar la fase 2 y verificar identidad, precio y exportación.</span></p><aside class="callout"><strong>Registro de aprobación.</strong> El usuario aprobó el plan el 2026-09-24. Registrar opción, fecha y condiciones sin reescribir esta especificación.</aside>
+<table><thead><tr><th>Fase</th><th>Estado</th><th>Producción al cerrar</th></tr></thead><tbody><tr><td><a href="#phase-1">1. Persistencia</a></td><td><span class="status done">done</span></td><td>Esquema aditivo; comportamiento actual.</td></tr><tr><td><a href="#phase-2">2. Casos de uso</a></td><td><span class="status done">done</span></td><td>Backend coherente; no hay controles de alta.</td></tr><tr><td><a href="#phase-3">3. Interfaz</a></td><td><span class="status done">done</span></td><td>Función completa para el usuario.</td></tr></tbody></table>
+<details><summary>Protocolo de cada sesión de implementación</summary><ol><li>Leer el HTML completo. Examinar la evidencia de todas las fases <code>done</code>.</li><li>Comparar el estado registrado con el worktree actual. Elegir la primera fase no terminada. No saltar una fase activa o bloqueada.</li><li>Antes de cambiar archivos, marcar esa fase <code>in_progress</code> y registrar hora y sesión. Solo una fase puede estar activa.</li><li>Conservar inmutable la especificación aprobada. Anotar archivos y símbolos reales, comprobaciones resumidas, commit o cambio, desviaciones, nuevas decisiones, riesgos y siguiente acción en el registro.</li><li>Una referencia factual se puede corregir si se registra la corrección. Detenerse para pedir dirección si cambia alcance, contrato, riesgo, límite de fase o resultado.</li><li>Marcar <code>done</code> solo con evidencia del control de producción. Si no pasa, marcar <code>blocked</code>, causa, alternativas probadas y decisión necesaria. No comenzar fase posterior.</li></ol></details></section>
+<section id="options"><p class="eyebrow">Comparación</p><h2>Caminos considerados</h2><div class="option-grid"><article class="option recommended"><span class="option-tag">Recomendado</span><h3>Deseo propio y ficha común</h3><p>Una entrada por dispositivo y una ficha por juego. La tienda mantiene sus copias y el usuario sus deseos.</p><dl><dt>Esfuerzo</dt><dd>Grande</dd><dt>Riesgo</dt><dd>Medio</dd><dt>Reversión</dt><dd>Conservar datos creados</dd><dt>Renuncia</dt><dd>Sin precio de consola</dd></dl><p class="choose-when">Satisface las decisiones cerradas.</p></article><article class="option"><span class="label">Alcance reducido</span><h3>Lista manual aparte</h3><p>Guarda título y dispositivo con menos integración, pero duplica juegos y no comparte notas ni precios de PC.</p><dl><dt>Esfuerzo</dt><dd>Medio</dd><dt>Riesgo</dt><dd>Bajo</dd><dt>Reversión</dt><dd>Fácil antes de usar</dd><dt>Renuncia</dt><dd>Ficha común</dd></dl><p class="choose-when">Solo si el usuario reduce explícitamente el alcance.</p></article></div></section>
+<section id="impact"><p class="eyebrow">Consecuencias</p><h2>Qué cambia</h2><div class="impact-grid"><article class="impact"><h3>Comportamiento</h3><p>Un juego no conectado aparecerá en deseados. La persona elegirá ficha o resultado IGDB; el título libre creará ficha propia.</p></article><article class="impact"><h3>Datos y contratos</h3><p>Una migración añade deseos manuales con borrado lógico. <code>LibraryRow</code> ganará entradas de dispositivo. JSON y CSV exportarán el dato escrito por el usuario.</p></article><article class="impact"><h3>Operación</h3><p>La base anterior recibirá una copia previa mediante el mecanismo existente. No hay servicios ni claves nuevas.</p></article><article class="impact"><h3>Desarrollo</h3><p>Hay que comprobar migración, identidad, precio, exportación e interfaz. La ventana Tauri y el arnés visual cierran la entrega.</p></article></div>
+<figure class="diagram-card" aria-labelledby="flow-heading flow-caption"><div class="figure-heading"><div><span class="label">Flujo de datos · Izquierda a derecha</span><h3 id="flow-heading">Una ficha, dos dueños del deseo</h3></div><p>La propiedad del dato controla su edición. Ver <a href="#phase-2">fase 2</a>.</p></div><svg class="diagram" viewBox="0 0 900 260" role="img" aria-labelledby="svg-title svg-desc"><title id="svg-title">Dos fuentes llegan a una ficha común</title><desc id="svg-desc">De izquierda a derecha, copias sincronizadas y deseos manuales llegan a una ficha común y a la lista. El precio requiere PC.</desc><path class="edge" d="M240 66 L350 120"></path><path class="edge" d="M240 195 L350 140"></path><path class="edge" d="M570 130 L675 130"></path><rect class="node-box" x="25" y="25" width="215" height="82" rx="12"></rect><text class="node-title" x="42" y="58">Copias de tienda</text><text class="node-copy" x="42" y="81">Sincronización</text><rect class="node-box focus" x="25" y="154" width="215" height="82" rx="12"></rect><text class="node-title" x="42" y="187">Deseos manuales</text><text class="node-copy" x="42" y="210">Usuario · dispositivo</text><rect class="node-box" x="350" y="84" width="220" height="92" rx="12"></rect><text class="node-title" x="368" y="120">Ficha de juego</text><text class="node-copy" x="368" y="145">Identidad y notas comunes</text><rect class="node-box" x="675" y="84" width="200" height="92" rx="12"></rect><text class="node-title" x="693" y="120">Deseados</text><text class="node-copy" x="693" y="145">Precio si hay PC</text></svg><figcaption id="flow-caption">El deseo manual no se hace pasar por copia de tienda; una sincronización posterior no lo retira.</figcaption></figure></section>
+<section id="scope"><p class="eyebrow">Límites</p><h2>Alcance para aprobación</h2><div class="scope-grid"><article><h3>Incluido</h3><ul><li>Alta desde ficha existente, búsqueda IGDB si está configurado y título libre sin credenciales.</li><li>Familias PC, PlayStation, Xbox, Nintendo y Otra, con modelo libre. Varios dispositivos en una ficha.</li><li>Edición y retirada de cada deseo. Copias sincronizadas, ficha y notas permanecen.</li><li>Lista, detalle, exportación y precio ITAD cuando exista deseo de PC.</li></ul></article><article class="out"><h3>Fuera</h3><ul><li>Precio de consola y conectores nuevos.</li><li>Sincronizar deseos entre dispositivos e importar archivos.</li><li>Rediseñar Biblioteca, Hoy o las decisiones de los planes <code>0001</code>–<code>0006</code>.</li></ul></article></div></section>
+<section id="change"><p class="eyebrow">Origen y destino</p><h2>Qué debe pasar a ser cierto</h2><table><thead><tr><th>Resultado</th><th>Hoy</th><th>Después</th><th>Movimiento</th></tr></thead><tbody><tr><td>Alta</td><td>Depende de una copia sincronizada.</td><td>Usuario guarda dispositivo en ficha elegida.</td><td>Tabla, repositorio y comandos.</td></tr><tr><td>Identidad</td><td>Emparejamiento local reutiliza título.</td><td>Título libre manual no se une por coincidencia.</td><td><code>find_local_by_sort_title</code>.</td></tr><tr><td>Lectura</td><td>Lista y contador usan <code>wishlist_stores</code>.</td><td>Incluyen deseos manuales distintos de tienda.</td><td><code>LibraryRow</code> y React.</td></tr><tr><td>Precio</td><td>ITAD exige copia wishlist.</td><td>También acepta deseo manual PC; consola sola queda fuera.</td><td><code>PriceRepository::targets</code>.</td></tr></tbody></table><details><summary>Evidencia del estado actual</summary><table><thead><tr><th>Hecho</th><th>Referencia abierta</th></tr></thead><tbody><tr><td><code>StoreId</code> solo admite Steam, GOG y Epic.</td><td><code>crates/domain/src/model.rs:4-22</code></td></tr><tr><td><code>StoreEntry</code> pertenece a cuenta y tienda; el conector la escribe.</td><td><code>crates/domain/src/library.rs:24-43</code>; <code>crates/storage/src/repositories/store_entry.rs:15-57</code></td></tr><tr><td>Ficha y estado de usuario son capas distintas.</td><td><code>crates/domain/src/library.rs:45-87</code></td></tr><tr><td>Lista y precio requieren copia wishlist.</td><td><code>crates/storage/src/repositories/library.rs:88-95</code>; <code>crates/storage/src/repositories/price.rs:53-81</code></td></tr><tr><td>UI filtra por <code>wishlist_stores</code>.</td><td><code>src/App.tsx:323-332</code>; <code>src/features/wishlist/prices.ts:24-30</code></td></tr><tr><td>Emparejamiento local busca por título y limpieza retira huérfanos.</td><td><code>src-tauri/src/identity.rs:235-243</code>; <code>crates/storage/src/repositories/game.rs:88-128</code></td></tr><tr><td>Existen búsqueda IGDB, copia antes de migración y exportación.</td><td><code>crates/metadata/src/igdb/mod.rs:184-218</code>; <code>crates/storage/src/lib.rs:75-105</code>; <code>src-tauri/src/commands/export.rs:40-83</code></td></tr></tbody></table></details></section>
+<section id="decisions"><p class="eyebrow">Decisiones cerradas</p><h2>No volver a debatirlas</h2><table><thead><tr><th>Pregunta</th><th>Decisión</th><th>Alternativa descartada y motivo</th></tr></thead><tbody><tr><td>Plataforma</td><td>Dispositivo; familia y modelo libre.</td><td>Tienda: ya tiene dato propio. Lista cerrada: no acepta consolas futuras.</td></tr><tr><td>Elección de juego</td><td>Ficha existente, IGDB o título libre.</td><td>Solo catálogo externo: impediría uso sin credenciales.</td></tr><tr><td>Varios dispositivos</td><td>Una ficha y varias entradas.</td><td>Ficha por dispositivo: duplicaría notas e identidad.</td></tr><tr><td>Operaciones</td><td>Crear, editar y retirar sin borrar ficha ni notas.</td><td>Solo añadir: impediría corregir un error.</td></tr><tr><td>Precios</td><td>ITAD para PC; consola sin precio.</td><td>Tratar oferta PC como consola: dato falso.</td></tr><tr><td>Origen sincronizado</td><td>Permanece separado del manual.</td><td>Sustituirlo: la siguiente sincronización lo repondría.</td></tr><tr><td>Títulos iguales</td><td>Elección explícita; título libre crea ficha.</td><td>Unión automática: un nombre no acredita identidad.</td></tr><tr><td>Ruta</td><td><code>.agents/plans/0007-manual-wishlist/plan.html</code>.</td><td>La propuesta 0005 repetía un número ya ocupado; el usuario aprobó 0007.</td></tr></tbody></table></section>
+<section id="phases"><p class="eyebrow">Ejecución</p><h2>Fases aptas para producción</h2>
+<article class="phase" id="phase-1"><div class="phase-header"><div><span class="phase-number">Fase 1 de 3</span><h3>Persistir sin cambiar la experiencia</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Esquema 0007</strong></div><div class="fact"><span class="label">Depende de</span><strong>Nada</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno</strong></div><div class="fact"><span class="label">Producción</span><strong>Comportamiento actual</strong></div></div><p class="plain-impact">La aplicación podrá guardar deseos del usuario sin que una sincronización los trate como copias de tienda.</p><h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody><tr><td><code>migrations/0008_manual_wish.up.sql</code>, <code>.down.sql</code></td><td>Crear <code>manual_wish</code> con ID, FK a juego, familia, modelo, clave normalizada, tiempos y borrado lógico. Índice único parcial por juego y dispositivo vivo. Down elimina tabla e índice.</td></tr><tr><td><code>crates/domain/src/library.rs</code>, <code>model.rs</code></td><td>Valor de deseo y familia de dispositivo. No ampliar <code>StoreId</code>.</td></tr><tr><td><code>crates/storage/src/repositories/manual_wish.rs</code>, <code>mod.rs</code></td><td>Guardar, listar, editar, retirar lógicamente y detectar duplicados. Normalizar modelo para clave estable.</td></tr><tr><td><code>crates/storage/tests/</code></td><td>Migración up/down, FK, duplicados, edición, borrado y dos dispositivos.</td></tr></tbody></table><aside class="gate"><h4>Control de producción</h4><ul class="checks"><li>Una base anterior abre con copia previa y conserva filas; un deseo persiste al reabrir.</li><li><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code> y <code>cargo test --workspace</code> pasan.</li></ul></aside><div class="triptych"><article><h4>Despliegue</h4><p>Migración aditiva; ningún control permite crear deseos.</p></article><article><h4>Observación</h4><p>Comprobar copia y apertura de una base anterior.</p></article><article><h4>Reversión</h4><p>Antes de crear deseos, aplicar down o recuperar copia. Con datos, conservar tabla hasta exportarlos.</p></article></div><details class="execution-record"><summary>Registro · done</summary><dl><dt>Inicio</dt><dd>2026-09-24 12:04 UTC</dd><dt>Fin</dt><dd>2026-09-24 12:16 UTC</dd><dt>Agente o sesión</dt><dd>Codex · sesión actual</dd><dt>Archivos y símbolos</dt><dd>Migración 0008, modelo de dominio, mapeo, repositorio y pruebas en <code>crates/storage/tests/manual_wish.rs</code>.</dd><dt>Comandos y resultados</dt><dd><code>cargo fmt --all --check</code> y <code>cargo clippy --all-targets --workspace -- -D warnings</code> pasaron. <code>cargo test --workspace</code> pasó con permiso de puerto local; en sandbox, wiremock no pudo abrir el puerto.</dd><dt>Commit o cambio</dt><dd>Pendiente.</dd><dt>Desviaciones y decisiones</dt><dd>Ninguna.</dd><dt>Riesgos restantes</dt><dd>La prueba de base anterior y copia previa pasó; quedan integración y UI.</dd><dt>Siguiente acción</dt><dd>Iniciar fase 2.</dd></dl></details></div></article>
+<article class="phase" id="phase-2"><div class="phase-header"><div><span class="phase-number">Fase 2 de 3</span><h3>Unir identidad, lectura, precios y exportación</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 1 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Tabla manual</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno aún</strong></div><div class="fact"><span class="label">Producción</span><strong>Backend coherente</strong></div></div><p class="plain-impact">Una ficha reunirá deseos manuales y copias sin perder notas ni mostrar un precio PC como precio de consola.</p><h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody><tr><td><code>src-tauri/src/commands/manual_wish.rs</code>, <code>commands/mod.rs</code>, <code>lib.rs</code></td><td>Buscar IGDB; crear desde ficha, resultado o título libre; editar y retirar. Validar entradas. Crear ficha y deseo en una transacción. Exponer caso de uso sin Tauri para prueba.</td></tr><tr><td><code>crates/storage/src/repositories/game.rs</code> · <code>find_local_by_sort_title</code>, <code>soft_delete_orphans</code></td><td>No emparejar por título una ficha manual sin copia. Conservar fichas con deseo vivo; después de retirar, conservar si hay nota, estado o copia.</td></tr><tr><td><code>crates/storage/src/repositories/library.rs</code> · <code>LibraryRow</code></td><td>Añadir deseos manuales con ID y dispositivo sin mezclarlos en <code>wishlist_stores</code>. Mantener lectura eficiente y <code>one()</code> igual que <code>all()</code>.</td></tr><tr><td><code>crates/storage/src/repositories/price.rs</code> · <code>targets</code></td><td>Añadir juegos con deseo manual PC. Consola sola fuera. El refresco retira precio antiguo; UI lo oculta mientras tanto.</td></tr><tr><td><code>src-tauri/src/commands/export.rs</code></td><td>JSON incluye deseos de <code>LibraryRow</code>. CSV añade <code>manual_platforms</code> al final; una fila por juego.</td></tr><tr><td><code>src-tauri/tests/</code>, <code>crates/storage/tests/</code></td><td>Probar elección de ficha, IGDB, título libre, dos dispositivos, duplicado, notas, sincronización, precio y exportación.</td></tr></tbody></table><aside class="gate"><h4>Control de producción</h4><ul class="checks"><li>Alta y retirada no cambian copias ni notas. Título libre no une fichas por sí solo.</li><li>PC y consola dan objetivos y exportaciones correctos. Pasan los tres comandos Rust de fase 1.</li></ul></aside><div class="triptych"><article><h4>Despliegue</h4><p>Comandos completos, registrados sin controles de alta en pantalla.</p></article><article><h4>Observación</h4><p>Pruebas de integración, JSON/CSV y ausencia de consulta ITAD para consola sola.</p></article><article><h4>Reversión</h4><p>Sin datos nuevos, retirar comandos y lecturas. Con datos, mantener compatibilidad hasta recuperarlos.</p></article></div><details class="execution-record"><summary>Registro · done</summary><dl><dt>Inicio</dt><dd>2026-09-24 12:16 UTC</dd><dt>Fin</dt><dd>2026-09-24 12:29 UTC</dd><dt>Agente o sesión</dt><dd>Codex · sesión actual</dd><dt>Archivos y símbolos</dt><dd>Comandos manual_wish, identidad y limpieza de game, LibraryRow, objetivos de price, exportación JSON/CSV y pruebas de integración.</dd><dt>Comandos y resultados</dt><dd>cargo fmt --all --check, cargo clippy --all-targets --workspace -- -D warnings y cargo test --workspace pasaron. Las pruebas manual_wish, export y price cubren identidad, notas, dispositivos y precio PC.</dd><dt>Commit o cambio</dt><dd>Pendiente.</dd><dt>Desviaciones y decisiones</dt><dd>Ninguna.</dd><dt>Riesgos restantes</dt><dd>Integración visual.</dd><dt>Siguiente acción</dt><dd>Implementar interfaz de fase 3.</dd></dl></details></div></article>
+<article class="phase" id="phase-3"><div class="phase-header"><div><span class="phase-number">Fase 3 de 3</span><h3>Exponer alta y gestión en la interfaz</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 2 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Backend completo</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Función completa</strong></div><div class="fact"><span class="label">Producción</span><strong>Alta usable</strong></div></div><p class="plain-impact">El usuario podrá añadir un juego no conectado, indicar dispositivos y corregir o retirar cada deseo sin perder la ficha.</p><h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody><tr><td><code>src/lib/api.ts</code>, <code>src/App.tsx</code></td><td>Tipos y llamadas; actualizar filas, contador y precios tras cada operación; mostrar errores.</td></tr><tr><td><code>src/features/wishlist/Wishlist.tsx</code>, <code>prices.ts</code></td><td>Alta visible con lista vacía; formulario accesible con ficha, IGDB o título libre; familia y modelo. Una fila por ficha y controles de editar/retirar cada deseo. Precio solo si hay deseo PC o copia wishlist de tienda.</td></tr><tr><td><code>src/features/game/GameDetail.tsx</code>, <code>src/features/library/filters.ts</code>, <code>LibraryTable.tsx</code>, <code>LibraryWall.tsx</code></td><td>Distinguir ficha manual sin copia de juego que dejó una tienda; presentar dispositivos sin llamarlos tiendas. Conservar scroll y colores del sistema.</td></tr><tr><td><code>src/App.test.tsx</code>, <code>src/features/wishlist/prices.test.ts</code>, <code>test/visual/</code></td><td>Alta sin cuenta ni IGDB, selección de ficha, dos plataformas, edición, retirada, precio y ancho estrecho. Medir estructura; captura para inspección.</td></tr></tbody></table><aside class="gate"><h4>Control de producción</h4><ul class="checks"><li>Crear dos dispositivos, editar y quitar uno; el otro, ficha y notas sobreviven reinicio y sincronización.</li><li>Consola sola no muestra precio. JSON y CSV incluyen plataforma.</li><li>Todos los comandos de <a href="#verification">comprobación</a> pasan y abre <code>bun run tauri dev</code>.</li></ul></aside><div class="triptych"><article><h4>Despliegue</h4><p>UI sobre backend compatible. La apertura aplica migración con copia.</p></article><article><h4>Observación</h4><p>Alta, reinicio, sincronización, exportación y foco en escritorio.</p></article><article><h4>Reversión</h4><p>Retirar UI conserva datos. No bajar esquema sin exportar y plan de restauración.</p></article></div><details class="execution-record"><summary>Registro · done</summary><dl><dt>Inicio</dt><dd>2026-09-24 12:29 UTC</dd><dt>Fin</dt><dd>2026-09-24 12:40 UTC</dd><dt>Agente o sesión</dt><dd>Codex · sesión actual</dd><dt>Archivos y símbolos</dt><dd>Tipos y comandos de API; App y alta local sin cuenta; ManualWishForm, Wishlist, precios y estados de biblioteca; CSS, pruebas de React y arnés visual.</dd><dt>Comandos y resultados</dt><dd>Pasaron fmt, clippy, cargo test --workspace, TypeScript, lint, 106 pruebas JS, build y arnés visual, incluido formulario a 620 y 1000 px. Tauri dev compiló y ejecutó la app en sesión de escritorio; la prueba real de keyring pasó. La prueba optativa live_manual_wish pasó con credenciales locales: IGDB dio 10 candidatos y ITAD una oferta para PC, ninguna para consola. La prueba manual guiada en escritorio confirmó alta de Hades en Nintendo Switch sin precio, edición a Switch 2 y retirada; la base conservó la ficha y la copia Steam.</dd><dt>Commit o cambio</dt><dd>Pendiente.</dd><dt>Desviaciones y decisiones</dt><dd>La limpieza conserva también fichas con deseos manuales ya retirados para cumplir la conservación de la ficha. El arnés de setup usa biblioteca vacía cuando no hay cuenta.</dd><dt>Riesgos restantes</dt><dd>El controlador remoto no expone la ventana del usuario; la interacción se comprobó mediante capturas y acciones guiadas del usuario, con lectura posterior de la base local.</dd><dt>Siguiente acción</dt><dd>Revisión del diff y entrega al usuario.</dd></dl></details></div></article></section>
+<section><p class="eyebrow">Compatibilidad</p><h2>Datos y contratos</h2><table><thead><tr><th>Cambio</th><th>Up</th><th>Compatibilidad y relleno</th><th>Down</th></tr></thead><tbody><tr><td><code>manual_wish</code></td><td>Migración 0008 aditiva.</td><td>Tabla nueva vacía, sin backfill. Una versión anterior puede rechazar una base con migración nueva; no prometer downgrade de app.</td><td>Eliminar tabla pierde deseos; exportar o restaurar copia antes.</td></tr><tr><td><code>LibraryRow</code></td><td>Añadir deseos manuales; campos previos siguen.</td><td>Rust y React se empaquetan juntos. Pruebas y arnés visual deben actualizar campo.</td><td>Conservar lectura mientras existan datos.</td></tr><tr><td>CSV</td><td>Columna final <code>manual_platforms</code>.</td><td>Lectores con cabecera exacta requieren adaptación. Una fila por juego.</td><td>Retirar columna pierde información exportada.</td></tr></tbody></table></section>
+<section id="risks"><p class="eyebrow">Fallos posibles</p><h2>Riesgos y respuesta</h2><table><thead><tr><th>Nivel</th><th>Riesgo</th><th>Señal</th><th>Respuesta</th><th>Reversión</th></tr></thead><tbody><tr><td class="risk-med">Medio</td><td>Unión falsa por título.</td><td>Notas en ficha incorrecta.</td><td>Elección explícita; título libre crea ficha; excluir manual sin copia de coincidencia local.</td><td>Corregir enlace o restaurar copia si se mezcló estado.</td></tr><tr><td class="risk-med">Medio</td><td>Match retira ficha con deseo.</td><td>Desaparece tras emparejar.</td><td>La limpieza consulta deseos vivos y se prueba después del alta.</td><td>Restaurar copia y corregir consulta.</td></tr><tr><td class="risk-med">Medio</td><td>Precio PC parece precio de consola.</td><td>Oferta en juego solo de consola.</td><td>Elegibilidad PC en consulta y presentación; caché se limpia al refrescar.</td><td>Ocultar precio y corregir objetivos.</td></tr><tr><td class="risk-med">Medio</td><td>Migración o down pierde deseos.</td><td>Faltan tras reabrir.</td><td>Copia con <code>VACUUM INTO</code> y prueba con base anterior.</td><td>Restaurar copia; no aplicar down sin exportar.</td></tr><tr><td class="risk-med">Medio</td><td>Altas simultáneas duplican dispositivo o dejan ficha sola.</td><td>Duplicado o huérfano.</td><td>Índice único parcial y transacción de ficha y deseo.</td><td>Reintentar tras corregir; conservar notas.</td></tr></tbody></table></section>
+<section id="verification"><p class="eyebrow">Evidencia final</p><h2>Cómo comprobar el resultado</h2><div class="scope-grid"><article><h3>Comandos</h3><pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev</code></pre><p>Con sesión secret-service: <code>cargo test -p secrets --test keyring_real -- --ignored</code>. No es una puerta de CI nueva.</p></article><article><h3>Criterios</h3><ul class="checks"><li>Alta por ficha, IGDB y título libre; este último funciona sin clave.</li><li>Dos dispositivos, edición y retirada independientes.</li><li>Sincronización no borra deseo manual ni notas.</li><li>ITAD solo aparece con PC; consola sola carece de precio.</li><li>Exportaciones, reinicio y migración conservan datos.</li></ul></article></div></section>
+<section><p class="eyebrow">Incertidumbre acotada</p><h2>Comprobaciones durante la ejecución</h2><table><thead><tr><th>Incógnita</th><th>Ruta de resolución</th><th>Salida si falla</th></tr></thead><tbody><tr><td>IGDB puede separar o unir ediciones de forma inesperada.</td><td>Prueba de candidatos homónimos y elección explícita.</td><td>Ficha local; pedir dirección si ID externo entra en conflicto con estado existente.</td></tr><tr><td>Base real con esquema anterior.</td><td>Abrir copia en fase 1 y revisar migrador.</td><td>Detener fase y corregir migración nueva; no tocar antiguas.</td></tr></tbody></table></section>
+<section class="guardrails"><p class="eyebrow">Límites</p><h2>No hacer</h2><ul><li>No añadir consolas a <code>StoreId</code> ni crear cuentas o copias falsas.</li><li>No editar migraciones <code>0001</code>–<code>0007</code> ni planes anteriores.</li><li>No unir fichas por título libre ni borrar notas al retirar el deseo.</li><li>No añadir precios de consola, un servicio de precios ni cambios de diseño ajenos al flujo.</li></ul></section>
+<footer>Plan de decisión · HTML autocontenido · Sin JavaScript ni recursos externos</footer>
+</main>
+</body>
+</html>

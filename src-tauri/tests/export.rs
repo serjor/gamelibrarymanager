@@ -1,10 +1,14 @@
 //! The two user-facing exports contain the library and no credentials.
 
-use domain::{Game, GameId, PlayStatus, StoreAccount, StoreAccountId, StoreId, UserState};
+use domain::{
+    Game, GameId, ManualWish, ManualWishId, PlatformFamily, PlayStatus, StoreAccount,
+    StoreAccountId, StoreId, UserState,
+};
 use gamelibrarymanager_lib::testing::{ExportFormat, export_library_for};
 use storage::Database;
 use storage::repositories::{
-    ConnectorStateRepository, GameRepository, StoreAccountRepository, UserStateRepository,
+    ConnectorStateRepository, GameRepository, ManualWishRepository, StoreAccountRepository,
+    UserStateRepository,
 };
 use time::OffsetDateTime;
 
@@ -43,6 +47,15 @@ async fn json_contains_the_library_accounts_and_connector_states() {
         .upsert(&game)
         .await
         .expect("add the game");
+    ManualWishRepository(&db)
+        .add(&ManualWish {
+            id: ManualWishId::new(),
+            game_id: game.id,
+            family: PlatformFamily::Playstation,
+            model: "PS5".to_owned(),
+        })
+        .await
+        .expect("add the manual wish");
     UserStateRepository(&db)
         .save(&UserState {
             game_id: game.id,
@@ -65,6 +78,7 @@ async fn json_contains_the_library_accounts_and_connector_states() {
 
     assert_eq!(value["library"][0]["title"], "Disco Elysium");
     assert_eq!(value["library"][0]["notes"], "at chapter 3");
+    assert_eq!(value["library"][0]["manual_wishes"][0]["model"], "PS5");
     assert_eq!(value["accounts"][0]["store"], "steam");
     assert_eq!(value["connectors"][0]["store"], "epic");
     assert!(!value.to_string().contains("credential"));
@@ -88,6 +102,15 @@ async fn csv_contains_only_user_fields_and_escapes_values() {
         .upsert(&game)
         .await
         .expect("add the game");
+    ManualWishRepository(&db)
+        .add(&ManualWish {
+            id: ManualWishId::new(),
+            game_id: game.id,
+            family: PlatformFamily::Nintendo,
+            model: "Switch, OLED".to_owned(),
+        })
+        .await
+        .expect("add the manual wish");
     UserStateRepository(&db)
         .save(&UserState {
             game_id: game.id,
@@ -106,8 +129,8 @@ async fn csv_contains_only_user_fields_and_escapes_values() {
         .expect("write CSV");
     let csv = std::fs::read_to_string(path).expect("read CSV");
 
-    assert!(csv.starts_with("game_id,title,status,score,notes\n"));
-    assert!(csv.contains("\"A, game\",playing,9,\"line 1\nline 2\"\n"));
+    assert!(csv.starts_with("game_id,title,status,score,notes,manual_platforms\n"));
+    assert!(csv.contains("\"A, game\",playing,9,\"line 1\nline 2\",\"nintendo: Switch, OLED\"\n"));
     assert!(!csv.contains("summary"));
     assert!(!csv.contains("credential"));
 }

@@ -95,6 +95,7 @@ export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
     genres: ["RPG"],
     owned_stores: ["steam"],
     wishlist_stores: [],
+    manual_wishes: [],
     store_cover_url: null,
     store_url: null,
     playtime_minutes: 0,
@@ -339,6 +340,7 @@ export async function withTheApp<T>(
     }
     if (options.setup === "steam" || options.setup === "gog" || options.setup === "epic") {
       answers.list_accounts = [];
+      answers.library = [];
     }
     if (options.setup === "igdb") answers.has_igdb_credentials = false;
     await page.addInitScript(

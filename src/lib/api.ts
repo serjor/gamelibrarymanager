@@ -72,6 +72,26 @@ export interface ReviewItem {
 
 export type PlayStatus = "backlog" | "playing" | "finished" | "abandoned";
 export type ExportFormat = "json" | "csv";
+export type PlatformFamily = "pc" | "playstation" | "xbox" | "nintendo" | "other";
+
+export interface ManualWish {
+  id: string;
+  game_id: string;
+  family: PlatformFamily;
+  model: string;
+}
+
+export type WishTarget =
+  | { kind: "existing"; game_id: string }
+  | { kind: "igdb"; igdb_id: number }
+  | { kind: "title"; title: string };
+
+export interface IgdbCandidate {
+  igdb_id: number;
+  name: string;
+  release_year: number | null;
+  cover_url: string | null;
+}
 
 export interface LibraryRow {
   game_id: string;
@@ -84,6 +104,7 @@ export interface LibraryRow {
   genres: string[];
   owned_stores: string[];
   wishlist_stores: string[];
+  manual_wishes: ManualWish[];
   /**
    * The horizontal image of the store, which is not the same as `cover_url`:
    * IGDB gives 3:4 covers and the store gives wide headers. The two go together
@@ -207,6 +228,14 @@ export const api = {
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
   library: () => invoke<LibraryRow[]>("library"),
+  searchManualWishGames: (title: string) =>
+    invoke<IgdbCandidate[]>("search_manual_wish_games", { title }),
+  addManualWish: (target: WishTarget, family: PlatformFamily, model: string) =>
+    invoke<LibraryRow>("add_manual_wish", { input: { target, family, model } }),
+  updateManualWish: (wishId: string, family: PlatformFamily, model: string) =>
+    invoke<LibraryRow>("update_manual_wish", { wishId, family, model }),
+  removeManualWish: (wishId: string) =>
+    invoke<LibraryRow>("remove_manual_wish", { wishId }),
   /** Stops the operation in progress: a synchronisation or a match. */
   cancelOperation: () => invoke<void>("cancel_operation"),
   /**

@@ -1047,6 +1047,49 @@ button.link {
   margin: 0;
 }
 
+.manual-wish-form {
+  display: grid;
+  gap: var(--e-3);
+  width: min(100%, 42rem);
+  padding: var(--e-4);
+  margin-bottom: var(--e-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+
+.manual-wish-form h2,
+.manual-wish-form p {
+  margin: 0;
+}
+
+.manual-wish-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  border: 0;
+  padding: 0;
+}
+
+.manual-wish-results {
+  flex-direction: column;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.manual-wish-search,
+.manual-wish-buttons,
+.manual-wish-device {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.manual-wish-search input { flex: 1 1 12rem; }
+.manual-wish-device { margin-top: var(--e-2); }
+.manual-wish-device input { width: 7rem; }
+
 .discount {
   font-weight: 600;
 }
