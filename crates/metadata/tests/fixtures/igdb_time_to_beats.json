@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1021,
+    "game_id": 115653,
+    "hastily": 79200,
+    "normally": 115200,
+    "completely": 172800,
+    "count": 412
+  },
+  {
+    "id": 1022,
+    "game_id": 250,
+    "hastily": 0,
+    "normally": 0,
+    "completely": 0,
+    "count": 0
+  },
+  {
+    "id": 1023,
+    "game_id": 7351,
+    "normally": 45000,
+    "count": 3
+  }
+]

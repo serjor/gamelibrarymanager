@@ -10,6 +10,7 @@ mod match_candidate;
 mod price;
 mod store_account;
 mod store_entry;
+mod time_to_beat;
 mod user_state;
 
 pub use connector_state::ConnectorStateRepository;
@@ -21,4 +22,5 @@ pub use match_candidate::MatchCandidateRepository;
 pub use price::{PriceRepository, PriceRow, PriceTarget};
 pub use store_account::StoreAccountRepository;
 pub use store_entry::StoreEntryRepository;
+pub use time_to_beat::TimeToBeatRepository;
 pub use user_state::UserStateRepository;

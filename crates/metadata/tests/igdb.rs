@@ -11,6 +11,7 @@ const TOKEN: &str = include_str!("fixtures/igdb_token.json");
 const EXTERNAL: &str = include_str!("fixtures/igdb_external_games.json");
 const SEARCH: &str = include_str!("fixtures/igdb_search.json");
 const GAME: &str = include_str!("fixtures/igdb_game.json");
+const TIMES: &str = include_str!("fixtures/igdb_time_to_beats.json");
 
 fn credentials() -> IgdbCredentials {
     IgdbCredentials {
@@ -208,6 +209,57 @@ async fn the_record_carries_a_cover_built_from_the_image_id() {
         game.genres,
         vec!["Role-playing (RPG)".to_owned(), "Adventure".to_owned()]
     );
+}
+
+#[tokio::test]
+async fn the_time_to_beat_comes_in_seconds_and_a_zero_is_no_duration() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .and(body_string_contains("game_id = (115653,250,7351)"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TIMES, "application/json"))
+        .mount(&server)
+        .await;
+
+    let times = client(&server)
+        .times_to_beat(&credentials(), &token(), &[115653, 250, 7351])
+        .await
+        .expect("query");
+
+    let disco = times.get(&115653).expect("Disco Elysium has durations");
+    assert_eq!(disco.hastily, Some(79200));
+    assert_eq!(disco.normally, Some(115200));
+    assert_eq!(disco.completely, Some(172800));
+    assert_eq!(disco.submissions, 412);
+
+    // Only zeros is the same as no answer: no record.
+    assert!(!times.contains_key(&250));
+
+    // One duration alone is sufficient, and the absent ones stay absent.
+    let doom = times.get(&7351).expect("one duration is sufficient");
+    assert_eq!(doom.hastily, None);
+    assert_eq!(doom.normally, Some(45000));
+    assert_eq!(doom.completely, None);
+}
+
+/// The same batch as `external_games`: one thousand records are two requests.
+#[tokio::test]
+async fn one_thousand_times_to_beat_fit_in_two_requests() {
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .expect(2)
+        .mount(&server)
+        .await;
+
+    let ids: Vec<i64> = (1..=1000).collect();
+    client(&server)
+        .times_to_beat(&credentials(), &token(), &ids)
+        .await
+        .expect("query");
+
+    drop(server);
 }
 
 #[tokio::test]

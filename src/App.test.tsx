@@ -123,6 +123,7 @@ mock.module("./lib/api", () => ({
         unknown: 0,
         cancelled: false,
         stopped: state.matchingStopped,
+        timed: 0,
       }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
@@ -212,6 +213,7 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
     summary: null,
     release_year: null,
     genres: [],
+    time_to_beat: null,
     owned_stores: ["steam"],
     wishlist_stores: [],
     manual_wishes: [],
@@ -973,6 +975,36 @@ describe("App", () => {
     const art = document.querySelector(".sheet-art");
     expect(art?.tagName).toBe("IMG");
     expect(art?.getAttribute("src")).toContain("header.jpg");
+  });
+
+  it("the record shows how long the game takes, from IGDB", async () => {
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({
+        title: "Celeste",
+        sort_title: "celeste",
+        time_to_beat: { hastily: 8 * 3600, normally: 13 * 3600 + 1800, completely: null, submissions: 212 },
+      }),
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    const block = within(inTheRecord().getByRole("region", { name: "Time to beat" }));
+    expect(block.getByText("Main story").nextSibling?.textContent).toBe("8 h");
+    expect(block.getByText("Main + extras").nextSibling?.textContent).toBe("13½ h");
+    expect(block.getByText("Completionist").nextSibling?.textContent).toBe("—");
+    expect(block.getByText(/212 players/)).toBeDefined();
+  });
+
+  it("a record with no durations shows no block of dashes", async () => {
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = [row({ title: "Celeste", sort_title: "celeste" })];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    expect(inTheRecord().queryByRole("region", { name: "Time to beat" })).toBeNull();
   });
 
   it("with no store cover and no summary the sheet still opens", async () => {

@@ -93,6 +93,7 @@ export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
     summary: null,
     release_year: 2020,
     genres: ["RPG"],
+    time_to_beat: null,
     owned_stores: ["steam"],
     wishlist_stores: [],
     manual_wishes: [],
@@ -114,7 +115,7 @@ export function game(overrides: Partial<LibraryRow> = {}): LibraryRow {
  */
 export function exampleLibrary(): LibraryRow[] {
   return [
-    game({ title: "Disco Elysium: The Final Cut", cover_url: PORTRAIT_ART, owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
+    game({ title: "Disco Elysium: The Final Cut", time_to_beat: { hastily: 79_200, normally: 115_200, completely: 172_800, submissions: 412 }, cover_url: PORTRAIT_ART, owned_stores: ["steam", "gog"], playtime_minutes: 1240, last_played_at: 1_700_000_000, status: "finished", rating: 10, store_cover_url: WIDE_ART, summary: "A detective with no memory wakes in a city that is falling to pieces and must resolve a murder while he argues with himself. Each skill is a voice, and all of them lie a little.".repeat(2) }),
     game({ title: "Hades", cover_url: PORTRAIT_ART, playtime_minutes: 3120, last_played_at: 1_750_000_000, status: "playing", rating: 9, store_cover_url: WIDE_ART }),
     game({ title: "Ori and the Blind Forest: Definitive Edition", owned_stores: ["steam", "gog"], playtime_minutes: 660, status: "finished", rating: 8 }),
     game({ title: "Outer Wilds", playtime_minutes: 0, status: "backlog" }),

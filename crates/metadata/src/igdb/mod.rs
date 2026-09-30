@@ -27,6 +27,25 @@
 //! It was written in phase 4, when Steam was the only store of the project, and
 //! nobody measured it again when GOG and Epic came in.
 //!
+//! ## The time to beat
+//!
+//! `game_time_to_beats` is an endpoint of its own and not a field of `games`:
+//! one row for each game, keyed by `game_id`. From the v4 documentation, read on
+//! 2026-09-30:
+//!
+//! - `hastily`: the average seconds to the credits, with no notable time on
+//!   extras.
+//! - `normally`: the average seconds with some extras, not overly thorough.
+//! - `completely`: the average seconds to 100% completion.
+//! - `count`: the number of submissions.
+//!
+//! This is an official endpoint and the names come from its reference, but no
+//! test here ran against a live answer: the tests use recorded answers, as the
+//! rest of this module.
+//!
+//! It goes in batches of 500 with `game_id = (…)`, as `external_games`. One
+//! request for each record would double the time of the matching.
+//!
 //! ## `category` is obsolete
 //!
 //! The documentation marks `category` as obsolete and tells you to use
@@ -38,7 +57,7 @@ mod parse;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use domain::Candidate;
+use domain::{Candidate, TimeToBeat};
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -216,6 +235,42 @@ impl IgdbClient {
         );
         let body = self.post("games", credentials, token, query).await?;
         parse::parse_game(&body)
+    }
+
+    /// The durations that the players report, for a batch of records.
+    ///
+    /// The records that IGDB has no durations for do not appear in the map, as
+    /// the identifiers that `by_external_ids` does not know. That is usual: a
+    /// small game can have no player who answered.
+    pub async fn times_to_beat(
+        &self,
+        credentials: &IgdbCredentials,
+        token: &IgdbToken,
+        igdb_ids: &[i64],
+    ) -> Result<HashMap<i64, TimeToBeat>> {
+        let mut found = HashMap::with_capacity(igdb_ids.len());
+
+        for batch in igdb_ids.chunks(BATCH) {
+            let values = batch
+                .iter()
+                .map(i64::to_string)
+                .collect::<Vec<_>>()
+                .join(",");
+            let query = format!(
+                "fields game_id, hastily, normally, completely, count; \
+                 where game_id = ({values}); \
+                 limit {BATCH};"
+            );
+            let body = self
+                .post("game_time_to_beats", credentials, token, query)
+                .await?;
+
+            for (igdb_id, time) in parse::parse_times_to_beat(&body)? {
+                found.entry(igdb_id).or_insert(time);
+            }
+        }
+
+        Ok(found)
     }
 
     async fn post(

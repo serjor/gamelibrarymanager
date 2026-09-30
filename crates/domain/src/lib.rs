@@ -10,7 +10,9 @@ pub mod model;
 pub mod ports;
 pub mod prices;
 
-pub use library::{Game, GameLink, LinkMethod, ManualWish, StoreAccount, StoreEntry, UserState};
+pub use library::{
+    Game, GameLink, LinkMethod, ManualWish, StoreAccount, StoreEntry, TimeToBeat, UserState,
+};
 pub use matching::{Candidate, MatchDecision, ScoredCandidate};
 pub use model::{
     ConnectorState, EntryKind, GameId, ManualWishId, PlatformFamily, PlayStatus, StoreAccountId,
