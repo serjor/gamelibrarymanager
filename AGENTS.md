@@ -22,8 +22,20 @@ Before you write code, read also:
   application must have — to disconnect a store and to take the data out — and
   give the repository a way to publish. Each phase closes alone and gives a
   version of its own.
+- `.agents/plans/0005-gamer-interface-redesign/plan.html` — the second redesign
+  of the interface: a live-archive identity for the wall, "Today" and the game
+  record, and a command-deck system for the screens that manage. It changes no
+  data and no command.
+- `.agents/plans/0006-theme-selector/plan.html` — the choice of Light, Dark or
+  System in Utilities. The preference is local to the webview. It is not library
+  data, and the export does not carry it.
+- `.agents/plans/0007-manual-wishlist/plan.html` — the wishes that the user adds
+  by hand, one for each device, on the same record as the store copies. A wish
+  for a console only gets no price.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
+
+All of these plans are done. Their decisions are closed.
 
 ## Conventions
 

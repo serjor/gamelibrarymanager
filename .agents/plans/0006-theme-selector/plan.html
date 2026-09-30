@@ -146,8 +146,8 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
   <dl class="meta">
     <div><dt>Repository</dt><dd><code>gamelibrarymanager</code></dd></div>
     <div><dt>Branch</dt><dd><code>t3code/implement-issue-three</code></dd></div>
-    <div><dt>Updated</dt><dd>2026-09-10</dd></div>
-    <div><dt>Status</dt><dd><span class="status done">Complete · implementation done</span></dd></div>
+    <div><dt>Updated</dt><dd>2026-09-30</dd></div>
+    <div><dt>Status</dt><dd><span class="status done">Complete · reviewed by the user</span></dd></div>
   </dl>
 
   <div class="decision-grid">
@@ -189,7 +189,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
     <article class="stat"><span class="label">Blockers</span><strong>0</strong></article>
     <article class="stat"><span class="label">Open decisions</span><strong>0</strong></article>
   </div>
-  <p class="next-action"><strong>Next action:</strong> <span>No implementation action remains.</span></p>
+  <p class="next-action"><strong>Next action:</strong> <span>No action remains. The user reviewed the result on 2026-09-30, and the plan is done.</span></p>
   <p class="callout warning"><strong>Planning environment.</strong> The planning session did not run <code>bun</code> or <code>cargo</code> because these commands are not installed. The implementation session must run the gates in a complete environment.</p>
 
   <table>
@@ -398,7 +398,7 @@ footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;tex
           <dt>Started</dt><dd>2026-08-31T19:14:52Z.</dd>
           <dt>Completed</dt><dd>2026-08-31T19:38:01Z.</dd>
           <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
-          <dt>Commit / change</dt><dd>Pending.</dd>
+          <dt>Commit / change</dt><dd><code>43b6c69</code> (#5), together with phase 2.</dd>
           <dt>Actual files</dt><dd><code>src/features/shell/theme.ts</code>, <code>src/features/shell/theme.test.ts</code>, <code>src/main.tsx</code>, <code>src/styles.css</code>, and <code>docs/ui/tokens-as-the-only-source-of-colour.md</code>.</dd>
           <dt>Commands / results</dt><dd>Type-check, lint, 99 frontend tests, build, and the visual suite passed. The commands used the temporary <code>npx --yes bun</code> wrapper because Bun is not installed globally.</dd>
           <dt>Deviations</dt><dd>None.</dd>
@@ -470,7 +470,7 @@ bun run build &amp;&amp; bun run visual</code></pre>
           <dt>Started</dt><dd>2026-08-31T19:38:01Z.</dd>
           <dt>Completed</dt><dd>2026-08-31T20:06:40Z.</dd>
           <dt>Agent / session</dt><dd>Codex · T3 Code.</dd>
-          <dt>Commit / change</dt><dd>Final implementation commit: <code>feat: add theme preference selector</code>.</dd>
+          <dt>Commit / change</dt><dd>Final implementation commit: <code>feat: add theme preference selector</code>, merged as <code>43b6c69</code> (#5).</dd>
           <dt>Actual files</dt><dd><code>src/App.tsx</code>, <code>src/App.test.tsx</code>, <code>src/features/shell/UtilityPanel.tsx</code>, <code>src/features/shell/AppShell.test.tsx</code>, <code>src/features/shell/theme.ts</code>, <code>src/features/shell/theme.test.ts</code>, <code>src/main.tsx</code>, <code>src/styles.css</code>, <code>test/visual/harness.ts</code>, <code>test/visual/look.ts</code>, and <code>docs/ui/tokens-as-the-only-source-of-colour.md</code>.</dd>
           <dt>Commands / results</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, and <code>cargo test --workspace</code> passed. <code>npx --yes bunx tsc --noEmit</code>, <code>npx --yes bun run lint</code>, <code>npx --yes bun test</code> (102 tests), <code>npx --yes bun run build</code>, and <code>npx --yes bun run visual</code> passed. <code>tauri dev</code> compiled and started under Xvfb; the timed development process was then stopped. The ignored real keyring test was run and reported no desktop <code>secret-service</code> because this environment has no keyring session.</dd>
           <dt>Deviations</dt><dd>Bun was run through the temporary <code>npx --yes bun</code> wrapper. A temporary stable Rust toolchain and the Linux Tauri development packages were installed because the environment did not provide them. The physical-display Tauri run cannot pass without a desktop session; the Xvfb run reached the application process.</dd>

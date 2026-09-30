@@ -32,6 +32,10 @@ strong{font-weight:600}
 <p class="m">gamelibrarymanager · main · 2026-08-17 · size: M</p>
 <p class="m">Eight phases. Each one closes alone, each one gives a version of its own, and no phase waits for a later phase. The order goes from the smallest cost to the largest, and the phase that publishes goes last by decision of the user.</p>
 
+<h2>Status</h2>
+<p><strong>The plan is done: the eight phases</strong>, merged together in commit <code>621f6d3</code> (#2). The version is <code>0.9.0</code>. The user reviewed the result on 2026-09-30.</p>
+<p>The phases 1 to 7 have no tag of their own, because they merged in one change. The tag <code>v0.9.0</code> is on <code>f265719</code>, the head of <code>main</code> on 2026-09-30, and it starts <code>release.yml</code>. The release stays a draft until a person publishes it.</p>
+
 <h2>Goal</h2>
 <p>The application stops in the three places where it can stop badly today: a request with no answer, two long operations at the same time, and a delete that compares against a list of thousands. It gains the two operations that a local-first application must have and does not have: to disconnect a store, and to take the data out. And the repository gains a way to publish what it builds.</p>
 
