@@ -32,10 +32,10 @@ Before you write code, read also:
 - `.agents/plans/0007-manual-wishlist/plan.html` — the wishes that the user adds
   by hand, one for each device, on the same record as the store copies. A wish
   for a console only gets no price.
-
-All of these plans are done. Their decisions are closed.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
+
+All of these plans are done. Their decisions are closed.
 
 ## Conventions
 
