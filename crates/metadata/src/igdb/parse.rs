@@ -1,7 +1,7 @@
 //! The reading of the IGDB answers, kept apart from the transport so that you
 //! can test it with recorded answers and with no network.
 
-use domain::Candidate;
+use domain::{Candidate, TimeToBeat};
 use serde::Deserialize;
 use time::OffsetDateTime;
 
@@ -18,6 +18,19 @@ struct TokenResponse {
 struct ExternalGame {
     uid: String,
     game: i64,
+}
+
+#[derive(Deserialize)]
+struct RawTimeToBeat {
+    game_id: i64,
+    #[serde(default)]
+    hastily: Option<i64>,
+    #[serde(default)]
+    normally: Option<i64>,
+    #[serde(default)]
+    completely: Option<i64>,
+    #[serde(default)]
+    count: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -121,6 +134,34 @@ pub fn parse_game(body: &str) -> Result<Option<GameMetadata>> {
             .and_then(|ts| OffsetDateTime::from_unix_timestamp(ts).ok()),
         genres: game.genres.into_iter().map(|genre| genre.name).collect(),
     }))
+}
+
+/// The durations of one batch, indexed by the IGDB record.
+///
+/// A zero is not a duration: no game is complete in zero seconds, and IGDB
+/// writes it where nobody answered. It becomes `None`, so that the interface
+/// shows "unknown" and not "0 h". A row with no duration at all is dropped: to
+/// keep it would show an empty block with a number of players.
+pub fn parse_times_to_beat(body: &str) -> Result<Vec<(i64, TimeToBeat)>> {
+    let parsed: Vec<RawTimeToBeat> = serde_json::from_str(body)
+        .map_err(|e| MetadataError::Unexpected(format!("unreadable answer: {e}")))?;
+
+    Ok(parsed
+        .into_iter()
+        .map(|raw| {
+            let positive = |value: Option<i64>| value.filter(|seconds| *seconds > 0);
+            (
+                raw.game_id,
+                TimeToBeat {
+                    hastily: positive(raw.hastily),
+                    normally: positive(raw.normally),
+                    completely: positive(raw.completely),
+                    submissions: raw.count.unwrap_or(0).max(0),
+                },
+            )
+        })
+        .filter(|(_, time)| !time.is_empty())
+        .collect())
 }
 
 fn year_of(timestamp: i64) -> Option<i32> {

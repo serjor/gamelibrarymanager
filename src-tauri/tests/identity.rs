@@ -11,8 +11,8 @@ use metadata::IgdbClient;
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use storage::Database;
 use storage::repositories::{
-    GameLinkRepository, GameRepository, MatchCandidateRepository, StoreAccountRepository,
-    StoreEntryRepository,
+    GameLinkRepository, GameRepository, LibraryRepository, MatchCandidateRepository,
+    StoreAccountRepository, StoreEntryRepository,
 };
 use time::OffsetDateTime;
 use wiremock::matchers::{body_string_contains, method, path};
@@ -21,6 +21,8 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 const EXTERNAL: &str = r#"[{"id":1,"uid":"632470","game":115653}]"#;
 const GAME_115653: &str = r#"[{"id":115653,"name":"Disco Elysium","first_release_date":1571270400,
                               "cover":{"id":1,"image_id":"co1x2y"}}]"#;
+const TIMES_115653: &str = r#"[{"id":1,"game_id":115653,"hastily":79200,"normally":115200,
+                                "completely":172800,"count":412}]"#;
 const SEARCH_AMBIGUO: &str = r#"[{"id":250,"name":"Doom","first_release_date":757382400},
                                  {"id":7351,"name":"Doom","first_release_date":1463011200}]"#;
 
@@ -71,6 +73,12 @@ async fn igdb_server(search_body: &'static str) -> MockServer {
     Mock::given(method("POST"))
         .and(path("/games"))
         .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .mount(&server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TIMES_115653, "application/json"))
         .mount(&server)
         .await;
 
@@ -147,6 +155,18 @@ async fn the_steam_appid_links_with_no_question_and_the_unsure_title_goes_to_the
     assert_eq!(games.len(), 1);
     assert_eq!(games[0].igdb_id, Some(115653));
     assert!(games[0].cover_url.is_some(), "the cover comes from IGDB");
+
+    // And at the end of the pass, how long it takes.
+    assert_eq!(report.timed, 1);
+    let row = LibraryRepository(&db)
+        .one(games[0].id)
+        .await
+        .expect("query")
+        .expect("the row exists");
+    let time = row.time_to_beat.expect("the durations of IGDB");
+    assert_eq!(time.hastily, Some(79200));
+    assert_eq!(time.completely, Some(172800));
+    assert_eq!(time.submissions, 412);
 
     // And the unsure entry stayed in the queue with its candidates, for the user.
     let candidates = MatchCandidateRepository(&db)
@@ -393,4 +413,110 @@ async fn gog_and_epic_link_by_identifier_and_never_search_by_title() {
     );
 
     drop(server);
+}
+
+/// A library that was matched before the durations existed gets them in the
+/// next pass, with no copy pending; and the pass after that does not ask again.
+#[tokio::test]
+async fn a_library_already_matched_gets_its_durations_once() {
+    let db = Database::in_memory().await.expect("database");
+    let record = domain::Game {
+        id: domain::GameId::new(),
+        canonical_title: "Disco Elysium".to_owned(),
+        sort_title: "disco elysium".to_owned(),
+        igdb_id: Some(115653),
+        cover_url: None,
+        summary: None,
+        released_at: None,
+        genres: Vec::new(),
+    };
+    GameRepository(&db).upsert(&record).await.expect("record");
+    // A record with no copy is an orphan and the pass removes it: the copy is
+    // what makes it a record of the library.
+    let steam = account(&db, StoreId::Steam).await;
+    let copy = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    StoreEntryRepository(&db)
+        .upsert_many(std::slice::from_ref(&copy))
+        .await
+        .expect("write the entry");
+    GameLinkRepository(&db)
+        .rebuild_auto(&[GameLink {
+            game_id: record.id,
+            store_entry_id: copy.id,
+            confidence: 1.0,
+            method: LinkMethod::Auto,
+        }])
+        .await
+        .expect("link");
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .and(body_string_contains("game_id = (115653)"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TIMES_115653, "application/json"))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    let first = resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("match");
+    let second = resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("match again");
+
+    assert_eq!(first.timed, 1);
+    assert_eq!(second.timed, 0, "the answer is fresh: nothing is due");
+    let row = LibraryRepository(&db)
+        .one(record.id)
+        .await
+        .expect("query")
+        .expect("the row exists");
+    assert_eq!(row.time_to_beat.map(|t| t.normally), Some(Some(115200)));
+
+    // `expect(1)` is examined when the server is dropped.
+    drop(server);
+}
+
+/// The durations are the last step and the least important one: a limit there
+/// says why the pass stopped and keeps the links that were made before it.
+#[tokio::test]
+async fn a_stop_in_the_durations_keeps_the_matches() {
+    let db = Database::in_memory().await.expect("database");
+    let steam = account(&db, StoreId::Steam).await;
+    let exact = entry(steam, StoreId::Steam, "632470", "Disco Elysium");
+    StoreEntryRepository(&db)
+        .upsert_many(std::slice::from_ref(&exact))
+        .await
+        .expect("write the entry");
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/external_games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(EXTERNAL, "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/games"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(GAME_115653, "application/json"))
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(429))
+        .mount(&server)
+        .await;
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    let report = resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("a stop from the provider is a result, not an error");
+
+    assert_eq!(report.linked, 1);
+    assert_eq!(report.timed, 0);
+    assert!(report.stopped.is_some(), "the pass must say why it stopped");
+    assert_eq!(GameLinkRepository(&db).all().await.expect("links").len(), 1);
 }

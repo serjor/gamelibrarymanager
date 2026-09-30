@@ -1,4 +1,4 @@
-use domain::{GameId, ManualWish, PlayStatus};
+use domain::{GameId, ManualWish, PlayStatus, TimeToBeat};
 use serde::Serialize;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
@@ -22,6 +22,10 @@ pub struct LibraryRow {
     pub summary: Option<String>,
     pub release_year: Option<i32>,
     pub genres: Vec<String>,
+    /// How long the game takes, as the players report it to IGDB. Absent in
+    /// the records with no IGDB identity, in the records that no pass has asked
+    /// for yet, and when nobody reported a time.
+    pub time_to_beat: Option<TimeToBeat>,
     pub owned_stores: Vec<String>,
     pub wishlist_stores: Vec<String>,
     /// Wishes written by the user, not copies reported by a store.
@@ -86,6 +90,7 @@ async fn rows(db: &Database, game_id: Option<GameId>) -> Result<Vec<LibraryRow>>
 const SQL: &str = "SELECT
                  g.id, g.canonical_title, g.sort_title, g.cover_url, g.released_at, g.genres,
                  g.summary,
+                 t.hastily, t.normally, t.completely, t.submissions,
                  us.status, us.rating, us.notes,
                  (SELECT GROUP_CONCAT(DISTINCT e.store) FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
@@ -136,6 +141,8 @@ const SQL: &str = "SELECT
                  ) AS last_played_at
              FROM game g
              LEFT JOIN user_state us ON us.game_id = g.id
+             -- The key of the cache: one row at the most for each game.
+             LEFT JOIN igdb_time_to_beat t ON t.igdb_id = g.igdb_id
              -- The one parameter selects one game, and NULL asks for all of
              -- them. The `WHERE` is examined before the subqueries of the
              -- columns, thus one game costs one pass over `game` and the
@@ -152,6 +159,13 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         value: manual_json,
     })?;
 
+    let time_to_beat = TimeToBeat {
+        hastily: row.get("hastily"),
+        normally: row.get("normally"),
+        completely: row.get("completely"),
+        submissions: row.get::<Option<i64>, _>("submissions").unwrap_or(0),
+    };
+
     Ok(LibraryRow {
         game_id: game_id_from_text(&row.get::<String, _>("id"))?,
         title: row.get("canonical_title"),
@@ -160,6 +174,7 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         summary: row.get("summary"),
         release_year: released.map(|date| date.year()),
         genres: serde_json::from_str(&row.get::<String, _>("genres")).unwrap_or_default(),
+        time_to_beat: (!time_to_beat.is_empty()).then_some(time_to_beat),
         owned_stores: split(row.get("owned_stores")),
         wishlist_stores: split(row.get("wishlist_stores")),
         manual_wishes,

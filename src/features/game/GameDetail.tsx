@@ -3,6 +3,7 @@ import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/a
 import { STATUSES, STATUS_LABEL } from "../../lib/status";
 import { isNoLongerInStore } from "../library/filters";
 import { GameArtwork } from "./GameArtwork";
+import { DURATIONS, formatDuration, submissionsLabel } from "./timeToBeat";
 
 /**
  * Beside the table, or on top of the covers.
@@ -77,6 +78,8 @@ export function GameDetail({
     }
   };
 
+  const timeToBeat = row.time_to_beat;
+
   const card = (
     <>
       {variant === "inspector" && <GameArtwork row={row} className="detail-art" />}
@@ -112,6 +115,24 @@ export function GameDetail({
         <p className="synopsis">{row.summary}</p>
       ) : (
         <p className="hint">No summary: the record was made with the title of the store.</p>
+      )}
+
+      {/* The answer to "does it fit in my week", before the status that the
+          user is about to change. Absent when IGDB has no durations: an empty
+          block of dashes would say less than no block. */}
+      {timeToBeat && (
+        <section className="time-to-beat" aria-labelledby="time-to-beat-title">
+          <h3 id="time-to-beat-title">Time to beat</h3>
+          <dl>
+            {DURATIONS.map(({ key, label }) => (
+              <div key={key}>
+                <dt>{label}</dt>
+                <dd>{formatDuration(timeToBeat[key])}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="hint">{submissionsLabel(timeToBeat)}</p>
+        </section>
       )}
 
       <label htmlFor="status">Status</label>

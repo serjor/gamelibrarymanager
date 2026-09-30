@@ -2739,3 +2739,50 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* The time to beat in the game record. Three figures side by side, the number
+   large and the name small below it: the eye goes to the hours first, which is
+   what the user came to read. On a narrow record the three wrap and keep their
+   order. */
+.time-to-beat {
+  display: grid;
+  gap: var(--e-2);
+}
+
+.time-to-beat h3 {
+  margin: 0;
+  font-size: var(--t-m);
+}
+
+.time-to-beat dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+  margin: 0;
+}
+
+.time-to-beat dl > div {
+  flex: 1 1 5.5rem;
+  display: flex;
+  flex-direction: column-reverse;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--surface-sunken);
+}
+
+.time-to-beat dt {
+  color: var(--text-muted);
+  font-size: var(--t-xs);
+}
+
+.time-to-beat dd {
+  margin: 0;
+  font-size: var(--t-l);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+
+.time-to-beat .hint {
+  margin: 0;
+}

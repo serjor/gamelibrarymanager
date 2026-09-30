@@ -17,6 +17,7 @@ function row(overrides: Partial<LibraryRow>): LibraryRow {
     summary: null,
     release_year: null,
     genres: [],
+    time_to_beat: null,
     owned_stores: ["steam"],
     wishlist_stores: [],
     manual_wishes: [],

@@ -93,6 +93,18 @@ export interface IgdbCandidate {
   cover_url: string | null;
 }
 
+/**
+ * How long a game takes, as the players report it to IGDB. Seconds; each value
+ * can be absent on its own, because a player can report one and not the others.
+ */
+export interface TimeToBeat {
+  hastily: number | null;
+  normally: number | null;
+  completely: number | null;
+  /** How many players answered. */
+  submissions: number;
+}
+
 export interface LibraryRow {
   game_id: string;
   title: string;
@@ -102,6 +114,11 @@ export interface LibraryRow {
   summary: string | null;
   release_year: number | null;
   genres: string[];
+  /**
+   * Absent in the records with no IGDB identity, in the records that no pass has
+   * asked for yet, and when nobody reported a time.
+   */
+  time_to_beat: TimeToBeat | null;
   owned_stores: string[];
   wishlist_stores: string[];
   manual_wishes: ManualWish[];
@@ -182,6 +199,8 @@ export interface IdentityReport {
    * from there.
    */
   stopped: string | null;
+  /** The records whose durations were asked for in this pass. */
+  timed: number;
 }
 
 /** The only door to Rust. Nobody else calls `invoke` directly. */

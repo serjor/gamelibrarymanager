@@ -12,7 +12,15 @@
 //! join fell to the search by title, which is the method with doubt that the
 //! identifier exists to prevent.
 //!
-//! It writes in `game`, `game_link` and `match_candidate`. Never in `store_entry`
+//! At the end, the pass asks IGDB how long each record takes, for the records
+//! that were never asked or were asked more than thirty days ago. That is in
+//! the same pass and not in a button of its own because it is the same
+//! provider with the same credentials, and because a library that was matched
+//! before this step existed gets its durations the next time the user runs the
+//! pass, with nothing more to do.
+//!
+//! It writes in `game`, `game_link`, `match_candidate` and `igdb_time_to_beat`.
+//! Never in `store_entry`
 //! — that belongs to the store — and never in `user_state` — that belongs to the
 //! user.
 
@@ -27,7 +35,9 @@ use serde::Serialize;
 use storage::Database;
 use storage::repositories::{
     GameLinkRepository, GameRepository, MatchCandidateRepository, StoreEntryRepository,
+    TimeToBeatRepository,
 };
+use time::{Duration, OffsetDateTime};
 
 use crate::error::AppError;
 use crate::sync::{ProgressSink, SyncProgress};
@@ -51,6 +61,8 @@ pub struct IdentityReport {
     /// all progress goes up as an error, and that is a failure of the
     /// database.
     pub stopped: Option<String>,
+    /// The records whose durations were asked for in this pass.
+    pub timed: usize,
 }
 
 /// How many games the pass matches before it keeps the result.
@@ -64,6 +76,15 @@ pub struct IdentityReport {
 /// An extra write breaks nothing: `rebuild_auto` writes the same set of links
 /// each time, thus twenty calls give the same result as one call.
 const BATCH: usize = 25;
+
+/// How many records go in one question for the durations, and are kept together.
+/// It is the limit of one IGDB query: a batch is one request and one write.
+const TIME_BATCH: usize = 500;
+
+/// After how long the durations of a record are asked again. They move slowly:
+/// a new game gets its answers in the first months, and after that the figure
+/// does not change enough to show.
+const TIME_TO_BEAT_TTL: Duration = Duration::days(30);
 
 pub async fn resolve(
     db: &Database,
@@ -198,7 +219,56 @@ pub async fn resolve(
     // manual links, which is the guarantee of phase 2.
     GameLinkRepository(db).rebuild_auto(&links).await?;
     GameRepository(db).soft_delete_orphans().await?;
+
+    // A pass that the user or the provider stopped does not start a new step.
+    if !report.cancelled && report.stopped.is_none() {
+        times_to_beat(db, igdb, credentials, token, progress, &mut report).await?;
+    }
     Ok(report)
+}
+
+/// Asks for the durations of the records that are due, in batches, and keeps
+/// each batch when it comes in.
+///
+/// A stop from the provider is a result as in the matching: the batches before
+/// it are kept, and the records after it are still due in the next pass.
+async fn times_to_beat(
+    db: &Database,
+    igdb: &IgdbClient,
+    credentials: &IgdbCredentials,
+    token: &IgdbToken,
+    progress: &dyn ProgressSink,
+    report: &mut IdentityReport,
+) -> Result<(), AppError> {
+    let times = TimeToBeatRepository(db);
+    let due = times
+        .due(OffsetDateTime::now_utc() - TIME_TO_BEAT_TTL)
+        .await?;
+    let total = due.len();
+
+    for batch in due.chunks(TIME_BATCH) {
+        if progress.cancelled() {
+            report.cancelled = true;
+            break;
+        }
+        progress.report(SyncProgress {
+            store: "igdb".to_owned(),
+            stage: "time to beat",
+            done: report.timed,
+            total,
+        });
+
+        let found = match igdb.times_to_beat(credentials, token, batch).await {
+            Ok(found) => found,
+            Err(error) => {
+                report.stopped = Some(error.to_string());
+                break;
+            }
+        };
+        times.save(batch, &found, OffsetDateTime::now_utc()).await?;
+        report.timed += batch.len();
+    }
+    Ok(())
 }
 
 /// The matching with no IGDB: it groups the copies by normalised title and makes

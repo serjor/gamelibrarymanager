@@ -60,6 +60,36 @@ pub struct Game {
     pub genres: Vec<String>,
 }
 
+/// How long a game takes, from the answers that the players give to IGDB.
+///
+/// Seconds, as IGDB gives them, and whole numbers: the interface rounds them
+/// when it shows them. Each of the three can be absent on its own, because a
+/// player can report one and not the others.
+///
+/// It is an estimate of other people and not a fact of the record. That is why
+/// it lives in a cache of its own and not in `Game`: the next pass replaces it
+/// complete, and nothing that the user wrote depends on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TimeToBeat {
+    /// The main story, with no extras. HowLongToBeat calls it "Main Story".
+    pub hastily: Option<i64>,
+    /// The story and part of the extras: "Main + Extras".
+    pub normally: Option<i64>,
+    /// Everything: "Completionist".
+    pub completely: Option<i64>,
+    /// How many players answered. An estimate from two players is not an
+    /// estimate from two thousand, and the interface says so.
+    pub submissions: i64,
+}
+
+impl TimeToBeat {
+    /// A record that IGDB knows but with no duration at all has nothing to
+    /// show.
+    pub fn is_empty(&self) -> bool {
+        self.hastily.is_none() && self.normally.is_none() && self.completely.is_none()
+    }
+}
+
 /// How a link was decided. `Manual` is the word of the user, and the automatic
 /// matching can never overwrite it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
