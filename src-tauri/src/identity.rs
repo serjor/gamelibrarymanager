@@ -19,6 +19,11 @@
 //! before this step existed gets its durations the next time the user runs the
 //! pass, with nothing more to do.
 //!
+//! The pass fills the cache for all of the library, but the figure moves: a
+//! record also asks again for its own durations when the user opens it
+//! (`refresh_time_to_beat`). The pass is what makes the first figure appear with
+//! no wait; the open is what keeps the figure on screen current.
+//!
 //! It writes in `game`, `game_link`, `match_candidate` and `igdb_time_to_beat`.
 //! Never in `store_entry`
 //! — that belongs to the store — and never in `user_state` — that belongs to the
@@ -268,6 +273,26 @@ async fn times_to_beat(
         times.save(batch, &found, OffsetDateTime::now_utc()).await?;
         report.timed += batch.len();
     }
+    Ok(())
+}
+
+/// Asks for the durations of one record and keeps the answer, when the user
+/// opens that record.
+///
+/// It writes through the same `save` as the pass: an answer with no durations
+/// clears the figures that IGDB no longer gives, and `checked_at` moves, thus
+/// the next pass does not ask again for this record.
+pub async fn refresh_time_to_beat(
+    db: &Database,
+    igdb: &IgdbClient,
+    credentials: &IgdbCredentials,
+    token: &IgdbToken,
+    igdb_id: i64,
+) -> Result<(), AppError> {
+    let found = igdb.times_to_beat(credentials, token, &[igdb_id]).await?;
+    TimeToBeatRepository(db)
+        .save(&[igdb_id], &found, OffsetDateTime::now_utc())
+        .await?;
     Ok(())
 }
 

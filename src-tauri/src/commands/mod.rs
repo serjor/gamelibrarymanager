@@ -507,6 +507,38 @@ pub async fn resolve_identities(
     }
 }
 
+/// The time to beat of one record, asked again when the user opens it: the
+/// figure moves, and the one of the last pass can be a month old.
+///
+/// It gives `None` when there is nothing to ask — a record with no IGDB
+/// identity, or no IGDB credentials — and the interface keeps what it shows.
+/// It does not take the guard of the long operations: it is one short request,
+/// and a record opened during a synchronisation must still get its figure.
+#[tauri::command]
+pub async fn refresh_time_to_beat(
+    state: State<'_, AppState>,
+    game_id: String,
+) -> Result<Option<LibraryRow>, AppError> {
+    let game_id = Uuid::parse_str(&game_id)
+        .map(GameId::from_uuid)
+        .map_err(|_| AppError::Message("invalid game identifier".to_owned()))?;
+    let Some(igdb_id) = GameRepository(&state.db)
+        .find(game_id)
+        .await?
+        .and_then(|game| game.igdb_id)
+    else {
+        return Ok(None);
+    };
+    let (credentials, token) = match igdb_session(&state).await {
+        Ok(session) => session,
+        Err(AppError::MissingIgdbCredentials) => return Ok(None),
+        Err(other) => return Err(other),
+    };
+
+    identity::refresh_time_to_beat(&state.db, &state.igdb, &credentials, &token, igdb_id).await?;
+    Ok(LibraryRepository(&state.db).one(game_id).await?)
+}
+
 /// The Twitch token lasts approximately sixty days: it is kept and renewed only
 /// when it really expires.
 async fn igdb_session(state: &AppState) -> Result<(IgdbCredentials, IgdbToken), AppError> {

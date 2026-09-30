@@ -11,6 +11,7 @@ import type {
   ReviewItem,
   StateUpdate,
   SyncReport,
+  TimeToBeat,
   WishTarget,
   PlatformFamily,
 } from "./lib/api";
@@ -50,6 +51,11 @@ const state = {
   exportPath: null as string | null,
   exports: [] as [string, "json" | "csv"][],
   wishTargets: [] as WishTarget[],
+  /** The records whose time to beat was asked again when they opened. */
+  timeRequests: [] as string[],
+  /** What IGDB answers on the open: `undefined` is a record with nothing to ask. */
+  freshTime: undefined as TimeToBeat | null | undefined,
+  timeError: null as string | null,
 };
 
 /**
@@ -141,6 +147,14 @@ mock.module("./lib/api", () => ({
       return Promise.resolve(state.rows);
     },
     cancelOperation: () => Promise.resolve(),
+    refreshTimeToBeat: (gameId: string) => {
+      state.timeRequests.push(gameId);
+      if (state.timeError !== null) return Promise.reject(state.timeError);
+      if (state.freshTime === undefined) return Promise.resolve(null);
+      const fresh = { ...state.rows.find((item) => item.game_id === gameId)!, time_to_beat: state.freshTime };
+      state.rows = state.rows.map((item) => (item.game_id === gameId ? fresh : item));
+      return Promise.resolve(fresh);
+    },
     setUserState: (
       gameId: string,
       status: PlayStatus | null,
@@ -395,6 +409,9 @@ describe("App", () => {
     state.exportPath = null;
     state.exports = [];
     state.wishTargets = [];
+    state.timeRequests = [];
+    state.freshTime = undefined;
+    state.timeError = null;
   });
 
   it("gives the product mark a stable accessible name", async () => {
@@ -995,6 +1012,45 @@ describe("App", () => {
     expect(block.getByText("Main + extras").nextSibling?.textContent).toBe("13½ h");
     expect(block.getByText("Completionist").nextSibling?.textContent).toBe("—");
     expect(block.getByText(/212 players/)).toBeDefined();
+  });
+
+  it("opening the record asks IGDB again and shows the new figure", async () => {
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({
+        title: "Celeste",
+        sort_title: "celeste",
+        time_to_beat: { hastily: 8 * 3600, normally: null, completely: null, submissions: 212 },
+      }),
+    ];
+    state.freshTime = { hastily: 9 * 3600, normally: null, completely: null, submissions: 230 };
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    const block = within(inTheRecord().getByRole("region", { name: "Time to beat" }));
+    expect(await block.findByText(/230 players/)).toBeDefined();
+    expect(block.getByText("Main story").nextSibling?.textContent).toBe("9 h");
+    expect(state.timeRequests).toEqual([state.rows[0]!.game_id]);
+  });
+
+  it("when IGDB does not answer on the open, the last figure stays and says so", async () => {
+    width(1000);
+    state.accounts = [steamAccount];
+    state.rows = [
+      row({
+        title: "Celeste",
+        sort_title: "celeste",
+        time_to_beat: { hastily: 8 * 3600, normally: null, completely: null, submissions: 212 },
+      }),
+    ];
+    state.timeError = "too many requests";
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Celeste" }));
+
+    const block = within(inTheRecord().getByRole("region", { name: "Time to beat" }));
+    expect(await block.findByText(/too many requests/)).toBeDefined();
+    expect(block.getByText("Main story").nextSibling?.textContent).toBe("8 h");
   });
 
   it("a record with no durations shows no block of dashes", async () => {

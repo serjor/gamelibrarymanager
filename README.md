@@ -33,7 +33,9 @@ get their metadata in place and keep the status that you wrote on them.
 With IGDB, the record of a game also says how long it takes: the main story,
 the story with extras, and all of it, as the players report it to IGDB. The
 IGDB pass asks for these durations at its end, 500 records in one request, and
-asks again after thirty days, because the figures of a new game move.
+asks again after thirty days, because the figures of a new game move. When you
+open the record of a game, it asks IGDB again for that game: what the pass kept
+shows at once, and the answer replaces it.
 
 The prices are also optional, and for the same reason. With an ITAD key — which
 is free — and your country, each wished-for game shows what it costs today, the

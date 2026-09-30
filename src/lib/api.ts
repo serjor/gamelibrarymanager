@@ -247,6 +247,12 @@ export const api = {
   reviewWithoutMetadata: (storeEntryId: string) =>
     invoke<void>("review_without_metadata", { storeEntryId }),
   library: () => invoke<LibraryRow[]>("library"),
+  /**
+   * Asks IGDB again for the time to beat of one record and gives back its row.
+   * `null` when there is nothing to ask: no IGDB identity or no credentials.
+   */
+  refreshTimeToBeat: (gameId: string) =>
+    invoke<LibraryRow | null>("refresh_time_to_beat", { gameId }),
   searchManualWishGames: (title: string) =>
     invoke<IgdbCandidate[]>("search_manual_wish_games", { title }),
   addManualWish: (target: WishTarget, family: PlatformFamily, model: string) =>

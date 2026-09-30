@@ -65,6 +65,25 @@ export function GameDetail({
   // gives the focus back to the tile from which it opened.
   const close = () => (sheet.current === null ? onClose() : sheet.current.close());
 
+  // The time to beat moves as players answer, thus the record asks IGDB again
+  // each time it opens. What the cache has shows at once and the answer replaces
+  // it; a record with no IGDB identity gets `null` back and nothing changes.
+  const [timeError, setTimeError] = useState<string | null>(null);
+  useEffect(() => {
+    let open = true;
+    api
+      .refreshTimeToBeat(row.game_id)
+      .then((fresh) => {
+        if (open && fresh !== null) onSaved([fresh]);
+      })
+      .catch((cause: unknown) => {
+        if (open) setTimeError(errorMessage(cause));
+      });
+    return () => {
+      open = false;
+    };
+  }, [row.game_id, onSaved]);
+
   const save = async () => {
     setBusy(true);
     setError(null);
@@ -120,7 +139,7 @@ export function GameDetail({
       {/* The answer to "does it fit in my week", before the status that the
           user is about to change. Absent when IGDB has no durations: an empty
           block of dashes would say less than no block. */}
-      {timeToBeat && (
+      {timeToBeat ? (
         <section className="time-to-beat" aria-labelledby="time-to-beat-title">
           <h3 id="time-to-beat-title">Time to beat</h3>
           <dl>
@@ -132,7 +151,12 @@ export function GameDetail({
             ))}
           </dl>
           <p className="hint">{submissionsLabel(timeToBeat)}</p>
+          {timeError && (
+            <p className="hint">IGDB did not answer ({timeError}): these are the last figures kept.</p>
+          )}
         </section>
+      ) : (
+        timeError && <p className="hint">No time to beat: IGDB did not answer ({timeError}).</p>
       )}
 
       <label htmlFor="status">Status</label>
