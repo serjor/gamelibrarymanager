@@ -6,7 +6,7 @@ use domain::{
     EntryKind, GameLink, LinkMethod, StoreAccount, StoreAccountId, StoreEntry, StoreEntryId,
     StoreId,
 };
-use gamelibrarymanager_lib::testing::{Silent, resolve};
+use gamelibrarymanager_lib::testing::{Silent, refresh_time_to_beat, resolve};
 use metadata::IgdbClient;
 use metadata::igdb::{IgdbCredentials, IgdbToken};
 use storage::Database;
@@ -415,10 +415,10 @@ async fn gog_and_epic_link_by_identifier_and_never_search_by_title() {
     drop(server);
 }
 
-/// A library that was matched before the durations existed gets them in the
-/// next pass, with no copy pending; and the pass after that does not ask again.
-#[tokio::test]
-async fn a_library_already_matched_gets_its_durations_once() {
+/// Disco Elysium already matched to its IGDB record, with the Steam copy that
+/// makes it a record of the library: the state of a library before the
+/// durations existed.
+async fn matched_record() -> (Database, domain::Game) {
     let db = Database::in_memory().await.expect("database");
     let record = domain::Game {
         id: domain::GameId::new(),
@@ -448,6 +448,14 @@ async fn a_library_already_matched_gets_its_durations_once() {
         }])
         .await
         .expect("link");
+    (db, record)
+}
+
+/// A library that was matched before the durations existed gets them in the
+/// next pass, with no copy pending; and the pass after that does not ask again.
+#[tokio::test]
+async fn a_library_already_matched_gets_its_durations_once() {
+    let (db, record) = matched_record().await;
 
     let server = MockServer::start().await;
     Mock::given(method("POST"))
@@ -519,4 +527,87 @@ async fn a_stop_in_the_durations_keeps_the_matches() {
     assert_eq!(report.timed, 0);
     assert!(report.stopped.is_some(), "the pass must say why it stopped");
     assert_eq!(GameLinkRepository(&db).all().await.expect("links").len(), 1);
+}
+
+/// The open of a record asks again even when the cache is fresh, and replaces
+/// the row complete: a figure that IGDB no longer gives does not stay.
+#[tokio::test]
+async fn opening_a_record_asks_again_and_replaces_the_figures() {
+    let (db, record) = matched_record().await;
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TIMES_115653, "application/json"))
+        .up_to_n_times(2)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw("[]", "application/json"))
+        .mount(&server)
+        .await;
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    // The pass fills the cache, and the open asks again at once all the same.
+    resolve(&db, &igdb, &credentials(), &token(), &Silent)
+        .await
+        .expect("match");
+    refresh_time_to_beat(&db, &igdb, &credentials(), &token(), 115653)
+        .await
+        .expect("open the record");
+    let row = LibraryRepository(&db)
+        .one(record.id)
+        .await
+        .expect("query")
+        .expect("row");
+    assert_eq!(row.time_to_beat.map(|t| t.submissions), Some(412));
+
+    // IGDB no longer has figures for the record.
+    refresh_time_to_beat(&db, &igdb, &credentials(), &token(), 115653)
+        .await
+        .expect("open the record again");
+    let row = LibraryRepository(&db)
+        .one(record.id)
+        .await
+        .expect("query")
+        .expect("row");
+    assert_eq!(row.time_to_beat, None);
+    assert_eq!(server.received_requests().await.expect("recorded").len(), 3);
+}
+
+/// A provider that fails on the open is an error for the interface, and the
+/// figures of the last answer stay in the cache.
+#[tokio::test]
+async fn a_failure_on_the_open_keeps_the_last_figures() {
+    let (db, record) = matched_record().await;
+
+    let server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(200).set_body_raw(TIMES_115653, "application/json"))
+        .up_to_n_times(1)
+        .mount(&server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/game_time_to_beats"))
+        .respond_with(ResponseTemplate::new(429))
+        .mount(&server)
+        .await;
+    let igdb = IgdbClient::new(reqwest::Client::new())
+        .with_bases(server.uri(), format!("{}/token", server.uri()));
+
+    refresh_time_to_beat(&db, &igdb, &credentials(), &token(), 115653)
+        .await
+        .expect("first open");
+    let failed = refresh_time_to_beat(&db, &igdb, &credentials(), &token(), 115653).await;
+
+    assert!(failed.is_err());
+    let row = LibraryRepository(&db)
+        .one(record.id)
+        .await
+        .expect("query")
+        .expect("row");
+    assert_eq!(row.time_to_beat.map(|t| t.normally), Some(Some(115200)));
 }

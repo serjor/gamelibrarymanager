@@ -17,7 +17,7 @@ pub mod testing {
         export::export_library_for, save_states, summary,
     };
     pub use crate::error::AppError;
-    pub use crate::identity::{IdentityReport, resolve, resolve_local};
+    pub use crate::identity::{IdentityReport, refresh_time_to_beat, resolve, resolve_local};
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
     pub use crate::state::{
         AppState, OperationGuard, credential_key, http_client, http_client_with,
@@ -69,6 +69,7 @@ pub fn run() {
             commands::review_without_metadata,
             commands::cancel_operation,
             commands::library,
+            commands::refresh_time_to_beat,
             commands::manual_wish::search_manual_wish_games,
             commands::manual_wish::add_manual_wish,
             commands::manual_wish::update_manual_wish,
