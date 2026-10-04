@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use connectors::{EpicConnector, GogConnector, SteamConnector};
 use domain::{StoreAccount, StoreConnector, StoreId};
-use metadata::{IgdbClient, ItadClient};
+use metadata::{IgdbClient, ItadClient, LunaClient};
 use secrets::{Backend, EncryptedFileStore, KeyringStore, SecretStore};
 use std::path::PathBuf;
 use storage::Database;
@@ -33,7 +33,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// not answer at all must fail before the complete time.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// The client that the three connectors, IGDB and ITAD share.
+/// The client that the three connectors, IGDB, ITAD and Luna share.
 pub fn http_client() -> reqwest::Client {
     http_client_with(REQUEST_TIMEOUT)
 }
@@ -72,6 +72,7 @@ pub struct AppState {
     pub db: Database,
     pub igdb: IgdbClient,
     pub itad: ItadClient,
+    pub luna: LunaClient,
     pub connectors: HashMap<StoreId, Arc<dyn StoreConnector>>,
     /// The store can not yet exist: with no keyring, the user must write a
     /// passphrase before the application can keep anything.
@@ -125,6 +126,7 @@ impl AppState {
 
         let http_for_igdb = http.clone();
         let http_for_itad = http.clone();
+        let http_for_luna = http.clone();
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
         connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http.clone())));
         connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http.clone())));
@@ -143,6 +145,7 @@ impl AppState {
             db,
             igdb: IgdbClient::new(http_for_igdb),
             itad: ItadClient::new(http_for_itad),
+            luna: LunaClient::new(http_for_luna),
             connectors,
             secrets: RwLock::new(secrets),
             backend,

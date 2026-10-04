@@ -3,8 +3,18 @@
 ## 💡 Convention
 
 Every table in this schema marks a row as gone with `deleted_at` and keeps it.
-The two price tables are the only exception: their rows are deleted for real,
-and a refresh replaces the whole set of prices of a game in one transaction.
+The caches of the data of a provider are the only exception: their rows are
+deleted for real, and a refresh replaces them in one transaction. They are four
+tables, and the list is closed:
+
+| Table | Provider | What a refresh replaces |
+| --- | --- | --- |
+| `price_snapshot` | ITAD | The prices of one game. |
+| `price_low` | ITAD | The historical low of one game. |
+| `igdb_time_to_beat` | IGDB | The durations of one record. |
+| `luna_catalog` | Amazon Luna | The whole catalogue that Prime includes. |
+
+The prices are the example of this document, because they were the first.
 
 The rule that forbids physical deletion protects what the user cannot get back.
 A copy that left a store keeps its state, its notes and its history, and a device
@@ -24,8 +34,14 @@ So, three parts:
    It does not touch `store_entry`, which belongs to the store, or `user_state`,
    which belongs to the user.
 
-The whole set of price tables can be dropped and rebuilt with one refresh. If
-that ever stops being true, something that is not a cache got in.
+The whole set of price tables can be dropped and rebuilt with one refresh. The
+same is true of the durations and of the Luna catalogue. If that ever stops
+being true, something that is not a cache got in.
+
+A new table goes in the list above only if all of this is true of it: it holds
+the data of a provider, the next refresh brings it again, and a row that stays
+after the provider stopped giving it shows the user something false. A row that
+the user wrote is never in this list.
 
 ## 🏆 Benefits
 
@@ -103,6 +119,13 @@ games.upsert(&game).await?;
   of the user moves.
 - [`src-tauri/tests/prices.rs`](../../src-tauri/tests/prices.rs) — buying a
   wished game removes its price on the next pass.
+- [`migrations/0010_luna.up.sql`](../../migrations/0010_luna.up.sql) and
+  [`crates/storage/src/repositories/luna.rs`](../../crates/storage/src/repositories/luna.rs)
+  — the fourth table: a refresh replaces the whole catalogue, and switching
+  Luna off deletes it.
+- [`crates/storage/tests/luna.rs`](../../crates/storage/tests/luna.rs) — a game
+  that left the catalogue goes, and switching Luna off touches no record and no
+  state.
 
 ## 🔗 Related agreements
 

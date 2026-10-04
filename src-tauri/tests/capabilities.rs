@@ -154,6 +154,30 @@ fn the_pages_of_a_copy_and_of_a_record_are_permitted() {
 }
 
 #[test]
+fn the_luna_page_of_a_game_is_permitted_in_each_supported_country() {
+    // The address is built with the domain of the country and the path that
+    // Luna gives, thus it is a literal in no place. Each country of the list is
+    // examined, with the two shapes of path of 2026-10-04: with an ASIN, and
+    // with no ASIN (Fortnite). A country added to the list with no pattern
+    // fails here and not on the click of a user.
+    let patterns: Vec<glob::Pattern> = permitted_patterns()
+        .iter()
+        .map(|p| glob::Pattern::new(p).expect("a valid glob pattern"))
+        .collect();
+
+    for region in metadata::luna::LunaRegion::supported() {
+        for path in ["/game/hogwarts-legacy/B0CMQK7H1T", "/game/fortnite"] {
+            let url = region.game_url(path);
+            assert!(
+                patterns.iter().any(|pattern| pattern.matches(&url)),
+                "the wishlist opens {url} and no pattern of \
+                 capabilities/default.json permits it"
+            );
+        }
+    }
+}
+
+#[test]
 fn no_pattern_opens_a_complete_host() {
     // A permission that is unnecessary is scope given away, and the real way to
     // give it away is a wildcard in the host: `https://*` is

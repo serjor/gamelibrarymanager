@@ -1,4 +1,4 @@
-use domain::{GameId, ManualWish, PlayStatus, TimeToBeat};
+use domain::{GameId, LunaIndex, LunaMark, LunaOffer, ManualWish, PlayStatus, TimeToBeat};
 use serde::Serialize;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
@@ -42,6 +42,18 @@ pub struct LibraryRow {
     pub status: Option<PlayStatus>,
     pub rating: Option<u8>,
     pub notes: Option<String>,
+    /// The game is in the catalogue of Luna that Prime includes. Absent when
+    /// Luna is switched off.
+    ///
+    /// It is not written when it is absent, and the export removes it: it is
+    /// data of Amazon that expires, not data of the library, and a file that
+    /// the user takes out must not change because Luna is on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub luna: Option<LunaMark>,
+    /// The titles of the live copies of the record, as each store writes them.
+    /// They are only for the match with Luna and the interface never sees them.
+    #[serde(skip)]
+    pub store_titles: Vec<String>,
 }
 
 pub struct LibraryRepository<'a>(pub &'a Database);
@@ -67,13 +79,61 @@ impl LibraryRepository<'_> {
 /// list: there is no second query where one of them could start to build the
 /// badges, the hours or the store link in a different way.
 async fn rows(db: &Database, game_id: Option<GameId>) -> Result<Vec<LibraryRow>> {
-    sqlx::query(SQL)
+    let mut rows = sqlx::query(SQL)
         .bind(game_id.map(game_id_to_text))
         .fetch_all(db.pool())
         .await?
         .iter()
         .map(hydrate)
-        .collect()
+        .collect::<Result<Vec<_>>>()?;
+    mark_luna(db, &mut rows).await?;
+    Ok(rows)
+}
+
+/// Marks the rows that are in the Luna catalogue.
+///
+/// One statement more, whatever the size of the library: the catalogue comes
+/// once and the match happens here and not in SQL, because the normalisation
+/// of a title is a rule of the domain that SQL cannot repeat. The match is done
+/// at each read and not kept: a wish added after the last refresh is matched at
+/// once, and a change to the rule needs no migration.
+async fn mark_luna(db: &Database, rows: &mut [LibraryRow]) -> Result<()> {
+    // With no region the `LEFT JOIN` gives no row, and with a region and no
+    // catalogue it gives one row with no title.
+    let catalog = sqlx::query(
+        "SELECT r.site, c.product_id, c.title, c.path, c.asin
+           FROM luna_region r
+           LEFT JOIN luna_catalog c
+          ORDER BY c.title, c.product_id",
+    )
+    .fetch_all(db.pool())
+    .await?;
+
+    let Some(site) = catalog.first().map(|row| row.get::<String, _>("site")) else {
+        return Ok(());
+    };
+    let offers: Vec<LunaOffer> = catalog
+        .iter()
+        .filter_map(|row| {
+            Some(LunaOffer {
+                product_id: row.get::<Option<String>, _>("product_id")?,
+                title: row.get("title"),
+                path: row.get("path"),
+                asin: row.get("asin"),
+            })
+        })
+        .collect();
+
+    let index = LunaIndex::new(&offers);
+    for row in rows {
+        let titles =
+            std::iter::once(row.title.as_str()).chain(row.store_titles.iter().map(String::as_str));
+        row.luna = index.find(titles).map(|offer| LunaMark {
+            title: offer.title.clone(),
+            url: format!("https://{site}{}", offer.path),
+        });
+    }
+    Ok(())
 }
 
 /// The query for all of the library.
@@ -107,6 +167,10 @@ const SQL: &str = "SELECT
                            WHERE game_id = g.id AND deleted_at IS NULL
                            ORDER BY family, model_key) m
                  ) AS manual_wishes,
+                 (SELECT json_group_array(DISTINCT e.title) FROM game_link l
+                    CROSS JOIN store_entry e ON e.id = l.store_entry_id
+                   WHERE l.game_id = g.id AND e.deleted_at IS NULL
+                 ) AS store_titles,
                  (SELECT COALESCE(SUM(e.playtime_minutes), 0) FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.deleted_at IS NULL
@@ -158,6 +222,11 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         column: "manual_wishes",
         value: manual_json,
     })?;
+    let titles_json: String = row.get("store_titles");
+    let store_titles = serde_json::from_str(&titles_json).map_err(|_| StorageError::Corrupt {
+        column: "store_titles",
+        value: titles_json,
+    })?;
 
     let time_to_beat = TimeToBeat {
         hastily: row.get("hastily"),
@@ -185,6 +254,8 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         status: status.as_deref().map(status_from_str).transpose()?,
         rating: row.get::<Option<i64>, _>("rating").map(|r| r as u8),
         notes: row.get("notes"),
+        luna: None,
+        store_titles,
     })
 }
 

@@ -45,6 +45,19 @@ of its own asks for the prices, and a synchronisation does not: a question to a
 third party about what something costs must not prevent your Steam
 synchronisation.
 
+Amazon Luna is optional too, and it needs no credential at all. You select your
+country in Utilities, and the application reads the catalogue of Luna that
+Prime includes, as the web page of Luna does with no session. Then each
+wished-for game that is in that catalogue says "On Luna", with a link to its
+page: you can play it today, and you do not need to buy it. Luna is not a store
+here. It gives no copy, and a game that leaves the catalogue at the end of the
+month does not leave your library. The match is by title and it is exact, thus
+an edition with a different name can miss the mark; a false mark would be
+worse. Luna has no public API, and the endpoint of its web page can change any
+day. When it fails, the marks of the last catalogue stay and nothing else
+stops. Amazon selects the catalogue from your connection, not from the country
+that you select.
+
 None of these credentials leaves your computer. They live in the keyring of the
 system, or in an encrypted file if your desktop has no keyring.
 
@@ -91,7 +104,7 @@ cargo test -p secrets --test keyring_real -- --ignored
 | `crates/domain` | The entities and the rules. No network, no database, no Tauri. CI examines this. |
 | `crates/storage` | SQLite and the migrations. All of the SQL of the project is here. |
 | `crates/connectors` | The stores (Steam, GOG, Epic), only authentication and lists. Never downloads. |
-| `crates/metadata` | The external providers: records (IGDB) and prices (ITAD). |
+| `crates/metadata` | The external providers: records (IGDB), prices (ITAD) and the Luna catalogue. |
 | `crates/secrets` | The native keyring of the operating system. |
 | `src-tauri` | The application shell and the commands: they control, they do not decide. |
 | `src` | The interface in React, in one directory for each feature. |

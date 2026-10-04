@@ -32,6 +32,10 @@ Before you write code, read also:
 - `.agents/plans/0007-manual-wishlist/plan.html` — the wishes that the user adds
   by hand, one for each device, on the same record as the store copies. A wish
   for a console only gets no price.
+- `.agents/plans/0008-luna-availability/plan.html` — the Amazon Luna catalog
+  that Prime includes, kept as a cache like the prices. A wish or a game record
+  says "On Luna" when the game is in it. It reopens "Amazon" from the plan
+  `0001` for this purpose only.
 - [`docs/documentation-guidelines.md`](docs/documentation-guidelines.md) — how to
   write a new document and where it goes.
 
@@ -60,7 +64,7 @@ All of these plans are done. Their decisions are closed.
 | Convention | What it is about |
 | --- | --- |
 | [To add metadata to a record writes its row again; it does not make a new one](docs/storage/enrich-records-in-place.md) | `user_state` is attached to the `game_id`: to use it again is what prevents the loss of what the user wrote. |
-| [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to two tables: an offer that ended cannot continue to look like an offer. |
+| [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to a closed list of four caches (prices, durations, Luna): an offer that ended cannot continue to look like an offer. |
 | [A database backup uses `VACUUM INTO`](docs/storage/database-backup-uses-vacuum-into.md) | Before a pending migration, SQLite writes a complete copy through the open WAL connection and only the three newest copies stay. |
 | [A delete that compares against a list of the provider uses a temporary table](docs/storage/compare-against-a-temporary-table.md) | Never a `NOT IN` with thousands of placeholders, and never a comparison divided into batches: each batch would delete what is in the other batches. |
 

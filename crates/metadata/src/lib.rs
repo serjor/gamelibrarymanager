@@ -9,13 +9,19 @@
 //! to the user, it lives in the store of secrets and it comes in as a parameter.
 //! What it gives is not a record but a price, which is what turns a wishlist
 //! into a decision to buy.
+//!
+//! Luna needs no credential at all: the catalogue that Prime includes is
+//! public, and the client asks for it as the web page of Luna does with no
+//! session.
 
 pub mod igdb;
 pub mod itad;
+pub mod luna;
 mod rate_limit;
 
 pub use igdb::IgdbClient;
 pub use itad::ItadClient;
+pub use luna::LunaClient;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MetadataError {

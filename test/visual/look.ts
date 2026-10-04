@@ -860,6 +860,40 @@ for (const theme of ["light", "dark"] as const) {
   check(`${theme} · "at its low" ${ratio.toFixed(2)}:1`, ratio >= 4.5);
 }
 
+/**
+ * The Luna mark, on its own background and in the two themes. It is the one
+ * badge of the wishlist that is a button, and a colour that reads on the light
+ * accent surface can become weak on the dark one.
+ */
+console.log("\nThe contrast of \"On Luna\"");
+for (const theme of ["light", "dark"] as const) {
+  const ratio = await withTheApp(
+    async (page) => {
+      await page.getByRole("button", { name: /^Wishlist/ }).click();
+      await page.locator(".luna-mark").first().waitFor();
+      return page.evaluate(() => {
+        const numbers = (s: string) => (s.match(/\d+/g) ?? []).map(Number);
+        const light = (c: number[]) => {
+          const channel = (v: number) => {
+            const x = v / 255;
+            return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+          };
+          return 0.2126 * channel(c[0] ?? 0) + 0.7152 * channel(c[1] ?? 0) + 0.0722 * channel(c[2] ?? 0);
+        };
+        const mark = document.querySelector(".luna-mark")!;
+        const style = getComputedStyle(mark);
+        const [high, low] = [light(numbers(style.color)), light(numbers(style.backgroundColor))].sort(
+          (x, y) => y - x,
+        ) as [number, number];
+        return (high + 0.05) / (low + 0.05);
+      });
+    },
+    { theme, answers: ALL },
+  );
+
+  check(`${theme} · "On Luna" ${ratio.toFixed(2)}:1`, ratio >= 4.5);
+}
+
 console.log("\nThe contrast of the text on its background");
 for (const theme of ["light", "dark"] as const) {
   const r = await withTheApp(

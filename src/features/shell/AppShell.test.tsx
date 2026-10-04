@@ -57,6 +57,10 @@ describe("AppShell", () => {
           onExport: () => {},
           onDisconnect: () => {},
           onToggleConnector: () => {},
+          luna: { settings: null, countries: ["ES"] },
+          onLunaCountry: () => {},
+          onLunaRefresh: () => {},
+          onLunaDisable: () => {},
         }}
       >
         <p>Library content</p>

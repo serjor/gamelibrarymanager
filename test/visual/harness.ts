@@ -29,6 +29,7 @@ import type {
   AppInfo,
   ConnectorState,
   LibraryRow,
+  LunaView,
   LibrarySummary,
   PriceRow,
   ReviewItem,
@@ -54,6 +55,7 @@ export interface Answers {
   review_queue: ReviewItem[];
   library: LibraryRow[];
   prices: PriceRow[];
+  luna_settings: LunaView;
 }
 
 /**
@@ -185,10 +187,16 @@ export function exampleWishlist(): { library: LibraryRow[]; prices: PriceRow[] }
     game({ title: "Hollow Knight: Silksong", owned_stores: [], wishlist_stores: ["steam"] }),
     game({ title: "Blasphemous II", owned_stores: [], wishlist_stores: ["gog", "steam"] }),
     game({ title: "Baldur's Gate 3", owned_stores: ["gog"], wishlist_stores: ["steam"] }),
+    // The long title also carries the Luna mark: the layout checks of the
+    // wishlist measure the cell where the two compete for the width.
     game({
       title: "A wished-for game with a very long title that does not fit in its column",
       owned_stores: [],
       wishlist_stores: ["epic"],
+      luna: {
+        title: "A wished-for game with a very long title",
+        url: "https://luna.amazon.es/game/a-long-title/B000000000",
+      },
     }),
     game({ title: "A game that nobody sells", owned_stores: [], wishlist_stores: ["gog"] }),
   ];
@@ -240,6 +248,7 @@ function defaultAnswers(library: LibraryRow[]): Answers {
     review_queue: [],
     library,
     prices: [],
+    luna_settings: { settings: null, countries: ["ES"] },
   };
 }
 
