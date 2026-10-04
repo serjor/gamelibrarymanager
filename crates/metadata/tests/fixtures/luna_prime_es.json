@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "analytics": {
+  "data": "pageId=default&pageType=browse_results_included_with_prime"
+ },
+ "cachePolicy": {
+  "invalidationKeys": [
+   "page_landing_browse"
+  ],
+  "ttlMs": 3600000
+ },
+ "pageContext": {
+  "encryptPageId": false,
+  "pageId": "default",
+  "pageType": "browse_results_included_with_prime",
+  "productStage": "Release"
+ },
+ "pageMemberGroups": {
+  "mainContent": {
+   "widgets": [
+    {
+     "__type": "CollectionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+     "actions": [],
+     "analytics": {
+      "data": "pageId=default&pageType=browse_results_included_with_prime&widgetId=collection_browse_included_with_prime"
+     },
+     "id": "collection_browse_included_with_prime",
+     "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiZGVmYXVsdCIsInBhZ2VUeXBlIjoiYnJvd3NlX3Jlc3VsdHNfaW5jbHVkZWRfd2l0aF9wcmltZSIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UiLCJ3aWRnZXRJZCI6ImNvbGxlY3Rpb25fYnJvd3NlX2luY2x1ZGVkX3dpdGhfcHJpbWUifQ==",
+     "type": "GRID",
+     "widgets": [
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuMDkwMzMwYjMtMWZlMS00OWE4LTk5ZTctOGIyNGY1ZjU1MjI3IiwicGFnZVR5cGUiOiJnYW1lX2RldGFpbCIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UifQ==",
+         "target": "/game/fortnite"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.adg.product.090330b3-1fe1-49a8-99e7-8b24f5f55227&widgetId=game_tile_amzn1.adg.product.090330b3-1fe1-49a8-99e7-8b24f5f55227&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.adg.product.090330b3-1fe1-49a8-99e7-8b24f5f55227",
+       "presentationData": "{\"hoverDetails\":{\"metacritic\":{},\"gameInputsString\":\"Controller, Keyboard and mouse, Touch\",\"primaryButtonDefaultText\":\"Play now\",\"primaryButtonServiceToken\":\"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuMDkwMzMwYjMtMWZlMS00OWE4LTk5ZTctOGIyNGY1ZjU1MjI3IiwicGFnZVR5cGUiOiJpbnRlcmFjdGl2ZV9nYW1lX3RpbGUiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0\\u003d\",\"productUrl\":\"https://play.amazon.es/play?r\\u003dweb\\u0026transferRequest\\u003dfalse\\u0026asin\\u003dB0BTRVRN6M\\u0026territory\\u003dES\",\"secondaryButtonText\":\"More info\",\"trailerUrl\":\"https://m.media-amazon.com/images/I/E1PCTiUzELL.mp4\",\"ageRating\":{\"isMature\":false,\"contentDescription\":[\"Parental Guidance Recommended\"],\"interactiveElements\":[\"In-Game Purchases (Includes Random Items)\",\"Users Interact\"],\"categoryId\":\"PEGI_AGE_PG\",\"categoryImageUrl\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_PG.png\",\"categoryText\":\"PARENTAL GUIDANCE RECOMMENDED\",\"moreInfoLink\":\"https://www.globalratings.com/ratings-guide-pegi\"},\"gameInputs\":[{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\",\"text\":\"Controller\"},{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Keyboard.png\",\"text\":\"Keyboard and mouse\"},{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Touch.png\",\"text\":\"Touch\"}],\"genreTags\":[\"Action\",\"Shooter\"],\"gameInputsLabel\":\"Play with\",\"gameInputsLabelV2\":\"Play with:\",\"publishersText\":\"Epic Games\",\"title\":\"Fortnite\"},\"genreTags\":[\"Action\",\"Shooter\"],\"lastPlayedAt\":0,\"gameId\":\"amzn1.adg.product.090330b3-1fe1-49a8-99e7-8b24f5f55227\",\"releaseYear\":\"2017\",\"title\":\"Fortnite\",\"imageLandscape\":\"https://m.media-amazon.com/images/I/91wHoQZd98L.png\",\"imagePortrait\":\"https://m.media-amazon.com/images/I/91zs6JPs8BL.png\"}",
+       "type": "GAME_TILE"
+      },
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuOWI1ZDJlNmYtMDgyNC00ZTQxLWE0ODEtZGVmOTk1ZTUwOThhIiwicGFnZVR5cGUiOiJnYW1lX2RldGFpbCIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UifQ==",
+         "target": "/game/hogwarts-legacy/B0FVWBCF89"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a&widgetId=game_tile_amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a",
+       "presentationData": "{\"hoverDetails\":{\"metacritic\":{},\"gameInputsString\":\"Controller, Keyboard and mouse\",\"primaryButtonDefaultText\":\"Play now\",\"primaryButtonServiceToken\":\"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuOWI1ZDJlNmYtMDgyNC00ZTQxLWE0ODEtZGVmOTk1ZTUwOThhIiwicGFnZVR5cGUiOiJpbnRlcmFjdGl2ZV9nYW1lX3RpbGUiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0\\u003d\",\"productUrl\":\"https://play.amazon.es/play?r\\u003dweb\\u0026transferRequest\\u003dfalse\\u0026asin\\u003dB0FVWBCF89\\u0026territory\\u003dES\",\"secondaryButtonText\":\"More info\",\"trailerUrl\":\"https://m.media-amazon.com/images/I/G1GYuVjttIL.mp4\",\"ageRating\":{\"isMature\":false,\"contentDescription\":[\"Mild Swearing\",\"Moderate Violence\"],\"interactiveElements\":[\"In-Game Purchases\"],\"categoryId\":\"PEGI_AGE_12\",\"categoryImageUrl\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_12.png\",\"categoryText\":\"PEGI 12\",\"moreInfoLink\":\"https://www.globalratings.com/ratings-guide-pegi\"},\"gameInputs\":[{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\",\"text\":\"Controller\"},{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Keyboard.png\",\"text\":\"Keyboard and mouse\"}],\"genreTags\":[\"Action\",\"Adventure\",\"RPG\"],\"gameInputsLabel\":\"Play with\",\"gameInputsLabelV2\":\"Play with:\",\"publishersText\":\"Warner Bros. Games\",\"title\":\"Hogwarts Legacy\"},\"genreTags\":[\"Action\",\"Adventure\",\"RPG\"],\"lastPlayedAt\":0,\"gameId\":\"amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a\",\"releaseYear\":\"2023\",\"title\":\"Hogwarts Legacy\",\"imageLandscape\":\"https://m.media-amazon.com/images/I/A1g1eY2fhzL.png\",\"imagePortrait\":\"https://m.media-amazon.com/images/I/9187sFiVXVL.png\"}",
+       "type": "GAME_TILE"
+      },
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuMDYxOGQ4M2UtMjY2Yy00NTc4LWFmNDktZWRiOWZjYmU4Y2NlIiwicGFnZVR5cGUiOiJnYW1lX2RldGFpbCIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UifQ==",
+         "target": "/game/ticket-to-ride/B0CW183PV8"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.adg.product.0618d83e-266c-4578-af49-edb9fcbe8cce&widgetId=game_tile_amzn1.adg.product.0618d83e-266c-4578-af49-edb9fcbe8cce&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.adg.product.0618d83e-266c-4578-af49-edb9fcbe8cce",
+       "presentationData": "{\"hoverDetails\":{\"metacritic\":{},\"gameInputsString\":\"Use phones as controllers\",\"numberOfPlayers\":\"1-5 players\",\"primaryButtonDefaultText\":\"Play now\",\"primaryButtonServiceToken\":\"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuMDYxOGQ4M2UtMjY2Yy00NTc4LWFmNDktZWRiOWZjYmU4Y2NlIiwicGFnZVR5cGUiOiJpbnRlcmFjdGl2ZV9nYW1lX3RpbGUiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0\\u003d\",\"productUrl\":\"https://play.amazon.es/play?r\\u003dweb\\u0026transferRequest\\u003dfalse\\u0026asin\\u003dB0CW183PV8\\u0026territory\\u003dES\",\"secondaryButtonText\":\"More info\",\"suggestedRoundTime\":\"30-min\",\"trailerUrl\":\"https://m.media-amazon.com/images/I/E1U2TS8r99L.mp4\",\"ageRating\":{\"isMature\":false,\"categoryId\":\"PEGI_AGE_3\",\"categoryImageUrl\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_3.png\",\"categoryText\":\"PEGI 3\",\"moreInfoLink\":\"https://www.globalratings.com/ratings-guide-pegi\"},\"gameInputs\":[{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\",\"text\":\"Use phones as controllers\"}],\"genreTags\":[\"Puzzle\",\"Strategy\",\"Tabletop\"],\"gameInputsLabel\":\"Play with\",\"gameInputsLabelV2\":\"Play with:\",\"publishersText\":\"Marmalade Game Studio\",\"title\":\"Ticket to Ride®\"},\"genreTags\":[\"Puzzle\",\"Strategy\",\"Tabletop\"],\"lastPlayedAt\":0,\"gameId\":\"amzn1.adg.product.0618d83e-266c-4578-af49-edb9fcbe8cce\",\"releaseYear\":\"2023\",\"title\":\"Ticket to Ride®\",\"imageLandscape\":\"https://m.media-amazon.com/images/I/A1-pOphViOL._PIGameNightGameLogo,BottomRight,0,0_.png\",\"imagePortrait\":\"https://m.media-amazon.com/images/I/91wJuCT1puL._PIGameNightGameLogo,BottomRight,0,0_.png\"}",
+       "type": "GAME_TILE"
+      },
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuYzBjYTQ2OTYtMjBhMi00NjgyLWFjOGQtNzE0OWNjMzcyODYxIiwicGFnZVR5cGUiOiJnYW1lX2RldGFpbCIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UifQ==",
+         "target": "/game/tomb-raider-game-of-the-year/B0FVW7W8N4"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.adg.product.c0ca4696-20a2-4682-ac8d-7149cc372861&widgetId=game_tile_amzn1.adg.product.c0ca4696-20a2-4682-ac8d-7149cc372861&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.adg.product.c0ca4696-20a2-4682-ac8d-7149cc372861",
+       "presentationData": "{\"hoverDetails\":{\"metacritic\":{},\"gameInputsString\":\"Controller, Keyboard and mouse\",\"primaryButtonDefaultText\":\"Play now\",\"primaryButtonServiceToken\":\"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuYzBjYTQ2OTYtMjBhMi00NjgyLWFjOGQtNzE0OWNjMzcyODYxIiwicGFnZVR5cGUiOiJpbnRlcmFjdGl2ZV9nYW1lX3RpbGUiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0\\u003d\",\"productUrl\":\"https://play.amazon.es/play?r\\u003dweb\\u0026transferRequest\\u003dfalse\\u0026asin\\u003dB0FVW7W8N4\\u0026territory\\u003dES\",\"secondaryButtonText\":\"More info\",\"trailerUrl\":\"https://m.media-amazon.com/images/I/E1X8AD-XM4L.mp4\",\"ageRating\":{\"isMature\":false,\"contentDescription\":[\"Strong Violence\",\"Horror\",\"Strong Language\"],\"categoryId\":\"PEGI_AGE_16\",\"categoryImageUrl\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_16.png\",\"categoryText\":\"PEGI 16\",\"moreInfoLink\":\"https://www.globalratings.com/ratings-guide-pegi\"},\"gameInputs\":[{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\",\"text\":\"Controller\"},{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Keyboard.png\",\"text\":\"Keyboard and mouse\"}],\"genreTags\":[\"Action\",\"Adventure\"],\"gameInputsLabel\":\"Play with\",\"gameInputsLabelV2\":\"Play with:\",\"publishersText\":\"Crystal Dynamics\",\"title\":\"Tomb Raider Game of the Year\"},\"genreTags\":[\"Action\",\"Adventure\"],\"lastPlayedAt\":0,\"gameId\":\"amzn1.adg.product.c0ca4696-20a2-4682-ac8d-7149cc372861\",\"releaseYear\":\"2013\",\"title\":\"Tomb Raider Game of the Year\",\"imageLandscape\":\"https://m.media-amazon.com/images/I/91OR5JvF36L.png\",\"imagePortrait\":\"https://m.media-amazon.com/images/I/91VkZHolu1L.png\"}",
+       "type": "GAME_TILE"
+      },
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEubHVuYS5wcm9kdWN0LjM5NTNhMjFjLTkxOWYtNDQ2Ny05YWVkLTc0NGNhYTNjMTI0MiIsInBhZ2VUeXBlIjoiZ2FtZV9kZXRhaWwiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0=",
+         "target": "/game/batman-caped-crusader-chronicles/B0H4Y4MWQ9"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.luna.product.3953a21c-919f-4467-9aed-744caa3c1242&widgetId=game_tile_amzn1.luna.product.3953a21c-919f-4467-9aed-744caa3c1242&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.luna.product.3953a21c-919f-4467-9aed-744caa3c1242",
+       "presentationData": "{\"hoverDetails\":{\"metacritic\":{},\"gameInputsString\":\"Use phones as controllers\",\"numberOfPlayers\":\"1-4 players\",\"primaryButtonDefaultText\":\"Play now\",\"primaryButtonServiceToken\":\"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEubHVuYS5wcm9kdWN0LjM5NTNhMjFjLTkxOWYtNDQ2Ny05YWVkLTc0NGNhYTNjMTI0MiIsInBhZ2VUeXBlIjoiaW50ZXJhY3RpdmVfZ2FtZV90aWxlIiwicHJvZHVjdFN0YWdlIjoiUmVsZWFzZSJ9\",\"productUrl\":\"https://play.amazon.es/play?r\\u003dweb\\u0026transferRequest\\u003dfalse\\u0026asin\\u003dB0H4Y4MWQ9\\u0026territory\\u003dES\",\"secondaryButtonText\":\"More info\",\"suggestedRoundTime\":\"30-min\",\"trailerUrl\":\"https://m.media-amazon.com/images/I/F1ALJQdM4LL.mp4\",\"ageRating\":{\"isMature\":false,\"contentDescription\":[\"Implied Violence\"],\"categoryId\":\"PEGI_AGE_7\",\"categoryImageUrl\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_7.png\",\"categoryText\":\"PEGI 7\",\"moreInfoLink\":\"https://www.globalratings.com/ratings-guide-pegi\"},\"gameInputs\":[{\"icon\":\"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\",\"text\":\"Use phones as controllers\"}],\"genreTags\":[\"Party\",\"Puzzle\"],\"gameInputsLabel\":\"Play with\",\"gameInputsLabelV2\":\"Play with:\",\"publishersText\":\"Amazon Game Studios\",\"title\":\"Batman Caped Crusader - Chronicles\"},\"genreTags\":[\"Party\",\"Puzzle\"],\"lastPlayedAt\":0,\"gameId\":\"amzn1.luna.product.3953a21c-919f-4467-9aed-744caa3c1242\",\"releaseYear\":\"2026\",\"title\":\"Batman Caped Crusader - Chronicles\",\"imageLandscape\":\"https://m.media-amazon.com/images/I/91Y5BNYvspL._PIGameNightGameLogo,BottomRight,0,0_.png\",\"imagePortrait\":\"https://m.media-amazon.com/images/I/91yyTMj6XVL._PIGameNightGameLogo,BottomRight,0,0_.png\"}",
+       "type": "GAME_TILE"
+      },
+      {
+       "__type": "ItemProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+       "actions": [
+        {
+         "__type": "ServiceActionProxy:http://internal.amazon.com/coral/com.amazon.spiderporkclientproxyservice/",
+         "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuOWI1ZDJlNmYtMDgyNC00ZTQxLWE0ODEtZGVmOTk1ZTUwOThhIiwicGFnZVR5cGUiOiJnYW1lX2RldGFpbCIsInByb2R1Y3RTdGFnZSI6IlJlbGVhc2UifQ==",
+         "target": "/browse"
+        }
+       ],
+       "analytics": {
+        "data": "pageId=default&pageType=browse_results_included_with_prime&searchId=464f17b4-6637-495c-b94c-ae5e2162d51b&productId=amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a&widgetId=game_tile_amzn1.adg.product.9b5d2e6f-0824-4e41-a481-def995e5098a&parentWidgetId=collection_browse_included_with_prime"
+       },
+       "id": "game_tile_amzn1.adg.product.00000000-0000-0000-0000-000000000000",
+       "presentationData": "{\"hoverDetails\": {\"metacritic\": {}, \"gameInputsString\": \"Controller, Keyboard and mouse\", \"primaryButtonDefaultText\": \"Play now\", \"primaryButtonServiceToken\": \"eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiYW16bjEuYWRnLnByb2R1Y3QuOWI1ZDJlNmYtMDgyNC00ZTQxLWE0ODEtZGVmOTk1ZTUwOThhIiwicGFnZVR5cGUiOiJpbnRlcmFjdGl2ZV9nYW1lX3RpbGUiLCJwcm9kdWN0U3RhZ2UiOiJSZWxlYXNlIn0=\", \"productUrl\": \"https://play.amazon.es/play?r=web&transferRequest=false&asin=B0FVWBCF89&territory=ES\", \"secondaryButtonText\": \"More info\", \"trailerUrl\": \"https://m.media-amazon.com/images/I/G1GYuVjttIL.mp4\", \"ageRating\": {\"isMature\": false, \"contentDescription\": [\"Mild Swearing\", \"Moderate Violence\"], \"interactiveElements\": [\"In-Game Purchases\"], \"categoryId\": \"PEGI_AGE_12\", \"categoryImageUrl\": \"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/IARC/PEGI_AGE_12.png\", \"categoryText\": \"PEGI 12\", \"moreInfoLink\": \"https://www.globalratings.com/ratings-guide-pegi\"}, \"gameInputs\": [{\"icon\": \"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Controller.png\", \"text\": \"Controller\"}, {\"icon\": \"https://m.media-amazon.com/images/G/01/T/TC05316420/A07531864/Keyboard.png\", \"text\": \"Keyboard and mouse\"}], \"genreTags\": [\"Action\", \"Adventure\", \"RPG\"], \"gameInputsLabel\": \"Play with\", \"gameInputsLabelV2\": \"Play with:\", \"publishersText\": \"Warner Bros. Games\", \"title\": \"Hogwarts Legacy\"}, \"genreTags\": [\"Action\", \"Adventure\", \"RPG\"], \"lastPlayedAt\": 0, \"gameId\": \"amzn1.adg.product.00000000-0000-0000-0000-000000000000\", \"releaseYear\": \"2023\", \"title\": \"Tile With No Page\", \"imageLandscape\": \"https://m.media-amazon.com/images/I/A1g1eY2fhzL.png\", \"imagePortrait\": \"https://m.media-amazon.com/images/I/9187sFiVXVL.png\"}",
+       "type": "GAME_TILE"
+      }
+     ]
+    }
+   ]
+  },
+  "header": {
+   "widgets": [
+    {
+     "__type": "ItemProxy",
+     "actions": [
+      {
+       "target": "/browse"
+      }
+     ],
+     "id": "item_browse_all_games",
+     "presentationData": "{\"text\": \"All games\"}",
+     "type": "BROWSE_GENRE_TILE"
+    }
+   ]
+  }
+ },
+ "serviceToken": "eyJlbmNyeXB0UGFnZUlkIjpmYWxzZSwicGFnZUlkIjoiZGVmYXVsdCIsInBhZ2VUeXBlIjoibXVsdGlzdGF0ZV9icm93c2VfcmVzdWx0cyJ9",
+ "templatePreviewApplied": false
+}

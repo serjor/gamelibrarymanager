@@ -6,6 +6,7 @@ import type {
   ConnectorState,
   LibraryRow,
   LibrarySummary,
+  LunaSettings,
   PlayStatus,
   PriceRow,
   ReviewItem,
@@ -56,6 +57,13 @@ const state = {
   /** What IGDB answers on the open: `undefined` is a record with nothing to ask. */
   freshTime: undefined as TimeToBeat | null | undefined,
   timeError: null as string | null,
+  /** `null` is Luna switched off. */
+  luna: null as LunaSettings | null,
+  /** How many times the Luna catalogue was really asked for. */
+  lunaRequests: 0,
+  lunaError: null as string | null,
+  /** The countries with which Luna was switched on. */
+  lunaCountries: [] as string[],
 };
 
 /**
@@ -117,6 +125,23 @@ mock.module("./lib/api", () => ({
       return Promise.resolve({ priced: 0, unknown: 0, cancelled: false });
     },
     librarySummary: () => Promise.resolve(state.summary),
+    lunaSettings: () =>
+      Promise.resolve({ settings: state.luna, countries: ["DE", "ES", "US"] }),
+    setLunaCountry: (country: string) => {
+      state.lunaCountries.push(country);
+      state.luna = { country, site: "luna.amazon.es", territory: "ES", refreshed_at: NOW };
+      return Promise.resolve({ games: 89, territory: "ES" });
+    },
+    disableLuna: () => {
+      state.luna = null;
+      return Promise.resolve();
+    },
+    refreshLuna: () => {
+      state.lunaRequests += 1;
+      if (state.lunaError !== null) return Promise.reject(state.lunaError);
+      state.luna = { ...state.luna!, refreshed_at: NOW };
+      return Promise.resolve({ games: 89, territory: "ES" });
+    },
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () =>
       state.syncError === null
@@ -412,6 +437,90 @@ describe("App", () => {
     state.timeRequests = [];
     state.freshTime = undefined;
     state.timeError = null;
+    state.luna = null;
+    state.lunaRequests = 0;
+    state.lunaError = null;
+    state.lunaCountries = [];
+  });
+
+  describe("Luna", () => {
+    const onLuna = (title: string) =>
+      row({
+        title,
+        sort_title: title.toLowerCase(),
+        owned_stores: [],
+        wishlist_stores: ["steam"],
+        luna: { title, url: `https://luna.amazon.es/game/${title.toLowerCase()}/B000000000` },
+      });
+
+    it("with Luna off there is no mark and no request", async () => {
+      state.accounts = [steamAccount];
+      state.rows = WISHES;
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      await screen.findByText("Blasphemous");
+      expect(screen.queryByText("On Luna ↗")).toBeNull();
+      expect(state.lunaRequests).toBe(0);
+    });
+
+    it("marks a wish that Prime includes on Luna, and only that one", async () => {
+      state.accounts = [steamAccount];
+      state.luna = { country: "ES", site: "luna.amazon.es", territory: "ES", refreshed_at: NOW };
+      state.rows = [...WISHES, onLuna("Hogwarts")];
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      const marks = await screen.findAllByRole("button", { name: /on Luna: it is included with Prime/ });
+      expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual([
+        "Play Hogwarts on Luna: it is included with Prime",
+      ]);
+      expect(screen.getByText(/1 on Luna/)).toBeDefined();
+      // Read less than a day ago: no request.
+      expect(state.lunaRequests).toBe(0);
+    });
+
+    it("an old catalogue is read again once when the wishlist opens", async () => {
+      state.accounts = [steamAccount];
+      state.luna = { country: "ES", site: "luna.amazon.es", territory: "ES", refreshed_at: NOW - 2 * DAY };
+      state.rows = WISHES;
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      await waitFor(() => expect(state.lunaRequests).toBe(1));
+      fireEvent.click(screen.getByRole("button", { name: /^Library/ }));
+      fireEvent.click(screen.getByRole("button", { name: /^Wishlist/ }));
+      await screen.findByText("Blasphemous");
+      expect(state.lunaRequests).toBe(1);
+    });
+
+    it("a Luna that fails is a hint on the wishlist and not an alert", async () => {
+      state.accounts = [steamAccount];
+      state.luna = { country: "ES", site: "luna.amazon.es", territory: "ES", refreshed_at: null };
+      state.lunaError = "HTTP 500";
+      state.rows = WISHES;
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      const hint = await screen.findByText(/Luna could not be read/);
+      expect(hint.textContent).toContain("HTTP 500");
+      expect(hint.textContent).toContain("last catalogue stay");
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("Utilities switches Luna on with the selected country", async () => {
+      state.accounts = [steamAccount];
+      render(<App />);
+      const dialog = within(await openUtilities());
+
+      expect(dialog.getByText(/Off: switch it on/)).toBeDefined();
+      fireEvent.change(dialog.getByLabelText("Country"), { target: { value: "ES" } });
+      fireEvent.click(dialog.getByRole("button", { name: "Switch Luna on" }));
+
+      await waitFor(() => expect(state.lunaCountries).toEqual(["ES"]));
+      expect(await dialog.findByText(/Luna catalogue of ES/)).toBeDefined();
+      expect(dialog.getByRole("button", { name: "Switch Luna off" })).toBeDefined();
+    });
   });
 
   it("gives the product mark a stable accessible name", async () => {

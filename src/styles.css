@@ -942,6 +942,32 @@ button.link {
 .status.gone { color: var(--text-muted); }
 .status.gone { border-color: var(--border-strong); }
 
+/* "On Luna": the game is in the catalogue that Prime includes. It has the shape
+   of a status badge and the colour of the accent, not the green of the price:
+   on the wishlist the all-time low is the only value in that colour, and a
+   second green would compete with it. It is a button because it opens the page
+   of the game on Luna. */
+.luna-mark {
+  display: inline-block;
+  margin-top: var(--e-1);
+  padding: 0 var(--e-2);
+  min-height: 0;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-s);
+  background: var(--surface-accent);
+  color: var(--accent);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  line-height: var(--leading-copy);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.luna-mark:hover {
+  border-color: var(--accent-hover);
+  color: var(--accent-hover);
+}
+
 /* At the bottom while the selection stays: if you must search for it, nobody
    uses it. */
 .bulk {
@@ -1707,6 +1733,28 @@ button.link {
 }
 
 .utility-list > li,
+.utility-luna-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e-2) var(--e-3);
+}
+
+.utility-luna-actions label {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.utility-luna-actions select {
+  min-height: 2.5rem;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--surface-raised);
+  color: inherit;
+  font: inherit;
+}
+
 .utility-status-row {
   display: flex;
   align-items: flex-start;

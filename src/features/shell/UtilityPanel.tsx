@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   Account,
   ConnectorState,
   ExportFormat,
   LibrarySummary,
+  LunaView,
 } from "../../lib/api";
+import { lunaCatalogueLabel } from "../wishlist/luna";
 import { THEME_PREFERENCES, type ThemePreference } from "./theme";
 
 export type SetupTarget = "steam" | "gog" | "epic" | "igdb" | "itad";
@@ -22,6 +24,8 @@ export interface UtilityPanelProps {
   connectors: ConnectorState[];
   hasIgdb: boolean;
   hasItad: boolean;
+  /** `null` until it loads. Its `settings` are `null` when Luna is off. */
+  luna: LunaView | null;
   busy: string | null;
   theme: ThemePreference;
   onThemeChange: (preference: ThemePreference) => void;
@@ -33,6 +37,10 @@ export interface UtilityPanelProps {
   onExport: (format: ExportFormat) => void;
   onDisconnect: (account: Account) => void;
   onToggleConnector: (connector: ConnectorState) => void;
+  /** Switches Luna on for a country, or changes the country. */
+  onLunaCountry: (country: string) => void;
+  onLunaRefresh: () => void;
+  onLunaDisable: () => void;
 }
 
 function syncLabel(account: Account): string {
@@ -56,6 +64,7 @@ export function UtilityPanel({
   connectors,
   hasIgdb,
   hasItad,
+  luna,
   busy,
   theme,
   onThemeChange,
@@ -67,6 +76,9 @@ export function UtilityPanel({
   onExport,
   onDisconnect,
   onToggleConnector,
+  onLunaCountry,
+  onLunaRefresh,
+  onLunaDisable,
 }: UtilityPanelProps) {
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -251,6 +263,15 @@ export function UtilityPanel({
                   {hasItad ? "Reconfigure ITAD" : "Configure ITAD"}
                 </button>
               </div>
+              {luna !== null && (
+                <LunaRow
+                  luna={luna}
+                  busy={busy}
+                  onCountry={onLunaCountry}
+                  onRefresh={onLunaRefresh}
+                  onDisable={onLunaDisable}
+                />
+              )}
             </div>
           </section>
 
@@ -313,5 +334,81 @@ export function UtilityPanel({
         </div>
       </div>
     </dialog>
+  );
+}
+
+/**
+ * Amazon Luna: the catalogue that Prime includes, to mark the wishes that you
+ * can already play.
+ *
+ * There is no key and no account: Luna gives this catalogue with no session.
+ * The only thing to select is the country, which decides the Luna web page
+ * that the links open. The catalogue itself is the one of your connection.
+ */
+function LunaRow({
+  luna,
+  busy,
+  onCountry,
+  onRefresh,
+  onDisable,
+}: {
+  luna: LunaView;
+  busy: string | null;
+  onCountry: (country: string) => void;
+  onRefresh: () => void;
+  onDisable: () => void;
+}) {
+  const settings = luna.settings;
+  const [country, setCountry] = useState(settings?.country ?? luna.countries[0] ?? "");
+  const working = busy === "luna";
+
+  return (
+    <div className="utility-status-row utility-luna">
+      <div className="utility-item-copy">
+        <strong>Amazon Luna</strong>
+        <span className="hint">
+          {settings === null
+            ? "Off: switch it on to mark the wished games that Prime already includes on Luna"
+            : lunaCatalogueLabel(settings)}
+        </span>
+        <span className="hint">
+          Only the catalogue included with Prime. Luna needs no account here.
+        </span>
+      </div>
+      <div className="utility-luna-actions">
+        <label htmlFor="utility-luna-country">Country</label>
+        <select
+          id="utility-luna-country"
+          value={country}
+          disabled={busy !== null}
+          onChange={(event) => setCountry(event.currentTarget.value)}
+        >
+          {luna.countries.map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
+        </select>
+        {settings === null ? (
+          <button disabled={busy !== null || country === ""} onClick={() => onCountry(country)}>
+            {working ? "Reading Luna…" : "Switch Luna on"}
+          </button>
+        ) : (
+          <>
+            {country !== settings.country && (
+              <button disabled={busy !== null} onClick={() => onCountry(country)}>
+                Change to {country}
+              </button>
+            )}
+            <button disabled={busy !== null} onClick={onRefresh}>
+              {working ? "Reading Luna…" : "Update Luna"}
+            </button>
+            <button className="link" disabled={busy !== null} onClick={onDisable}>
+              Switch Luna off
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

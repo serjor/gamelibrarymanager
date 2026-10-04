@@ -7,6 +7,7 @@
 pub mod epic;
 pub mod export;
 pub mod gog;
+pub mod luna;
 pub mod manual_wish;
 
 use domain::{

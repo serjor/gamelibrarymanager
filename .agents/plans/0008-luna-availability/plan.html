@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Plan — Disponibilidad en Amazon Luna</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8fafc;--text:#172033;--muted:#667085;
+  --line:#dce2ea;--accent:#3157d5;--accent-solid:#3157d5;--on-accent:#fff;--accent-soft:#edf1ff;--good:#16734b;
+  --accent-strong:#233fa6;--good-soft:#e9f7f0;--warn:#9a6700;--warn-soft:#fff6d8;--danger:#b42318;
+  --danger-soft:#fff0ee;--code:#eef1f5;--shadow:0 12px 35px rgba(23,32,51,.08)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#10141d;--surface:#171d28;--surface-2:#1d2532;--text:#edf1f7;--muted:#a6b0c0;
+    --line:#303a49;--accent:#91a7ff;--accent-strong:#bec9ff;--accent-soft:#222d57;--good:#70d6aa;
+    --good-soft:#15382c;--warn:#f0c46b;--warn-soft:#3c3015;--danger:#ff9b91;
+    --danger-soft:#49231f;--code:#242d3a;--shadow:0 14px 38px rgba(0,0,0,.22)
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:clip}
+main{width:100%;max-width:74rem;min-width:0;margin:0 auto;padding:2rem 1.25rem 5rem}
+a{color:var(--accent);text-decoration-thickness:.08em;text-underline-offset:.18em}
+a:hover{text-decoration-thickness:.14em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+header,section,.phase{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+header{padding:2rem}
+section{padding:1.5rem;margin-top:1rem}
+.phase{padding:0;margin-top:1rem;overflow:hidden}
+.eyebrow{margin:0 0 .45rem;color:var(--accent);font-size:.76rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(1.85rem,5vw,3.15rem);line-height:1.08;letter-spacing:-.035em;margin:.15rem 0 .8rem;max-width:18ch}
+h2{font-size:1.32rem;line-height:1.25;margin:0 0 .85rem;letter-spacing:-.015em}
+h3{font-size:1.03rem;line-height:1.3;margin:0 0 .45rem}
+h4{font-size:.92rem;line-height:1.35;margin:0 0 .35rem}
+p{margin:.4rem 0}
+ul,ol{margin:.55rem 0;padding-left:1.2rem}
+li{margin:.3rem 0}
+.lede{max-width:68ch;font-size:1.07rem;color:var(--muted);margin:0}
+.meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.phase-facts,.triptych{display:grid;gap:.75rem}
+.meta{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:1.4rem}
+.meta div,.stat,.decision,.decision-fact,.option,.impact,.fact,.triptych article{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+dt,.label{color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+dd{margin:.18rem 0 0;font-weight:650}
+.status{display:inline-flex;align-items:center;gap:.35rem;border:1px solid currentColor;border-radius:999px;padding:.15rem .52rem;font-size:.75rem;font-weight:750;white-space:nowrap}
+.status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:currentColor}
+.review{color:var(--warn);background:var(--warn-soft)}
+.planned{color:var(--accent);background:var(--accent-soft)}
+.active{color:var(--warn);background:var(--warn-soft)}
+.done{color:var(--good);background:var(--good-soft)}
+.blocked{color:var(--danger);background:var(--danger-soft)}
+nav{position:sticky;top:.7rem;z-index:2;max-width:74rem;margin:1rem auto;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+nav ul{display:flex;gap:.4rem .95rem;list-style:none;margin:0;padding:0;overflow-x:auto}
+nav li{margin:0;white-space:nowrap}
+nav a{color:var(--muted);font-size:.84rem;font-weight:650;text-decoration:none}
+nav a:hover{color:var(--accent)}
+.decision-grid{grid-template-columns:1.2fr .8fr;margin-top:1rem}
+.decision{padding:1rem}
+.decision.primary{background:var(--accent-soft);border-color:var(--accent)}
+.decision strong{display:block;font-size:1.18rem;margin:.15rem 0 .35rem}
+.decision p,.impact p{color:var(--muted)}
+.decision-request{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1.15rem;padding:.9rem 1rem;border:2px solid var(--accent);border-radius:11px;background:var(--surface)}
+.decision-request strong{font-size:1.08rem}
+.decision-request a{white-space:nowrap;font-weight:750}
+.decision-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:.75rem}
+.decision-fact strong{display:block;margin-top:.18rem}
+.confidence{display:flex;align-items:center;gap:.45rem}
+.confidence::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--muted)}
+.confidence.high::before{background:var(--good)}
+.confidence.medium::before{background:var(--warn)}
+.confidence.low::before{background:var(--danger)}
+.callout{border-left:4px solid var(--accent);border-radius:8px;background:var(--accent-soft);padding:.85rem 1rem;margin-top:1rem}
+.callout.warning{border-color:var(--warn);background:var(--warn-soft)}
+.stat-grid{grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));margin:.8rem 0}
+.stat strong{display:block;font-size:1.08rem;margin-top:.2rem}
+.next-action{display:flex;gap:.7rem;align-items:flex-start;margin-top:.8rem}
+.next-action strong{white-space:nowrap}
+.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.impact{padding:1rem}
+.impact h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.no-change{color:var(--good);font-size:.75rem;font-weight:750;text-transform:uppercase}
+.option-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.option{position:relative;padding:1rem;display:flex;flex-direction:column}
+.option.recommended{border:2px solid var(--accent);background:var(--accent-soft)}
+.option-tag{align-self:flex-start;border-radius:999px;padding:.12rem .48rem;background:var(--accent-solid);color:var(--on-accent);font-size:.7rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.option h3{margin:.6rem 0 .25rem}
+.option>p{color:var(--muted)}
+.option dl{display:grid;grid-template-columns:5.6rem 1fr;gap:.35rem .6rem;margin:.7rem 0 1rem}
+.option dd{font-weight:600}
+.choose-when{margin-top:auto;padding-top:.65rem;border-top:1px solid var(--line);color:var(--text)!important}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.out{border-left:3px solid var(--danger);padding-left:1rem}
+.diagram-card{margin:1rem 0 0;padding:1rem;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.figure-heading{display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:.75rem}
+.figure-heading p{color:var(--muted);max-width:68ch}
+.diagram{display:block;width:100%;height:auto;min-height:15rem;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.diagram .node-box{fill:var(--surface-2);stroke:var(--line);stroke-width:2}
+.diagram .node-box.focus{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3}
+.diagram .node-title{fill:var(--text);font:700 16px ui-sans-serif,system-ui,sans-serif}
+.diagram .node-copy{fill:var(--muted);font:13px ui-sans-serif,system-ui,sans-serif}
+.diagram .edge{fill:none;stroke:var(--muted);stroke-width:2.5}
+.diagram .edge.risk{stroke:var(--danger);stroke-dasharray:7 6}
+.diagram .flow{stroke-dasharray:10 7;animation:flow 1.4s linear 2}
+.diagram-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;list-style:none;padding:0;margin:.7rem 0 0;color:var(--muted);font-size:.84rem}
+.diagram-key li{display:flex;align-items:center;gap:.35rem;margin:0}
+.key-line{width:1.7rem;border-top:3px solid var(--muted)}
+.key-line.risk{border-color:var(--danger);border-top-style:dashed}
+.timeline{display:flex;list-style:none;padding:0;margin:1rem 0;counter-reset:step}
+.timeline li{position:relative;flex:1;min-width:0;margin:0;padding:2.6rem .8rem .8rem;border:1px solid var(--line);background:var(--surface)}
+.timeline li:first-child{border-radius:10px 0 0 10px}
+.timeline li:last-child{border-radius:0 10px 10px 0}
+.timeline li::before{counter-increment:step;content:counter(step);position:absolute;top:.65rem;left:.8rem;width:1.45rem;height:1.45rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:.75rem;font-weight:800}
+.timeline li+li{border-left:0}
+.timeline strong,.timeline span{display:block}
+.timeline span{color:var(--muted);font-size:.84rem;margin-top:.25rem}
+.timeline .critical{box-shadow:inset 0 3px 0 var(--warn)}
+figcaption{margin-top:.75rem;color:var(--text);font-weight:650}
+@keyframes flow{to{stroke-dashoffset:-34}}
+table{border-collapse:separate;border-spacing:0;width:100%;max-width:100%;display:block;overflow-x:auto;margin:.65rem 0}
+thead,tbody{display:table;width:100%;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:.62rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--surface-2);color:var(--muted);font-size:.73rem;letter-spacing:.05em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+code{background:var(--code);border-radius:4px;padding:.1rem .32rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:.8rem 1rem;overflow-x:auto;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+details{border-top:1px solid var(--line);margin-top:.9rem;padding-top:.8rem}
+summary{cursor:pointer;color:var(--accent);font-weight:700}
+summary::marker{color:var(--accent)}
+.phase-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.phase-number{color:var(--muted);font-size:.76rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.phase-header h3{font-size:1.2rem;margin:.12rem 0 0}
+.phase-body{padding:1.3rem 1.4rem}
+.phase-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:1rem}
+.fact{padding:.7rem .8rem}
+.fact strong{display:block;margin-top:.18rem}
+.plain-impact{font-size:1.02rem;margin:.85rem 0 1rem}
+.change-list td:first-child{width:30%}
+.gate{border:1px solid var(--good);background:var(--good-soft);border-radius:9px;padding:.85rem 1rem;margin:1rem 0}
+.gate h4{color:var(--good)}
+.triptych{grid-template-columns:repeat(3,minmax(0,1fr))}
+.triptych article{padding:.85rem}
+.execution-record{background:var(--surface-2);border-radius:9px;padding:0 .9rem .8rem}
+.execution-record dl{display:grid;grid-template-columns:9rem 1fr;gap:.45rem .8rem;margin:.75rem 0 0}
+.execution-record dd{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}
+.risk-high{color:var(--danger);font-weight:750}
+.risk-med{color:var(--warn);font-weight:750}
+.checks{list-style:none;padding:0}
+.checks li{position:relative;padding-left:1.55rem}
+.checks li::before{content:"□";position:absolute;left:.1rem;color:var(--accent);font-weight:800}
+.guardrails{border-left:4px solid var(--danger)}
+footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+@media(max-width:760px){
+  main{padding:1rem .75rem 3rem}
+  header,section{padding:1.15rem}
+  .meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.scope-grid,.phase-facts,.triptych{grid-template-columns:1fr}
+  .decision-request,.figure-heading{align-items:flex-start;flex-direction:column}
+  .diagram-card{overflow-x:auto}
+  .diagram{min-width:46rem}
+  .timeline{flex-direction:column}
+  .timeline li{width:100%;padding:1rem 1rem 1rem 3rem}
+  .timeline li:first-child{border-radius:10px 10px 0 0}
+  .timeline li:last-child{border-radius:0 0 10px 10px}
+  .timeline li+li{border-left:1px solid var(--line);border-top:0}
+  .timeline li::before{top:.9rem;left:.85rem}
+  nav{top:0;margin:.6rem .75rem;border-radius:9px}
+  .phase-header{padding:1rem;flex-direction:column}
+  .phase-body{padding:1rem}
+  .execution-record dl{grid-template-columns:1fr;gap:.1rem}
+  thead,tbody{min-width:42rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.diagram .flow{animation:none}}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f5f5f5;--text:#111;--muted:#555;--line:#ccc;--shadow:none}
+  body{font-size:10pt}
+  main{max-width:none;padding:0}
+  nav{display:none}
+  header,section,.phase{box-shadow:none;break-inside:avoid}
+  .phase{break-before:page}
+  details{display:block}
+  details>*{display:block}
+  summary{display:none}
+  a{color:inherit;text-decoration:none}
+  .diagram .flow{animation:none}
+}
+</style>
+</head>
+<body>
+<main>
+<header id="summary"><p class="eyebrow">Plan de cambio · Tamaño M</p><h1>Disponibilidad en Amazon Luna</h1><p class="lede">Un deseado y la ficha de un juego dirán «En Luna» cuando el juego esté en el catálogo de Luna incluido con Prime. Así el usuario no compra lo que ya puede jugar.</p>
+<dl class="meta"><div><dt>Repositorio</dt><dd><code>gamelibrarymanager</code></dd></div><div><dt>Rama examinada</dt><dd><code>claude/gamelibrarymanager-issue-13-ccd19d</code></dd></div><div><dt>Actualizado</dt><dd>2026-10-04</dd></div><div><dt>Estado</dt><dd><span class="status done">Finalizado · verificado por el usuario</span></dd></div></dl>
+<div class="decision-request"><div><span class="label">Decisión solicitada</span><strong>Aprobar el alcance y las tres fases, reducirlo o detenerlo</strong></div><a href="#options">Comparar caminos</a></div>
+<div class="decision-grid"><article class="decision primary"><span class="label">Recomendación</span><strong>El catálogo de Luna es una caché, como los precios</strong><p>Luna no da copias: da un catálogo que rota cada mes. Se guarda aparte, se sustituye entero en cada consulta y se cruza con las fichas por título al leer. No toca <code>store_entry</code> ni <code>user_state</code>.</p></article><article class="decision"><span class="label">Coste principal</span><strong>Un endpoint privado de Amazon</strong><p>Luna no tiene API pública. El endpoint de su web responde sin login, pero puede cambiar el día que Amazon quiera. Por eso Luna tiene un interruptor propio y su fallo no afecta a nada más.</p></article></div>
+<div class="decision-facts"><article class="decision-fact"><span class="label">Esfuerzo</span><strong>Medio</strong></article><article class="decision-fact"><span class="label">Riesgo</span><strong>Medio</strong></article><article class="decision-fact"><span class="label">Reversibilidad</span><strong>Total: se borra una caché</strong></article><article class="decision-fact"><span class="label">Confianza</span><strong class="confidence high">Alta: endpoint probado</strong></article></div>
+<aside class="callout"><strong>Origen.</strong> Issue <a href="https://github.com/serjor/gamelibrarymanager/issues/13">serjor/gamelibrarymanager#13</a>. El usuario reabre de forma explícita la exclusión de «Amazon» del plan 0001, solo para Luna y solo como disponibilidad. El resto de esa exclusión sigue cerrada.</aside>
+</header>
+<nav aria-label="Contenido"><ul><li><a href="#execution-status">Estado</a></li><li><a href="#evidence">Evidencia</a></li><li><a href="#options">Caminos</a></li><li><a href="#impact">Impacto</a></li><li><a href="#scope">Alcance</a></li><li><a href="#decisions">Decisiones</a></li><li><a href="#phases">Fases</a></li><li><a href="#risks">Riesgos</a></li><li><a href="#verification">Verificación</a></li></ul></nav>
+
+<section id="execution-status"><p class="eyebrow">Documento vivo</p><h2>Estado de ejecución</h2><div class="stat-grid"><article class="stat"><span class="label">Documento</span><strong>Aprobado 2026-10-04</strong></article><article class="stat"><span class="label">Avance</span><strong>3 de 3 fases</strong></article><article class="stat"><span class="label">Fase activa o bloqueada</span><strong>Ninguna</strong></article><article class="stat"><span class="label">Decisiones abiertas</span><strong>0</strong></article><article class="stat"><span class="label">Última actualización</span><strong>2026-10-04</strong></article></div>
+<table><thead><tr><th>Fase</th><th>Estado</th><th>Producción al cerrar</th></tr></thead><tbody><tr><td><a href="#phase-1">1. Proveedor y caché</a></td><td><span class="status done">done</span></td><td>Esquema aditivo; comportamiento actual.</td></tr><tr><td><a href="#phase-2">2. Caso de uso y cruce</a></td><td><span class="status done">done</span></td><td>Backend completo; sin controles visibles.</td></tr><tr><td><a href="#phase-3">3. Interfaz</a></td><td><span class="status done">done</span></td><td>Función completa para el usuario.</td></tr></tbody></table>
+<details><summary>Protocolo de cada sesión de implementación</summary><ol><li>Leer el HTML completo. Examinar la evidencia de todas las fases <code>done</code>.</li><li>Comparar el estado registrado con el worktree actual. Elegir la primera fase no terminada. No saltar una fase activa o bloqueada.</li><li>Antes de cambiar archivos, marcar esa fase <code>in_progress</code> y registrar hora y sesión. Solo una fase puede estar activa.</li><li>Conservar inmutable la especificación aprobada. Anotar archivos y símbolos reales, comprobaciones resumidas, commit o cambio, desviaciones, nuevas decisiones, riesgos y siguiente acción en el registro.</li><li>Una referencia factual se puede corregir si se registra la corrección. Detenerse para pedir dirección si cambia alcance, contrato, riesgo, límite de fase o resultado.</li><li>Marcar <code>done</code> solo con evidencia del control de producción. Si no pasa, marcar <code>blocked</code>, causa, alternativas probadas y decisión necesaria. No comenzar fase posterior.</li></ol></details></section>
+
+<section id="evidence"><p class="eyebrow">Examen del 2026-10-04</p><h2>Lo que responde Luna hoy</h2>
+<p>Se siguió <a href="../../../docs/connectors/verify-unofficial-endpoints.md">la convención de los endpoints no oficiales</a>. No hay implementación de referencia mantenida para Luna (ni Playnite ni Heroic la leen). La referencia es la propia web <code>luna.amazon.es</code>: su bundle (<code>ProxyClient</code>, <code>GET_PAGE_PATH="getPage"</code>) y las peticiones que hace al pulsar el filtro «Luna Estándar» en <code>/browse</code>.</p>
+<table><thead><tr><th>Prueba</th><th>Resultado</th></tr></thead><tbody>
+<tr><td><code>POST https://proxy-prod.eu-west-1.tempo.digital.a2z.com/getPage</code> con <code>x-amz-access-token</code> vacío</td><td><strong>200</strong>. La web también lo llama así cuando no hay sesión (<code>requestUnauthenticated</code>). No hace falta cuenta de Amazon.</td></tr>
+<tr><td>Cuerpo con <code>searchContext: {query: "included_with_prime", sort: "TITLE_A_TO_Z", filtersList: []}</code> y <code>pageContext: {pageType: "multistate_browse_results", pageId: "default"}</code></td><td><strong>200</strong>, 242 KB, <code>pageType = browse_results_included_with_prime</code>, <strong>89 juegos</strong> en una sola respuesta, sin campo de paginación.</td></tr>
+<tr><td>Cabeceras <code>x-amz-marketplace-id: A1RKKUPIHCS9HS</code>, <code>x-amz-country-of-residence: ES</code>, <code>x-amz-platform: web</code></td><td>El marketplace decide el catálogo. España usa el host <code>eu-west-1</code>.</td></tr>
+<tr><td>Mismo cuerpo con <code>x-amz-locale: es_ES</code> y con <code>en_GB</code></td><td>Los mismos 89 identificadores. 16 títulos cambian: «Aventureros al Tren®» / «Ticket to Ride®», «Pitufos Kart» / «Smurfs Kart». Con <code>en_GB</code> los títulos coinciden con los de IGDB y de las tiendas.</td></tr>
+<tr><td>Cada tile <code>game_tile_*</code></td><td><code>presentationData</code> (JSON en texto) con <code>gameId</code> (<code>amzn1.adg.product.…</code> o <code>amzn1.luna.product.…</code>), <code>title</code>, <code>releaseYear</code>, imágenes. La acción lleva <code>target: "/game/&lt;slug&gt;/&lt;ASIN&gt;"</code>. Los 89 tienen ASIN.</td></tr>
+<tr><td><code>query: "luna_premium"</code></td><td>117 juegos: incluye los 89 de Prime. Fuera de alcance, pero confirma que el filtro selecciona canal.</td></tr>
+</tbody></table>
+<aside class="callout warning"><strong>Por confirmar en la fase 1.</strong> El host y el marketplace de cada país fuera de España (<code>us-east-1</code> aparece en el bundle para EE. UU.). Se prueba cada país de la lista antes de ofrecerlo. Un país que no responda no se ofrece.</aside>
+<aside class="callout"><strong>Resultado de la fase 1 (2026-10-04).</strong> Los once marketplaces que enlaza la web (BE, CA, DE, ES, FR, GB, IT, NL, PL, SE, US) responden 200 en <code>eu-west-1</code> y en <code>us-east-1</code>, con los <strong>mismos</strong> 89 juegos y <code>territory=ES</code> en todos. Con un marketplace inventado la respuesta es la misma, y sin marketplace es 500. <strong>Amazon decide el territorio por la conexión, no por las cabeceras.</strong> El país del usuario fija las cabeceras y el dominio de los enlaces, y la interfaz muestra el territorio que dice la respuesta. Uno de los 89 juegos, Fortnite, llega con <code>target: "/game/fortnite"</code>, sin ASIN.</aside>
+</section>
+
+<section id="options"><p class="eyebrow">Comparación</p><h2>Caminos considerados</h2><div class="option-grid">
+<article class="option recommended"><span class="option-tag">Recomendado</span><h3>Caché de catálogo, cruce al leer</h3><p>Una tabla con el catálogo de Luna, sustituida entera. La lectura cruza por título normalizado con cada ficha.</p><dl><dt>Esfuerzo</dt><dd>Medio</dd><dt>Riesgo</dt><dd>Bajo en datos</dd><dt>Reversión</dt><dd>Borrar la tabla</dd><dt>Renuncia</dt><dd>Cruce por título, no por ID</dd></dl><p class="choose-when">Un deseado nuevo ve Luna al instante, sin otra consulta.</p></article>
+<article class="option"><h3>Marca por ficha al refrescar</h3><p>El refresco resuelve cada juego del catálogo a un <code>game_id</code> y guarda la marca en la ficha.</p><dl><dt>Esfuerzo</dt><dd>Medio</dd><dt>Riesgo</dt><dd>Medio</dd><dt>Reversión</dt><dd>Borrar la tabla</dd><dt>Renuncia</dt><dd>Fichas nuevas sin marca</dd></dl><p class="choose-when">Un deseado añadido después no sale «En Luna» hasta el siguiente refresco: es justo el caso del issue.</p></article>
+<article class="option"><h3>Luna como tienda</h3><p>Un conector en <code>crates/connectors</code> que crea copias <code>Owned</code>.</p><dl><dt>Esfuerzo</dt><dd>Grande</dd><dt>Riesgo</dt><dd>Alto</dd><dt>Reversión</dt><dd>Copias que desaparecen</dd><dt>Renuncia</dt><dd>La biblioteca miente</dd></dl><p class="choose-when">Descartado por el usuario: un juego de suscripción no es tuyo, y al rotar el catálogo la biblioteca cambiaría sola.</p></article>
+</div></section>
+
+<section id="impact"><p class="eyebrow">Consecuencias</p><h2>Qué cambia</h2><div class="impact-grid">
+<article class="impact"><h3>Comportamiento</h3><p>Con Luna activado, cada deseado y cada ficha que está en el catálogo Prime muestra «En Luna», con un enlace a su página. Sin Luna activado, nada cambia.</p></article>
+<article class="impact"><h3>Datos y contratos</h3><p>La migración <code>0010</code> añade dos tablas de caché. <code>LibraryRow</code> gana <code>luna</code>, que es opcional. La exportación no la lleva: no es dato de la biblioteca.</p></article>
+<article class="impact"><h3>Operación</h3><p>Una petición anónima de unos 240 KB. Se hace con el botón propio, y sola al abrir Deseados si la caché tiene más de 24 horas. La sincronización nunca la espera.</p></article>
+<article class="impact"><h3>Desarrollo</h3><p>Un módulo nuevo <code>crates/metadata/src/luna</code>. La convención de la caché pasa de dos tablas a tres, y se actualiza su documento.</p></article>
+</div>
+<figure class="diagram-card" aria-labelledby="flow-heading flow-caption"><div class="figure-heading"><div><span class="label">Flujo de datos · Izquierda a derecha</span><h3 id="flow-heading">El catálogo y la ficha solo se juntan al leer</h3></div><p>Ver <a href="#phase-2">fase 2</a>.</p></div><svg class="diagram" viewBox="0 0 900 240" role="img" aria-labelledby="svg-title svg-desc"><title id="svg-title">Luna llega a una caché y se cruza con las fichas al leer</title><desc id="svg-desc">De izquierda a derecha: getPage de Luna llena luna_catalog. La lectura de la biblioteca junta luna_catalog con game por título normalizado y produce LibraryRow con luna.</desc>
+<rect class="node-box" x="20" y="30" width="200" height="80" rx="10"/><text class="node-title" x="40" y="62">Luna getPage</text><text class="node-copy" x="40" y="86">anónimo · Prime · en_GB</text>
+<rect class="node-box focus" x="320" y="30" width="220" height="80" rx="10"/><text class="node-title" x="340" y="62">luna_catalog</text><text class="node-copy" x="340" y="86">caché sustituida entera</text>
+<rect class="node-box" x="320" y="140" width="220" height="80" rx="10"/><text class="node-title" x="340" y="172">game + store_entry</text><text class="node-copy" x="340" y="196">sin cambios</text>
+<rect class="node-box focus" x="650" y="85" width="230" height="80" rx="10"/><text class="node-title" x="670" y="117">LibraryRow.luna</text><text class="node-copy" x="670" y="141">domain::luna::match_titles</text>
+<path class="edge flow" d="M220 70 H320"/><path class="edge" d="M540 70 C600 70 600 110 650 115"/><path class="edge" d="M540 180 C600 180 600 140 650 135"/>
+</svg><figcaption id="flow-caption">Ninguna escritura de Luna llega a <code>game</code>, <code>store_entry</code> ni <code>user_state</code>.</figcaption></figure>
+</section>
+
+<section id="scope"><p class="eyebrow">Límites</p><h2>Alcance para aprobación</h2><div class="scope-grid"><article><h3>Incluido</h3><ul><li>Catálogo «Luna Estándar», el incluido con Prime, del país que elige el usuario.</li><li>Marca «En Luna» en Deseados y en la ficha del juego, con enlace a la página de Luna.</li><li>Botón «Actualizar Luna» y refresco automático al abrir Deseados si la caché tiene más de 24 horas.</li><li>Activar Luna eligiendo país, y desactivarlo, en Utilidades. Desactivar borra la caché.</li></ul></article><article class="out"><h3>Fuera</h3><ul><li>Luna Premium, Ubisoft+, Jackbox y otros canales.</li><li>Login con Amazon, la biblioteca «Mis juegos» de Luna y cualquier copia propia.</li><li>Lanzar el juego en streaming desde la aplicación.</li><li>Proponer juegos de Luna en «Hoy», filtros nuevos en la biblioteca y avisos de los juegos que salen del catálogo.</li><li>El resto de «Amazon» del plan 0001: Prime Gaming, claves de Amazon y Amazon Games.</li></ul></article></div></section>
+
+<section id="change"><p class="eyebrow">Origen y destino</p><h2>Qué debe pasar a ser cierto</h2><table><thead><tr><th>Resultado</th><th>Hoy</th><th>Después</th><th>Movimiento</th></tr></thead><tbody>
+<tr><td>Fuente</td><td>No existe.</td><td><code>LunaClient::prime_catalog(region)</code> devuelve <code>Vec&lt;LunaOffer&gt;</code>.</td><td>Módulo nuevo en <code>crates/metadata</code>.</td></tr>
+<tr><td>Caché</td><td>No existe.</td><td>Catálogo y región guardados; sustitución completa en una transacción.</td><td>Migración <code>0010</code> y <code>LunaRepository</code>.</td></tr>
+<tr><td>Cruce</td><td>No existe.</td><td>Una ficha está en Luna si uno de sus títulos normalizados coincide con uno del catálogo.</td><td>Función pura en <code>crates/domain</code>.</td></tr>
+<tr><td>Lectura</td><td><code>LibraryRow</code> sin Luna.</td><td><code>LibraryRow.luna: Option&lt;LunaMark&gt;</code>.</td><td>Comandos <code>library</code> y <code>refresh_time_to_beat</code>.</td></tr>
+<tr><td>Interfaz</td><td>Sin Luna.</td><td>Marca, enlace, ajustes y botón.</td><td><code>Wishlist.tsx</code>, <code>GameDetail.tsx</code>, <code>UtilityPanel.tsx</code>.</td></tr>
+</tbody></table></section>
+
+<section id="decisions"><p class="eyebrow">Decisiones cerradas</p><h2>No volver a debatirlas</h2><table><thead><tr><th>Pregunta</th><th>Decisión</th><th>Alternativa descartada y motivo</th></tr></thead><tbody>
+<tr><td>¿Reabrir «Amazon» del plan 0001?</td><td>Sí, solo para la disponibilidad en Luna.</td><td>Mantener la exclusión: el usuario la reabre en el issue 13 y lo confirma el 2026-10-04.</td></tr>
+<tr><td>Modelo</td><td>Disponibilidad: una caché, como los precios.</td><td>Copia propia: un juego de suscripción no es del usuario, y la rotación haría aparecer y desaparecer copias.</td></tr>
+<tr><td>Catálogo</td><td>Solo el incluido con Prime (<code>included_with_prime</code>).</td><td>Premium y canales: el usuario no los usa. El filtro admite añadirlos más tarde sin cambiar el esquema.</td></tr>
+<tr><td>Autenticación</td><td>Ninguna: petición anónima.</td><td>Login con Amazon: el catálogo es público, y la aplicación nunca pide la contraseña de una tienda.</td></tr>
+<tr><td>Crate</td><td><code>crates/metadata</code>, junto a IGDB e ITAD.</td><td><code>crates/connectors</code>: es para las tiendas del usuario, y Luna aquí no aporta copias.</td></tr>
+<tr><td>Idioma del catálogo</td><td>Locale inglés del país (<code>en_GB</code> en Europa, <code>en_US</code> en América), con el marketplace del país.</td><td>Locale local: 16 de 89 títulos en español no cruzan con IGDB ni con las tiendas.</td></tr>
+<tr><td>Cruce</td><td>Al leer, por título normalizado con <code>domain::normalize</code>, contra el título canónico y los títulos de tienda de la ficha.</td><td>Al refrescar: los deseados nuevos quedan sin marca. Por similitud: un falso «En Luna» hace que el usuario no compre algo que no puede jugar.</td></tr>
+<tr><td>Refresco</td><td>Botón propio y, al abrir Deseados, uno automático si la caché tiene más de 24 horas. Usa el guard de operación larga.</td><td>Dentro de la sincronización: un fallo de Amazon no puede parar Steam.</td></tr>
+<tr><td>Interruptor</td><td>Luna está activado si hay una región guardada. Desactivar borra la región y la caché.</td><td>Fila en <code>connector_state</code>: esa tabla es de las tiendas y sus copias.</td></tr>
+<tr><td>Exportación</td><td>No lleva Luna.</td><td>Exportarla: es dato de Amazon y caduca. Pasa lo mismo con los precios.</td></tr>
+</tbody></table></section>
+
+<section id="phases"><p class="eyebrow">Ejecución</p><h2>Fases aptas para producción</h2>
+
+<article class="phase" id="phase-1"><div class="phase-header"><div><span class="phase-number">Fase 1 de 3</span><h3>Proveedor y caché</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Esquema 0009</strong></div><div class="fact"><span class="label">Depende de</span><strong>Nada</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno</strong></div><div class="fact"><span class="label">Producción</span><strong>Comportamiento actual</strong></div></div>
+<p class="plain-impact">La aplicación sabe leer el catálogo Prime de Luna y guardarlo, pero todavía no lo usa.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td><code>crates/metadata/src/luna/mod.rs</code></td><td><code>LunaClient</code> con <code>with_base</code> para las pruebas, como <code>ItadClient</code>. <code>LunaRegion</code>: país, host, marketplace y locale. <code>prime_catalog(region)</code> hace un POST a <code>getPage</code>. El <code>//!</code> recoge el examen con fecha de la sección <a href="#evidence">Evidencia</a>.</td></tr>
+<tr><td><code>crates/metadata/src/luna/parse.rs</code></td><td>Recorre <code>pageMemberGroups</code> y toma los widgets <code>game_tile_*</code>. Lee <code>presentationData</code> como JSON y saca el ASIN del <code>target</code> <code>/game/&lt;slug&gt;/&lt;ASIN&gt;</code>. Si un tile no tiene ASIN o título, lo salta. No lo inventa.</td></tr>
+<tr><td><code>LunaRegion::supported()</code></td><td>Solo los países que respondieron 200 en la prueba manual de esta fase. España es seguro. El resto se anota con su resultado.</td></tr>
+<tr><td><code>migrations/0010_luna.up.sql</code>, <code>.down.sql</code></td><td><code>luna_region</code> (una fila: <code>country</code>, <code>refreshed_at</code>) y <code>luna_catalog</code> (<code>asin</code> PK, <code>product_id</code>, <code>title</code>, <code>normalized_title</code>, <code>slug</code>, <code>captured_at</code>) con índice por <code>normalized_title</code>. <code>STRICT</code>. El comentario explica por qué es la tercera tabla de la excepción de la caché.</td></tr>
+<tr><td><code>crates/storage/src/repositories/luna.rs</code></td><td><code>region</code>, <code>set_region</code>, <code>replace_catalog</code> (borra y escribe en una transacción, y actualiza <code>refreshed_at</code>), <code>catalog</code> y <code>clear</code>.</td></tr>
+<tr><td><code>crates/metadata/tests/luna.rs</code> + <code>fixtures/luna_prime_es.json</code></td><td>Fixture recortado de la respuesta real del 2026-10-04: tiles de los dos prefijos de <code>gameId</code>, un tile sin ASIN y un widget que no es un juego. La cabecera del archivo dice de dónde viene.</td></tr>
+<tr><td><code>crates/storage/tests/luna.rs</code></td><td>Migración up y down. Sustituir quita lo que salió del catálogo. Sustituir no toca <code>game</code>, <code>store_entry</code> ni <code>user_state</code>.</td></tr>
+<tr><td><code>docs/storage/prices-are-a-cache-that-is-replaced.md</code></td><td>La excepción pasa de dos tablas a tres, con el motivo. Se actualiza la línea de <code>AGENTS.md</code>.</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Las comprobaciones de CI pasan. La migración se aplica sobre una base 0009 con copia <code>VACUUM INTO</code>. La aplicación abre igual que antes.</p></div><details open><summary>Registro de ejecución · fase 1</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-04, rama <code>claude/gamelibrarymanager-issue-13-ccd19d</code>.</dd>
+<dt>Archivos</dt><dd><code>crates/domain/src/luna.rs</code> (<code>LunaOffer</code>, <code>LunaCatalog</code>); <code>crates/metadata/src/luna/mod.rs</code> (<code>LunaClient::prime_catalog</code>, <code>LunaRegion::{supported, find, game_url}</code>); <code>crates/metadata/src/luna/parse.rs</code>; <code>migrations/0010_luna.{up,down}.sql</code>; <code>crates/storage/src/repositories/luna.rs</code> (<code>LunaRepository::{settings, set_country, replace_catalog, catalog, clear}</code>, <code>LunaSettings</code>); <code>crates/metadata/tests/luna.rs</code> + <code>fixtures/luna_prime_es.json</code>; <code>crates/storage/tests/luna.rs</code>; <code>docs/storage/prices-are-a-cache-that-is-replaced.md</code>; <code>AGENTS.md</code>.</dd>
+<dt>Correcciones factuales</dt><dd>1) La identidad de una oferta es <code>product_id</code> (<code>gameId</code>) y no el ASIN: Fortnite no tiene ASIN. <code>luna_catalog</code> tiene PK <code>product_id</code>, <code>asin</code> opcional y <code>path</code> (la ruta de la página tal como la da Luna) en lugar de <code>slug</code>. 2) <code>luna_catalog</code> no guarda <code>normalized_title</code>: el cruce de la fase 2 se hace en Rust y normaliza los dos lados al leer, así un cambio de <code>normalize</code> no exige migrar. 3) <code>luna_region</code> guarda también <code>territory</code>, el país que dice la respuesta. 4) La convención de la caché ya tenía una tercera tabla, <code>igdb_time_to_beat</code> (0009); el documento ahora lista las cuatro como lista cerrada.</dd>
+<dt>Comprobaciones</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code> (0 fallos), <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (114), <code>bun run build</code>, <code>bun run visual</code>: todo correcto. El parser contra la respuesta real completa da 89 juegos (88 antes de admitir Fortnite).</dd>
+<dt>Control de producción</dt><dd>Copia de la biblioteca real (versión 8, 1025 fichas) en un <code>XDG_DATA_HOME</code> temporal. <code>bun run tauri dev</code>: aplica 0009 y 0010, deja <code>library.db.bak-9</code> con <code>VACUUM INTO</code>, las 1025 fichas siguen, la app arranca sin errores. La biblioteca real no se tocó.</dd>
+<dt>Siguiente acción</dt><dd>Fase 2: <code>domain::luna::match_titles</code>, <code>src-tauri/src/luna.rs</code> y los comandos.</dd>
+</dl></div></details></div></article>
+
+<article class="phase" id="phase-2"><div class="phase-header"><div><span class="phase-number">Fase 2 de 3</span><h3>Caso de uso y cruce</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 1 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Caché</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno aún</strong></div><div class="fact"><span class="label">Producción</span><strong>Backend completo</strong></div></div>
+<p class="plain-impact">El backend sabe refrescar Luna y decir qué fichas están en su catálogo.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td><code>crates/domain/src/luna.rs</code></td><td><code>LunaMark { asin, title, url }</code> y <code>match_titles(record_titles, catalog) -&gt; Option&lt;LunaMark&gt;</code>. Igualdad exacta de <code>normalize</code>. Sin red ni SQL.</td></tr>
+<tr><td><code>src-tauri/src/luna.rs</code></td><td><code>refresh(db, client, progress)</code>: lee la región, llama al cliente, normaliza y sustituye. Si Luna falla, es un error que se muestra y la caché anterior queda. Si falla la base de datos, el error sube.</td></tr>
+<tr><td><code>src-tauri/src/commands/luna.rs</code></td><td><code>luna_settings</code>, <code>set_luna_region</code> (valida el país contra <code>supported()</code> y hace la primera consulta), <code>disable_luna</code> y <code>refresh_luna</code> (con <code>try_begin</code>).</td></tr>
+<tr><td><code>crates/storage/src/repositories/library.rs</code>, comando <code>library</code></td><td>Los títulos de tienda de cada ficha llegan a la lectura. El comando aplica <code>match_titles</code> y llena <code>LibraryRow.luna</code>. Sin región, siempre <code>None</code>.</td></tr>
+<tr><td><code>src-tauri/tests/luna.rs</code></td><td>De extremo a extremo contra un servidor falso y una base real. Un deseado que se añade después del refresco sale «En Luna». Cuando el catálogo deja de traerlo, la marca desaparece. Un fallo de Luna no borra la caché. Desactivar la borra.</td></tr>
+<tr><td>Prueba de estructura</td><td>La lectura de la biblioteca hace el mismo número de sentencias con Luna que sin Luna, más una (<a href="../../../docs/testing/assert-on-the-structure.md">convención</a>).</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Las comprobaciones de CI pasan. Contra el endpoint real, con España: <code>refresh_luna</code> guarda unos 89 juegos y una ficha conocida (por ejemplo «Hogwarts Legacy») sale con <code>luna</code>.</p></div><details open><summary>Registro de ejecución · fase 2</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-04, misma rama, a continuación de la fase 1.</dd>
+<dt>Archivos</dt><dd><code>crates/domain/src/luna.rs</code> (<code>LunaMark</code>, <code>LunaIndex::{new, find}</code>); <code>crates/storage/src/repositories/library.rs</code> (<code>store_titles</code> con <code>json_group_array(DISTINCT e.title)</code>, <code>mark_luna</code>, <code>LibraryRow.luna</code>); <code>migrations/0010_luna.up.sql</code> (columna <code>site</code>); <code>src-tauri/src/luna.rs</code> (<code>enable</code>, <code>refresh</code>, <code>disable</code>); <code>src-tauri/src/commands/luna.rs</code> (<code>luna_settings</code>, <code>set_luna_country</code>, <code>disable_luna</code>, <code>refresh_luna</code>); <code>src-tauri/src/state.rs</code> (<code>AppState.luna</code>); <code>src-tauri/src/commands/export.rs</code>; <code>src-tauri/tests/luna.rs</code>; <code>crates/storage/tests/{luna,one_query}.rs</code>.</dd>
+<dt>Desviaciones</dt><dd>1) La marca se pone en <code>LibraryRepository::rows</code> y no en cada comando. Así la lista, un guardado, un deseo manual y el refresco del tiempo de juego dan la misma fila, que es la regla que ya defiende ese archivo. 2) Para eso <code>luna_region</code> guarda <code>site</code> (el dominio de Luna del país) y <code>storage</code> no depende de <code>metadata</code>. 3) <code>LibraryRow.luna</code> no se escribe cuando es <code>None</code>, y la exportación lo pone a <code>None</code>: el JSON exportado es idéntico con Luna activado o no (prueba <code>the_export_is_the_same_with_luna_on</code>). 4) <code>refresh</code> no recibe un <code>ProgressSink</code>: es una sola petición. 5) Un 200 con cero juegos es un error y conserva la caché. 6) <code>enable</code> consulta el catálogo antes de guardar el país.</dd>
+<dt>Comprobaciones</dt><dd>fmt, clippy, <code>cargo test --workspace</code>, tsc, lint, <code>bun test</code>: todo correcto. La lectura de la biblioteca hace 2 sentencias con 1000 juegos (antes 1); <code>the_planner_starts_at_game_link</code> sigue pasando con la subconsulta nueva.</dd>
+<dt>Control de producción</dt><dd>Endpoint real, España, copia nueva de la biblioteca real (1025 fichas): <code>enable_luna</code> guarda 89 juegos, territorio <code>ES</code>, y marca 12 fichas, 2 de ellas deseadas (Indiana Jones and the Great Circle, Star Wars Outlaws). Ningún falso positivo a la vista. Hogwarts Legacy no está en esa biblioteca.</dd>
+<dt>Riesgo observado</dt><dd>Falsos negativos por sufijos de edición que <code>normalize</code> no quita: «Death Stranding» / «DEATH STRANDING DIRECTOR'S CUT», «Rise of the Tomb Raider» / «… 20 Year Celebration», «Sonic Mania» / «Sonic Mania Plus», «Tetris Effect: Connected» / «… Party Edition». No se cambia <code>normalize</code>, que también decide la deduplicación entre tiendas (plan 0001). Una lista de sufijos propia de Luna es una decisión nueva del usuario.</dd>
+<dt>Siguiente acción</dt><dd>Fase 3: interfaz.</dd>
+</dl></div></details></div></article>
+
+<article class="phase" id="phase-3"><div class="phase-header"><div><span class="phase-number">Fase 3 de 3</span><h3>Interfaz</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 2 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Comandos</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Función completa</strong></div><div class="fact"><span class="label">Producción</span><strong>Issue 13 cerrado</strong></div></div>
+<p class="plain-impact">El usuario activa Luna, elige país y ve «En Luna» en los deseados que puede jugar ya.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td><code>src/lib/api.ts</code></td><td>Tipos <code>LunaMark</code> y <code>LunaSettings</code>, el campo <code>luna</code> de <code>LibraryRow</code> y los cuatro comandos.</td></tr>
+<tr><td><code>src/features/shell/UtilityPanel.tsx</code></td><td>Una tarjeta «Amazon Luna»: país, fecha del último refresco, «Actualizar Luna» y «Desactivar». Dice que solo usa el catálogo incluido con Prime.</td></tr>
+<tr><td><code>src/features/wishlist/Wishlist.tsx</code></td><td>Una marca «En Luna» por fila, con enlace. Al montar, refresca solo si la caché tiene más de 24 horas, sin bloquear la lista. Si falla, un aviso discreto.</td></tr>
+<tr><td><code>src/features/game/GameDetail.tsx</code></td><td>La misma marca y el mismo enlace en la ficha.</td></tr>
+<tr><td><code>src/styles.css</code></td><td>Estilo de la marca solo con tokens (<a href="../../../docs/ui/tokens-as-the-only-source-of-colour.md">convención</a>).</td></tr>
+<tr><td><code>src-tauri/capabilities/default.json</code> y su prueba</td><td><code>https://luna.amazon.&lt;tld&gt;/game/**</code> para cada país admitido (<a href="../../../docs/tauri/url-scope-in-capabilities.md">convención</a>).</td></tr>
+<tr><td><code>README.md</code>, <code>AGENTS.md</code></td><td>Un párrafo sobre Luna en el README, y el plan 0008 en el índice.</td></tr>
+<tr><td>Pruebas <code>bun test</code> y <code>bun run visual</code></td><td>La marca sale solo con <code>luna</code>. El refresco automático respeta las 24 horas. La tarjeta funciona en tema claro y oscuro.</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Todas las comprobaciones de <code>AGENTS.md</code>. En <code>bun run tauri dev</code>, con España: un deseado que está en Luna sale marcado y el enlace abre su página.</p></div><details open><summary>Registro de ejecución · fase 3</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-04, misma rama.</dd>
+<dt>Archivos</dt><dd><code>src/lib/api.ts</code> (<code>LunaMark</code>, <code>LunaSettings</code>, <code>LunaView</code>, <code>LunaReport</code>, <code>LibraryRow.luna?</code>, cuatro comandos); <code>src/features/game/LunaLink.tsx</code> (una sola marca para Deseados y la ficha); <code>src/features/wishlist/luna.ts</code> + <code>luna.test.ts</code> (<code>lunaIsStale</code>, <code>lunaCatalogueLabel</code>); <code>src/features/wishlist/Wishlist.tsx</code>; <code>src/features/game/GameDetail.tsx</code>; <code>src/features/shell/UtilityPanel.tsx</code> (<code>LunaRow</code>); <code>src/features/shell/ActivityStrip.tsx</code>; <code>src/App.tsx</code>; <code>src/styles.css</code> (<code>.luna-mark</code>, <code>.utility-luna-actions</code>); <code>src-tauri/capabilities/default.json</code> (11 patrones <code>https://&lt;dominio&gt;/game/**</code>); <code>src-tauri/tests/capabilities.rs</code>; <code>src/App.test.tsx</code>; <code>src/features/shell/AppShell.test.tsx</code>; <code>test/visual/{harness,look}.ts</code>.</dd>
+<dt>Desviaciones</dt><dd>1) El refresco automático vive en <code>App.tsx</code>, que es quien tiene los datos, y se lanza al abrir la pestaña Deseados: una vez por arranque si la caché tiene 24 horas o más. 2) La marca usa <code>--accent</code> y no un token nuevo, para no competir con el verde de <code>--price-low</code>. 3) Cambiar de país es un botón aparte («Change to XX») y no un efecto del desplegable.</dd>
+<dt>Comprobaciones</dt><dd>fmt, clippy, <code>cargo test --workspace</code>, tsc, lint, <code>bun test</code> (125, 11 nuevas), <code>bun run build</code>, <code>bun run visual</code> (contraste de «On Luna»: 5,39:1 en claro y 5,64:1 en oscuro; las comprobaciones de maquetación de Deseados pasan con la marca en el título largo). <code>bun run tauri dev</code> sobre una copia de la biblioteca con Luna activado: arranca sin errores.</dd>
+<dt>Pendiente</dt><dd>(Resuelto, ver abajo.) 1) <strong>Verificación manual</strong> en la ventana nativa: abrir Deseados, ver «On Luna» en Indiana Jones and the Great Circle y en Star Wars Outlaws, y pulsar el enlace. Desde esta sesión no se puede pulsar en la ventana. 2) <strong><code>README.md</code></strong>: el párrafo sobre Luna no se escribió porque la herramienta de permisos bloqueó la edición. Lo decide el usuario.</dd>
+<dt>Verificación manual</dt><dd>2026-10-04: el usuario abrió la app con su biblioteca real y Deseados muestra «On Luna» en Star Wars Outlaws y en ningún otro de los deseados visibles.</dd>
+<dt>README</dt><dd>Escrito con el permiso explícito del usuario: el párrafo sobre Luna y la fila de <code>crates/metadata</code> en la tabla de arquitectura.</dd>
+<dt>Siguiente acción</dt><dd>Ninguna en este plan.</dd>
+</dl></div></details></div></article>
+</section>
+
+<section id="risks"><p class="eyebrow">Fallos posibles</p><h2>Riesgos y respuesta</h2><table><thead><tr><th>Riesgo</th><th>Nivel</th><th>Respuesta</th></tr></thead><tbody>
+<tr><td>Amazon cambia el endpoint, las cabeceras o la forma de los tiles.</td><td class="risk-high">Alto</td><td>El fallo se queda en Luna: la caché anterior sigue y el resto de la aplicación no lo nota. El <code>//!</code> con fecha guía la reparación, y el usuario puede desactivar Luna.</td></tr>
+<tr><td>Falso «En Luna» por un título normalizado igual (un remake o una edición).</td><td class="risk-med">Medio</td><td>Igualdad exacta, no similitud. <code>normalize</code> ya conserva «remastered» y «remake». Las pruebas del corpus de cruce tienen casos de Luna.</td></tr>
+<tr><td>Falso negativo: el título de Luna no coincide con el de la ficha.</td><td class="risk-med">Medio</td><td>Usar el locale inglés y comparar también con los títulos de tienda. En la fase 2 se mide sobre la biblioteca real. Si IGDB tiene una fuente externa de Luna con ASIN, se registra como nueva decisión. No se cambia el plan sin aprobación.</td></tr>
+<tr><td>Más de una página de resultados si el catálogo crece.</td><td class="risk-med">Medio</td><td>Hoy son 89 juegos y no hay campo de paginación. El parser cuenta los tiles. Si aparece un token de página, se sigue, con un límite de páginas.</td></tr>
+<tr><td>El catálogo de otro país usa otro host o marketplace.</td><td class="risk-med">Medio</td><td>Solo se ofrecen los países que se probaron en la fase 1.</td></tr>
+</tbody></table></section>
+
+<section id="verification"><p class="eyebrow">Evidencia final</p><h2>Cómo comprobar el resultado</h2><h3>Comandos</h3><pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev</code></pre>
+<h3>Criterios</h3><ul class="checks"><li>Sin Luna activado, la aplicación hace exactamente lo mismo que antes.</li><li>Con España, Deseados marca los juegos del catálogo Prime y el enlace abre su página.</li><li>Un deseado añadido a mano que está en Luna sale marcado sin otro refresco.</li><li>Desactivar Luna quita todas las marcas y deja la biblioteca, las notas y los estados igual.</li><li>La exportación JSON y CSV no cambia.</li></ul></section>
+
+<section class="guardrails"><p class="eyebrow">Límites</p><h2>No hacer</h2><ul><li>No pedir ni guardar credenciales de Amazon.</li><li>No crear <code>store_entry</code>, <code>store_account</code> ni filas de <code>connector_state</code> para Luna.</li><li>No escribir en <code>game</code> ni en <code>user_state</code> desde Luna.</li><li>No llamar a Luna desde la sincronización.</li><li>No cruzar por similitud ni con un umbral.</li><li>No ampliar el alcance a Premium, canales ni «Hoy» sin un plan aprobado.</li></ul></section>
+</main>
+<footer>Plan 0008 · gamelibrarymanager · 2026-10-04</footer>
+</body>
+</html>

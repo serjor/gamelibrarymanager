@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import {
@@ -11,6 +11,7 @@ import {
   type IdentityReport,
   type LibraryRow,
   type LibrarySummary,
+  type LunaView,
   type PriceRow,
   type PlatformFamily,
   type ReviewItem,
@@ -32,6 +33,7 @@ import { ActivityStrip } from "./features/shell/ActivityStrip";
 import { AppShell, type AppTab } from "./features/shell/AppShell";
 import { useThemePreference } from "./features/shell/theme";
 import { Wishlist } from "./features/wishlist/Wishlist";
+import { lunaIsStale } from "./features/wishlist/luna";
 
 /** The stores that the application can read, with the name that it shows. */
 const STORES = [
@@ -57,6 +59,12 @@ export function App() {
   const [queue, setQueue] = useState<ReviewItem[]>([]);
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [luna, setLuna] = useState<LunaView | null>(null);
+  const [lunaNotice, setLunaNotice] = useState<string | null>(null);
+  // One automatic refresh of Luna for each start of the application. A Luna
+  // that fails must not be asked again at each visit to the wishlist; the
+  // button in Utilities is always there.
+  const lunaAsked = useRef(false);
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   // It starts at the library and not at "Today": if the recommendation is
   // incorrect, it must not be the first thing that you see each day.
@@ -93,6 +101,7 @@ export function App() {
         nextQueue,
         nextRows,
         nextPrices,
+        nextLuna,
       ] = await Promise.all([
         api.listAccounts(),
         api.connectorStates(),
@@ -102,6 +111,7 @@ export function App() {
         api.reviewQueue(),
         api.library(),
         api.prices(),
+        api.lunaSettings(),
       ]);
       if (!alive()) return;
       setAccounts(nextAccounts);
@@ -112,6 +122,7 @@ export function App() {
       setQueue(nextQueue);
       setRows(nextRows);
       setPrices(nextPrices);
+      setLuna(nextLuna);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -168,6 +179,29 @@ export function App() {
       mounted = false;
     };
   }, [load]);
+
+  // The wishlist reads Luna again when its catalogue is older than one day, in
+  // the background: the list shows the marks it has at once, and the answer
+  // replaces them. A failure is a hint on the wishlist and not an error, because
+  // the marks of the last catalogue stay and nothing else depends on it.
+  useEffect(() => {
+    if (tab !== "wishlist" || busy !== null || lunaAsked.current) return;
+    if (!lunaIsStale(luna?.settings ?? null, Date.now() / 1000)) return;
+    lunaAsked.current = true;
+    api
+      .refreshLuna()
+      .then(async () => {
+        const [nextRows, nextLuna] = await Promise.all([api.library(), api.lunaSettings()]);
+        setRows(nextRows);
+        setLuna(nextLuna);
+        setLunaNotice(null);
+      })
+      .catch((cause: unknown) =>
+        setLunaNotice(
+          `Luna could not be read (${errorMessage(cause)}). The marks of the last catalogue stay.`,
+        ),
+      );
+  }, [tab, busy, luna]);
 
   // The progress comes through events from Rust: the window does not stay quiet
   // while one thousand games synchronise.
@@ -231,6 +265,13 @@ export function App() {
       return;
     }
     void run("disconnect", () => api.disconnectAccount(account.store, account.account_ref));
+  };
+
+  const disableLuna = () => {
+    if (!window.confirm("Switch Luna off? The Luna marks go. Your library and your notes stay.")) {
+      return;
+    }
+    void run("luna", api.disableLuna);
   };
 
   const exportLibrary = async (format: ExportFormat) => {
@@ -378,6 +419,7 @@ export function App() {
         connectors,
         hasIgdb,
         hasItad,
+        luna,
         busy,
         theme,
         onThemeChange,
@@ -392,6 +434,15 @@ export function App() {
           void run("connector", () =>
             api.setConnectorEnabled(connector.store, !connector.enabled),
           ),
+        onLunaCountry: (country) => {
+          setLunaNotice(null);
+          void run("luna", () => api.setLunaCountry(country));
+        },
+        onLunaRefresh: () => {
+          setLunaNotice(null);
+          void run("luna", api.refreshLuna);
+        },
+        onLunaDisable: disableLuna,
       }}
     >
       {tab === "library" && (
@@ -406,6 +457,8 @@ export function App() {
           hasItad={hasItad}
           hasIgdb={hasIgdb}
           busy={busy !== null}
+          luna={luna?.settings ?? null}
+          lunaNotice={lunaNotice}
           onRefresh={() => void run("prices", api.refreshPrices)}
           onSetup={() => setSetup("itad")}
           onAdd={(target: WishTarget, family: PlatformFamily, model: string) => changeWish(() => api.addManualWish(target, family, model))}

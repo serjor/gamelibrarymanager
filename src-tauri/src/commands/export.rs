@@ -44,7 +44,12 @@ pub async fn export_library_for(
     path: &Path,
     format: ExportFormat,
 ) -> Result<(), AppError> {
-    let rows = LibraryRepository(db).all().await?;
+    let mut rows = LibraryRepository(db).all().await?;
+    // Luna is data of Amazon that expires next month, not data of the library.
+    // The file that the user takes out is the same with Luna on or off.
+    for row in &mut rows {
+        row.luna = None;
+    }
     let content = match format {
         ExportFormat::Json => {
             let export = JsonExport {

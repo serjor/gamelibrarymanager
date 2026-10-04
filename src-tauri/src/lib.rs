@@ -1,6 +1,7 @@
 mod commands;
 mod error;
 mod identity;
+mod luna;
 mod prices;
 mod state;
 mod sync;
@@ -18,6 +19,9 @@ pub mod testing {
     };
     pub use crate::error::AppError;
     pub use crate::identity::{IdentityReport, refresh_time_to_beat, resolve, resolve_local};
+    pub use crate::luna::{
+        LunaReport, disable as disable_luna, enable as enable_luna, refresh as refresh_luna,
+    };
     pub use crate::prices::{PriceReport, refresh as refresh_prices};
     pub use crate::state::{
         AppState, OperationGuard, credential_key, http_client, http_client_with,
@@ -70,6 +74,10 @@ pub fn run() {
             commands::cancel_operation,
             commands::library,
             commands::refresh_time_to_beat,
+            commands::luna::luna_settings,
+            commands::luna::set_luna_country,
+            commands::luna::disable_luna,
+            commands::luna::refresh_luna,
             commands::manual_wish::search_manual_wish_games,
             commands::manual_wish::add_manual_wish,
             commands::manual_wish::update_manual_wish,

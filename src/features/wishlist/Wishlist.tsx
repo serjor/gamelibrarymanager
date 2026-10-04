@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { errorMessage, type LibraryRow, type PlatformFamily, type PriceRow, type WishTarget } from "../../lib/api";
+import { errorMessage, type LibraryRow, type LunaSettings, type PlatformFamily, type PriceRow, type WishTarget } from "../../lib/api";
+import { LunaLink } from "../game/LunaLink";
+import { lunaCatalogueLabel } from "./luna";
 import { wishes, money, atAllTimeLow, type Wish } from "./prices";
 import { ManualWishForm, FAMILIES, deviceLabel } from "./ManualWishForm";
 
@@ -29,6 +31,10 @@ const ITAD_GAME_URL = "https://isthereanydeal.com/game/";
  * Fanatical, Humble, any of them — and the window can open only the addresses
  * that the capability lists before. The ITAD page lists all of them and it is
  * one host.
+ *
+ * "On Luna" is the other half of the decision: a game that Prime already
+ * includes on Luna is a game that you do not need to buy to play. The mark
+ * comes in the row from Rust, and this screen only shows it.
  */
 export function Wishlist({
   rows,
@@ -37,6 +43,8 @@ export function Wishlist({
   hasItad,
   hasIgdb,
   busy,
+  luna,
+  lunaNotice,
   onRefresh,
   onSetup,
   onAdd,
@@ -57,6 +65,13 @@ export function Wishlist({
   hasItad: boolean;
   hasIgdb: boolean;
   busy: boolean;
+  /** `null` when Luna is switched off. */
+  luna: LunaSettings | null;
+  /**
+   * Why the automatic refresh of Luna failed. It is a hint and not an error:
+   * the marks of the last catalogue stay, and the list operates the same.
+   */
+  lunaNotice: string | null;
   onRefresh: () => void;
   onSetup: () => void;
   onAdd: (target: WishTarget, family: PlatformFamily, model: string) => Promise<void>;
@@ -71,6 +86,7 @@ export function Wishlist({
   const [saving, setSaving] = useState(false);
   const list = useMemo(() => wishes(rows, prices), [rows, prices]);
   const withPrice = list.filter((wish) => wish.price !== null).length;
+  const onLuna = list.filter((wish) => wish.game.luna !== undefined).length;
   const hasPriceTargets = list.some(({ game }) =>
     game.wishlist_stores.length > 0 || game.manual_wishes.some((wish) => wish.family === "pc"),
   );
@@ -108,8 +124,11 @@ export function Wishlist({
           <p className="hint" role="status">
             {list.length} wished for
             {withPrice > 0 && ` · ${withPrice} with a price`}
+            {luna !== null && ` · ${onLuna} on Luna`}
             {captured > 0 && ` · read on ${new Date(captured * 1000).toLocaleString()}`}
           </p>
+          {luna !== null && <p className="hint">{lunaCatalogueLabel(luna)}</p>}
+          {lunaNotice && <p className="hint">{lunaNotice}</p>}
         </div>
         <div className="wishlist-actions">
           <button type="button" disabled={busy || saving} onClick={() => setAdding((value) => !value)}>
@@ -184,7 +203,7 @@ export function Wishlist({
             </thead>
             <tbody>
               {list.map((wish) => (
-                <Row key={wish.game.game_id} wish={wish} onOpen={open}
+                <Row key={wish.game.game_id} wish={wish} onOpen={open} onError={setError}
                   editing={editing} editFamily={editFamily} editModel={editModel} saving={saving}
                   onStartEdit={(id, family, model) => { setEditing(id); setEditFamily(family); setEditModel(model); setError(null); }}
                   onFamily={setEditFamily} onModel={setEditModel} onCancelEdit={() => setEditing(null)}
@@ -199,9 +218,10 @@ export function Wishlist({
   );
 }
 
-function Row({ wish, onOpen, editing, editFamily, editModel, saving, onStartEdit, onFamily, onModel, onCancelEdit, onSaveEdit, onRemove }: {
+function Row({ wish, onOpen, onError, editing, editFamily, editModel, saving, onStartEdit, onFamily, onModel, onCancelEdit, onSaveEdit, onRemove }: {
   wish: Wish;
   onOpen: (url: string) => void;
+  onError: (message: string) => void;
   editing: string | null;
   editFamily: PlatformFamily;
   editModel: string;
@@ -219,6 +239,7 @@ function Row({ wish, onOpen, editing, editFamily, editModel, saving, onStartEdit
     <tr>
       <td>
         <strong className="wish-title">{game.title}</strong>
+        <LunaLink row={game} onError={onError} />
         <span className="hint">
           {game.wishlist_stores.length > 0 && `Store wishlist: ${game.wishlist_stores.join(" · ")}`}
           {/* You have it and you still want it: that occurs when you want it in

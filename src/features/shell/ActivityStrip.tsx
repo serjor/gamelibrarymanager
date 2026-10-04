@@ -27,6 +27,8 @@ function operationLabel(operation: string): string {
       return "Matching";
     case "prices":
       return "Updating prices";
+    case "luna":
+      return "Reading the Luna catalogue";
     case "disconnect":
       return "Disconnecting";
     case "connector":

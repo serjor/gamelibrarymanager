@@ -82,7 +82,7 @@ fn game(title: &str) -> Game {
 }
 
 #[tokio::test]
-async fn one_thousand_games_come_in_one_query() {
+async fn one_thousand_games_come_in_one_query_and_luna_in_one_more() {
     let db = Database::in_memory().await.expect("database");
     let account = StoreAccountRepository(&db)
         .upsert(&StoreAccount {
@@ -138,11 +138,14 @@ async fn one_thousand_games_come_in_one_query() {
 
     assert_eq!(rows.len(), 1000);
     assert!(rows[0].sort_title < rows[999].sort_title, "they are sorted");
-    // An exact `1` is also a test of the counter itself: if the logger did not
+    // Two: the library, and the Luna catalogue that marks it. The second one
+    // does not grow with the library, which is what this test watches. An
+    // exact number is also a test of the counter itself: if the logger did not
     // install, this would be 0 and the test would still fail.
     assert_eq!(
-        made, 1,
-        "all of the library must come in one query; {made} statements for one \
-         thousand games means that somebody added one query for each game"
+        made, 2,
+        "all of the library must come in one query, and Luna in one more; {made} \
+         statements for one thousand games means that somebody added one query \
+         for each game"
     );
 }

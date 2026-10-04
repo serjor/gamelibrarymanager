@@ -3,6 +3,7 @@ import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/a
 import { STATUSES, STATUS_LABEL } from "../../lib/status";
 import { isNoLongerInStore } from "../library/filters";
 import { GameArtwork } from "./GameArtwork";
+import { LunaLink } from "./LunaLink";
 import { DURATIONS, formatDuration, submissionsLabel } from "./timeToBeat";
 
 /**
@@ -125,6 +126,10 @@ export function GameDetail({
         {row.wishlist_stores.length > 0 && ` · Wished for in: ${row.wishlist_stores.join(", ")}`}
         {row.manual_wishes.length > 0 && ` · Wanted for: ${row.manual_wishes.map((wish) => wish.model || wish.family).join(", ")}`}
       </p>
+
+      {/* Before the purchase and before the status: you can play it today with
+          Prime. Nothing appears when the game is not on Luna. */}
+      <LunaLink row={row} onError={setError} />
 
       {/* The summary comes from IGDB, thus it is absent exactly in the records
           that came from the title of the store. To say that is better than an

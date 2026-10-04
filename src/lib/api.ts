@@ -139,6 +139,42 @@ export interface LibraryRow {
   status: PlayStatus | null;
   rating: number | null;
   notes: string | null;
+  /**
+   * The game is in the Luna catalogue that Prime includes. Absent when Luna is
+   * switched off or the game is not in it: Rust does not write the field then.
+   */
+  luna?: LunaMark;
+}
+
+/** The title as Luna writes it, and the address of its page. */
+export interface LunaMark {
+  title: string;
+  url: string;
+}
+
+export interface LunaSettings {
+  country: string;
+  /** The domain of the Luna web page for that country. */
+  site: string;
+  /**
+   * The country that the last answer of Luna gave. Amazon selects the catalogue
+   * from the connection, thus it can differ from `country`.
+   */
+  territory: string | null;
+  /** Seconds from the epoch. `null` until the first refresh succeeds. */
+  refreshed_at: number | null;
+}
+
+export interface LunaView {
+  /** `null` when Luna is switched off. */
+  settings: LunaSettings | null;
+  /** The countries that the user can select. */
+  countries: string[];
+}
+
+export interface LunaReport {
+  games: number;
+  territory: string | null;
 }
 
 /** One save: the same four fields that `setUserState` takes apart. */
@@ -236,6 +272,12 @@ export const api = {
   setItadCredentials: (key: string, country: string) =>
     invoke<void>("set_itad_credentials", { key, country }),
   refreshPrices: () => invoke<PriceReport>("refresh_prices"),
+  lunaSettings: () => invoke<LunaView>("luna_settings"),
+  /** Switches Luna on, or changes the country, and asks for the catalogue. */
+  setLunaCountry: (country: string) => invoke<LunaReport>("set_luna_country", { country }),
+  /** Switches Luna off: the catalogue and every mark go. Nothing else changes. */
+  disableLuna: () => invoke<void>("disable_luna"),
+  refreshLuna: () => invoke<LunaReport>("refresh_luna"),
   prices: () => invoke<PriceRow[]>("prices"),
   resolveIdentities: () => invoke<IdentityReport>("resolve_identities"),
   reviewQueue: () => invoke<ReviewItem[]>("review_queue"),
