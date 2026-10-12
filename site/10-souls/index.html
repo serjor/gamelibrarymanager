@@ -1,0 +1,852 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.classList.add('js');</script>
+<title>Game Library Manager — Bonfire</title>
+<meta name="description" content="Game Library Manager is a free desktop app that puts the games you own on Steam, GOG and Epic into one local library. No server, no accounts.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231E2633'/%3E%3Crect x='7' y='10' width='11' height='13' rx='2' fill='%23E8B25A'/%3E%3Crect x='11' y='7' width='11' height='13' rx='2' fill='%233A5BD9'/%3E%3Crect x='15' y='12' width='10' height='12' rx='2' fill='%23E0703A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0908;
+  --bg-2: #120f0c;
+  --bone: #d8d2c4;
+  --ember: #e07b2c;
+  --gold: #b39b5a;
+  --dim: #9a937f;
+  --line: #3a3731;
+  --line-dim: #24211d;
+  --serif-body: 'EB Garamond', Garamond, Georgia, serif;
+  --serif-lore: 'Cormorant Garamond', 'EB Garamond', Garamond, Georgia, serif;
+  --caps: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--bg); scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--bone);
+  font-family: var(--serif-body);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+img, svg { display: block; max-width: 100%; }
+p { margin: 0 0 1em; }
+a { color: var(--gold); text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+a:hover { color: var(--ember); }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 4px; border-radius: 2px; }
+
+.wrap { width: 100%; max-width: 1040px; margin: 0 auto; padding: 0 clamp(16px, 5vw, 56px); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 40px 0 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 42% at 50% 100%, rgba(224, 123, 44, 0.20), transparent 72%),
+    radial-gradient(ellipse 40% 26% at 50% 100%, rgba(224, 123, 44, 0.12), transparent 80%),
+    var(--bg);
+}
+#ash {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+.hero-top { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; }
+.mark { width: 52px; height: 52px; opacity: 0.9; }
+.fade-rule {
+  width: min(520px, 84%);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent);
+}
+.hero h1 {
+  margin: 0;
+  font-family: var(--caps);
+  font-weight: 400;
+  text-transform: uppercase;
+  font-size: clamp(1.7rem, 6.2vw, 4.2rem);
+  line-height: 1.12;
+  letter-spacing: 0.14em;
+  color: var(--bone);
+  padding: 0 16px;
+  max-width: 18ch;
+}
+.kindle-band {
+  width: 100%;
+  padding: clamp(34px, 6vh, 60px) 16px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(18, 15, 12, 0.96) 18%,
+    rgba(18, 15, 12, 0.96) 82%,
+    transparent 100%);
+  border-top: 1px solid var(--line-dim);
+  border-bottom: 1px solid var(--line-dim);
+}
+.kindle {
+  margin: 0;
+  font-family: var(--serif-lore);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: clamp(2.1rem, 7.4vw, 5.6rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-shadow: 0 0 28px rgba(224, 123, 44, 0.30);
+  animation: kindle 3.2s ease-out 0.5s both;
+}
+@keyframes kindle {
+  from { opacity: 0; letter-spacing: 0.22em; }
+  to   { opacity: 1; letter-spacing: 0.06em; }
+}
+.hero-foot { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; padding: 0 16px; }
+.lede {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--bone);
+  font-size: 1.12rem;
+}
+.press {
+  font-family: var(--caps);
+  font-size: 0.85rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  padding: 8px 4px;
+  animation: flicker 4.5s ease-in-out infinite;
+}
+.press:hover { color: var(--ember); }
+@keyframes flicker {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.95; }
+}
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--caps);
+  font-size: 0.74rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.menu a { color: var(--dim); text-decoration: none; padding: 4px 0; }
+.menu a:hover { color: var(--bone); }
+
+/* ---------- Sections ---------- */
+section {
+  padding: clamp(80px, 13vh, 150px) 0 0;
+}
+.section-head { text-align: center; margin-bottom: clamp(40px, 7vh, 64px); }
+.numeral {
+  display: block;
+  font-family: var(--caps);
+  font-size: 0.72rem;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+h2 {
+  margin: 0 0 14px;
+  font-family: var(--caps);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3.6vw, 2.1rem);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+.sub {
+  margin: 0 auto;
+  max-width: 34rem;
+  color: var(--dim);
+  font-style: italic;
+  font-family: var(--serif-lore);
+  font-size: 1.3rem;
+}
+.diamond-rule {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 26px auto 0;
+  width: min(300px, 70%);
+}
+.diamond-rule::before, .diamond-rule::after {
+  content: ""; flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line));
+}
+.diamond-rule::after { background: linear-gradient(270deg, transparent, var(--line)); }
+.diamond-rule span {
+  width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); opacity: 0.7;
+}
+
+/* ---------- Items (inventory) ---------- */
+.inventory {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(32px, 6vw, 72px);
+  align-items: start;
+}
+.slots {
+  display: grid;
+  grid-template-columns: repeat(4, 84px);
+  gap: 10px;
+}
+.slot {
+  appearance: none;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--dim);
+  background: radial-gradient(circle at 50% 30%, #1d1914 0%, #0d0b09 75%);
+  border: 1px solid var(--line);
+  transition: border-color 1.2s ease, color 1.2s ease, box-shadow 1.2s ease;
+}
+.slot:hover { color: var(--bone); border-color: #554f45; }
+.slot[aria-pressed="true"] {
+  color: var(--bone);
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px rgba(179, 155, 90, 0.22), 0 0 22px rgba(224, 123, 44, 0.14);
+}
+.ico { width: 48%; height: 48%; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.detail {
+  min-height: 300px;
+  padding-left: clamp(24px, 4vw, 48px);
+  border-left: 1px solid var(--line-dim);
+}
+.detail article { animation: fadeIn 1.4s ease both; }
+.detail article + article { margin-top: 48px; }
+.detail .big { width: 56px; height: 56px; margin-bottom: 18px; fill: none; stroke: var(--gold); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.detail h3 {
+  margin: 0 0 14px;
+  font-family: var(--caps);
+  font-weight: 400;
+  font-size: 1.35rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+.lore {
+  margin: 0 0 16px;
+  font-family: var(--serif-lore);
+  font-style: italic;
+  font-size: clamp(1.4rem, 2.6vw, 1.75rem);
+  line-height: 1.3;
+  color: var(--bone);
+  max-width: 28ch;
+}
+.plain { margin: 0; color: var(--dim); font-size: 1rem; max-width: 52ch; }
+.plain b {
+  font-family: var(--caps); font-weight: 400; font-size: 0.7rem;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold);
+  margin-right: 8px;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Messages ---------- */
+.messages {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 40rem;
+  display: grid;
+  gap: 40px;
+}
+.messages li {
+  position: relative;
+  padding: 0 0 0 36px;
+  text-align: left;
+}
+.messages li::before {
+  content: "";
+  position: absolute;
+  left: 4px; top: 0.62em;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--ember);
+  box-shadow: 0 0 10px 2px rgba(224, 123, 44, 0.55), 0 0 26px 6px rgba(224, 123, 44, 0.16);
+}
+.messages q {
+  display: block;
+  quotes: none;
+  font-family: var(--serif-lore);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.35rem, 3vw, 1.7rem);
+  line-height: 1.25;
+  color: var(--bone);
+  margin-bottom: 6px;
+}
+.messages p { margin: 0; color: var(--dim); font-size: 1.02rem; }
+
+/* ---------- Bonfire / Estus ---------- */
+.two-col-text { max-width: 40rem; margin: 0 auto; }
+.bonfire-lead {
+  font-family: var(--serif-lore);
+  font-size: clamp(1.4rem, 3vw, 1.75rem);
+  line-height: 1.35;
+  color: var(--bone);
+  text-align: center;
+  margin: 0 auto 44px;
+  max-width: 26ch;
+}
+.facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--line-dim);
+  border-bottom: 1px solid var(--line-dim);
+}
+.facts div { padding: 22px 18px; text-align: center; }
+.facts div + div { border-left: 1px solid var(--line-dim); }
+.facts dt {
+  font-family: var(--caps); font-size: 0.7rem; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 8px;
+}
+.facts dd { margin: 0; color: var(--bone); font-size: 1rem; }
+
+.estus { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.estus li { padding: 26px 0; border-bottom: 1px solid var(--line-dim); }
+.estus li:first-child { border-top: 1px solid var(--line-dim); }
+.estus h3 {
+  margin: 0 0 6px;
+  font-family: var(--caps); font-weight: 400; font-size: 1.05rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--bone);
+}
+.estus .tag {
+  font-family: var(--caps); font-size: 0.66rem; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--gold); margin-left: 10px; vertical-align: 2px;
+}
+.estus p { margin: 0; color: var(--dim); }
+
+/* ---------- Why ---------- */
+.why p { color: var(--bone); }
+.why p.muted { color: var(--dim); }
+.refused {
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 26px;
+  font-family: var(--caps);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.refused .label { color: var(--gold); width: 100%; text-align: center; letter-spacing: 0.3em; font-size: 0.66rem; }
+.refuse {
+  position: relative;
+  display: inline-block;
+  min-width: 13ch;
+  text-align: center;
+  color: var(--dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--line);
+  cursor: help;
+}
+.refuse::after {
+  content: attr(data-refused);
+  position: absolute;
+  inset: -4px -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--ember);
+  text-decoration: none;
+  letter-spacing: 0.28em;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.refuse:hover::after,
+.refuse:focus-visible::after { opacity: 1; }
+.refuse:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; }
+
+/* ---------- Travel ---------- */
+.bonfires { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-dim); max-width: none; }
+.bonfires li {
+  display: grid;
+  grid-template-columns: minmax(0, 130px) minmax(0, 1fr) auto;
+  gap: 8px 28px;
+  align-items: baseline;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--line-dim);
+}
+.bonfires h3 {
+  margin: 0;
+  font-family: var(--caps); font-weight: 400; font-size: 1rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--bone);
+}
+.bonfires .file { margin: 0; color: var(--dim); font-size: 1rem; overflow-wrap: anywhere; }
+.bonfires .file code {
+  font-family: var(--mono); font-size: 0.86rem; color: var(--bone);
+  background: none; padding: 0;
+}
+.bonfires .go {
+  font-family: var(--caps); font-size: 0.72rem; letter-spacing: 0.22em;
+  text-transform: uppercase; text-decoration: none; white-space: nowrap;
+}
+.bonfires .go:hover { color: var(--ember); }
+.cmd {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-dim);
+  color: var(--bone);
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cmd .p { color: var(--dim); user-select: none; }
+
+/* ---------- Footer ---------- */
+footer {
+  margin-top: clamp(96px, 16vh, 160px);
+  padding: 44px 0 56px;
+  border-top: 1px solid var(--line-dim);
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.95rem;
+}
+footer .mini {
+  font-family: var(--caps); font-size: 0.7rem; letter-spacing: 0.24em;
+  text-transform: uppercase; margin: 0 0 14px;
+}
+footer p { margin: 0 auto 10px; max-width: 46rem; }
+footer .legal { font-size: 0.85rem; color: #7d776b; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px) {
+  body { font-size: 1.06rem; }
+  .inventory { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+  .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .detail { border-left: 0; padding-left: 0; min-height: 0; border-top: 1px solid var(--line-dim); padding-top: 28px; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts div + div { border-left: 0; border-top: 1px solid var(--line-dim); }
+  .bonfires li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .bonfires .go { justify-self: start; margin-top: 4px; }
+  .refuse { min-width: 0; }
+}
+
+html:not(.js) .slots { display: none; }
+html:not(.js) .inventory { grid-template-columns: minmax(0, 1fr); }
+html:not(.js) .detail { border-left: 0; padding-left: 0; }
+html:not(.js) .detail article { border-top: 1px solid var(--line-dim); padding-top: 28px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .kindle { opacity: 1; letter-spacing: 0.06em; }
+  .detail article { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v2"/></symbol>
+  <symbol id="i-ring" viewBox="0 0 24 24"><circle cx="12" cy="14" r="6.5"/><path d="M12 7.5 9.5 4.5 12 2.5l2.5 2z"/><path d="M9 13.5a3.2 3.2 0 0 1 3-2"/></symbol>
+  <symbol id="i-sigil" viewBox="0 0 24 24"><path d="M12 2.5 21.5 12 12 21.5 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-3M12 18v-3M9 12H6M18 12h-3"/></symbol>
+  <symbol id="i-tome" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7.5 4.5 4 4.8v14c3.5-.3 6 .2 8 1.7 2-1.5 4.5-2 8-1.7v-14c-3.5-.3-6 .2-8 1.7Z"/><path d="M12 6.5v14"/></symbol>
+  <symbol id="i-lantern" viewBox="0 0 24 24"><path d="M9 9.5 12 5.5l3 4"/><path d="M12 3v2.5"/><rect x="7.5" y="9.5" width="9" height="10.5" rx="1.2"/><path d="M10.5 9.5v10.5M13.5 9.5v10.5M5.5 21h13"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M15.5 3.5a8.5 8.5 0 1 0 5 14.6A7 7 0 0 1 15.5 3.5Z"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 3.5v1.5M12 19v1.5"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7 4.5h10.5v12.5a2.5 2.5 0 0 1-2.5 2.5H7a2.5 2.5 0 0 1-2.5-2.5V7A2.5 2.5 0 0 1 7 4.5Z"/><path d="M9.5 9h5M9.5 12h5M9.5 15h3.5"/></symbol>
+</svg>
+
+<header class="hero">
+  <canvas id="ash" aria-hidden="true"></canvas>
+
+  <div class="hero-top wrap">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <rect x="7" y="10" width="11" height="13" rx="2" fill="#E8B25A"/>
+      <rect x="11" y="7" width="11" height="13" rx="2" fill="#3A5BD9"/>
+      <rect x="15" y="12" width="10" height="12" rx="2" fill="#E0703A"/>
+    </svg>
+    <div class="fade-rule" aria-hidden="true"></div>
+    <h1>Game Library Manager</h1>
+    <div class="fade-rule" aria-hidden="true"></div>
+  </div>
+
+  <div class="kindle-band">
+    <p class="kindle">Library Kindled</p>
+  </div>
+
+  <div class="hero-foot">
+    <p class="lede">One library for the games you own on Steam, GOG and Epic. The same game bought twice becomes one record. Everything stays on your machine.</p>
+    <a class="press" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Press any button</a>
+    <nav aria-label="Sections">
+      <ul class="menu">
+        <li><a href="#items">Items</a></li>
+        <li><a href="#messages">Messages</a></li>
+        <li><a href="#bonfire">Bonfire</a></li>
+        <li><a href="#estus">Estus</a></li>
+        <li><a href="#why">Why this path</a></li>
+        <li><a href="#travel">Travel</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="items" aria-labelledby="items-title">
+    <div class="section-head">
+      <span class="numeral">I</span>
+      <h2 id="items-title">Items</h2>
+      <p class="sub">What you carry into the library. Select an item to read it.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+
+    <div class="inventory">
+      <div class="slots" role="group" aria-label="Items">
+        <button class="slot" type="button" data-item="item-steam" aria-controls="item-steam" aria-pressed="false" aria-label="Steam Key"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-key"/></svg></button>
+        <button class="slot" type="button" data-item="item-gog" aria-controls="item-gog" aria-pressed="false" aria-label="GOG Ring"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-ring"/></svg></button>
+        <button class="slot" type="button" data-item="item-epic" aria-controls="item-epic" aria-pressed="false" aria-label="Epic Sigil"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-sigil"/></svg></button>
+        <button class="slot" type="button" data-item="item-igdb" aria-controls="item-igdb" aria-pressed="false" aria-label="Tome of IGDB"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-tome"/></svg></button>
+        <button class="slot" type="button" data-item="item-itad" aria-controls="item-itad" aria-pressed="false" aria-label="Lantern of ITAD"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-lantern"/></svg></button>
+        <button class="slot" type="button" data-item="item-luna" aria-controls="item-luna" aria-pressed="false" aria-label="Charm of Luna"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-moon"/></svg></button>
+        <button class="slot" type="button" data-item="item-wish" aria-controls="item-wish" aria-pressed="false" aria-label="Wish Coin"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-coin"/></svg></button>
+        <button class="slot" type="button" data-item="item-export" aria-controls="item-export" aria-pressed="false" aria-label="Scroll of Export"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg></button>
+      </div>
+
+      <div class="detail" aria-live="polite">
+        <article id="item-steam">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-key"/></svg>
+          <h3>Steam Key</h3>
+          <p class="lore">Given by the one store that speaks openly. With it, the library reads what you own.</p>
+          <p class="plain"><b>In plain terms</b>Steam's official API, with your own Steam API key.</p>
+        </article>
+        <article id="item-gog">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-ring"/></svg>
+          <h3>GOG Ring</h3>
+          <p class="lore">This store keeps no public door. You sign in at its own gate, and what it leaves behind stays in your keyring.</p>
+          <p class="plain"><b>In plain terms</b>GOG has no public API. You log in on GOG's own page. The app never asks for your password.</p>
+        </article>
+        <article id="item-epic">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-sigil"/></svg>
+          <h3>Epic Sigil</h3>
+          <p class="lore">Borrowed from the launcher's own tongue. It may fall silent any day. When it does, extinguish it; what it brought remains.</p>
+          <p class="plain"><b>In plain terms</b>Epic has no public API. This uses its launcher's private API, so it can break at any time. Switch it off and your games and notes stay.</p>
+        </article>
+        <article id="item-igdb">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-tome"/></svg>
+          <h3>Tome of IGDB</h3>
+          <p class="lore">Notes kept by scholars of the realm: covers, metadata, and how long each journey takes.</p>
+          <p class="plain"><b>In plain terms</b>Optional. Covers, metadata and time to beat, as players report it to IGDB. Without it, titles come from the store and everything still works.</p>
+        </article>
+        <article id="item-itad">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-lantern"/></svg>
+          <h3>Lantern of ITAD</h3>
+          <p class="lore">A light for the wishes. It shows what they cost now, where, and how low they have gone.</p>
+          <p class="plain"><b>In plain terms</b>Optional. IsThereAnyDeal prices for your wishlist: current price, the store, the historical low. Needs a free ITAD key and your country.</p>
+        </article>
+        <article id="item-luna">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-moon"/></svg>
+          <h3>Charm of Luna</h3>
+          <p class="lore">A cloud of play, held in a small charm. The Prime catalogue carries it. No key is asked.</p>
+          <p class="plain"><b>In plain terms</b>Optional. Wishes that are in the Amazon Luna catalogue that Prime includes are marked On Luna. No credential needed.</p>
+        </article>
+        <article id="item-wish">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-coin"/></svg>
+          <h3>Wish Coin</h3>
+          <p class="lore">Cast by your own hand. One for each device. A console gets no price.</p>
+          <p class="plain"><b>In plain terms</b>Add wishes by hand, one for each device, on the same record as the store copies.</p>
+        </article>
+        <article id="item-export">
+          <svg class="big" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-scroll"/></svg>
+          <h3>Scroll of Export</h3>
+          <p class="lore">Your records, written out so you can carry them away.</p>
+          <p class="plain"><b>In plain terms</b>Export your data. Disconnect a store and the records, links and notes you wrote stay.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="messages" aria-labelledby="messages-title">
+    <div class="section-head">
+      <span class="numeral">II</span>
+      <h2 id="messages-title">Messages</h2>
+      <p class="sub">Notes left on the ground by those who came before.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+    <ul class="messages">
+      <li>
+        <q>Try local-first</q>
+        <p>Your library is one SQLite file on your machine. Nothing needs a server to work.</p>
+      </li>
+      <li>
+        <q>Be wary of servers</q>
+        <p>The app runs no server. A server holding store tokens would break the stores' terms and invite attack.</p>
+      </li>
+      <li>
+        <q>No password ahead</q>
+        <p>The app never asks for a store password. You sign in on the store's own login page.</p>
+      </li>
+      <li>
+        <q>Duplicates ahead, therefore one record</q>
+        <p>The same game bought on two stores is shown as one record.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="bonfire" aria-labelledby="bonfire-title">
+    <div class="section-head">
+      <span class="numeral">III</span>
+      <h2 id="bonfire-title">Bonfire</h2>
+      <p class="sub">Rest here. Your progress is kept on your machine.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+    <div class="two-col-text">
+      <p class="bonfire-lead">All your data lives in one SQLite file on your machine. No server. No accounts.</p>
+      <dl class="facts">
+        <div>
+          <dt>Data</dt>
+          <dd>One SQLite file, on your machine.</dd>
+        </div>
+        <div>
+          <dt>Accounts</dt>
+          <dd>None.</dd>
+        </div>
+        <div>
+          <dt>Credentials</dt>
+          <dd>In the system keyring, or an encrypted file if there is no keyring.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section id="estus" aria-labelledby="estus-title">
+    <div class="section-head">
+      <span class="numeral">IV</span>
+      <h2 id="estus-title">Estus</h2>
+      <p class="sub">Optional blessings. The library works without any of them.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+    <ul class="estus two-col-text">
+      <li>
+        <h3>IGDB <span class="tag">Optional</span></h3>
+        <p>Covers, metadata and time to beat: main story, main plus extras, or completionist, as players report it.</p>
+      </li>
+      <li>
+        <h3>IsThereAnyDeal <span class="tag">Optional</span></h3>
+        <p>Wishlist prices, sorted by discount: the current price, the store that sells it, and the historical low. Needs a free ITAD key and your country.</p>
+      </li>
+      <li>
+        <h3>Amazon Luna <span class="tag">Optional</span></h3>
+        <p>Wishes and games in the Prime Luna catalogue are marked On Luna. No key and no credential.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section id="why" class="why" aria-labelledby="why-title">
+    <div class="section-head">
+      <span class="numeral">V</span>
+      <h2 id="why-title">Why this path</h2>
+      <p class="sub">A desktop app, not a website.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+    <div class="two-col-text">
+      <p>Store sign-in can only be defended on your own machine. A server that keeps tokens would break store terms, become an attack target, and one IP ban would stop everyone. Playnite, Heroic and Lutris are desktop apps too.</p>
+      <p class="muted">The app never downloads or launches games. It is a library, not a launcher.</p>
+      <ul class="refused" aria-label="Considered and refused">
+        <li class="label">Considered and refused</li>
+        <li><span class="refuse" tabindex="0" data-refused="SYNC REFUSED">Use a server</span></li>
+        <li><span class="refuse" tabindex="0" data-refused="NO ACCOUNT">Accounts</span></li>
+        <li><span class="refuse" tabindex="0" data-refused="NOT YOURS">A hosted copy</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="travel" aria-labelledby="travel-title">
+    <div class="section-head">
+      <span class="numeral">VI</span>
+      <h2 id="travel-title">Travel</h2>
+      <p class="sub">Fast travel to the bonfires where the app can be had.</p>
+      <div class="diamond-rule" aria-hidden="true"><span></span></div>
+    </div>
+    <ul class="bonfires two-col-text">
+      <li>
+        <h3>Windows</h3>
+        <p class="file"><code>Game.Library.Manager_0.10.0_x64-setup.exe</code>, or the <code>.msi</code>.</p>
+        <a class="go" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download</a>
+      </li>
+      <li>
+        <h3>Linux</h3>
+        <div>
+          <p class="file"><code>Game.Library.Manager_0.10.0_amd64.AppImage</code>, or the <code>.deb</code> or <code>.rpm</code>.</p>
+          <pre class="cmd"><span class="p">$ </span>chmod +x Game.Library.Manager_*_amd64.AppImage
+<span class="p">$ </span>./Game.Library.Manager_*_amd64.AppImage</pre>
+        </div>
+        <a class="go" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download</a>
+      </li>
+      <li>
+        <h3>macOS</h3>
+        <p class="file"><code>Game.Library.Manager_0.10.0_aarch64.dmg</code>, for Apple silicon.</p>
+        <a class="go" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download</a>
+      </li>
+      <li>
+        <h3>Source</h3>
+        <div>
+          <p class="file">Build it yourself.</p>
+          <pre class="cmd"><span class="p">$ </span>bun install
+<span class="p">$ </span>bun run tauri dev</pre>
+        </div>
+        <a class="go" href="https://github.com/serjor/gamelibrarymanager">Repository</a>
+      </li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p class="mini">Game Library Manager 0.10.0</p>
+  <p>Free software under the GPL-3.0-or-later licence. Source code and issues on <a href="https://github.com/serjor/gamelibrarymanager">GitHub</a>.</p>
+  <p class="legal">Not affiliated with Steam, GOG, Epic Games, IGDB, IsThereAnyDeal or Amazon. Their names belong to their owners.</p>
+</footer>
+
+<script>
+(function () {
+  var slots = Array.prototype.slice.call(document.querySelectorAll('.slot'));
+  var articles = Array.prototype.slice.call(document.querySelectorAll('.detail article'));
+
+  function show(id) {
+    slots.forEach(function (s) {
+      s.setAttribute('aria-pressed', String(s.getAttribute('data-item') === id));
+    });
+    articles.forEach(function (a) {
+      a.hidden = a.id !== id;
+    });
+  }
+
+  if (slots.length) {
+    show(slots[0].getAttribute('data-item'));
+
+    slots.forEach(function (s, i) {
+      var id = s.getAttribute('data-item');
+      s.addEventListener('mouseenter', function () { show(id); });
+      s.addEventListener('focus', function () { show(id); });
+      s.addEventListener('click', function () { show(id); });
+      s.addEventListener('keydown', function (e) {
+        var step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 4, ArrowUp: -4 }[e.key];
+        if (!step) return;
+        var next = Math.min(slots.length - 1, Math.max(0, i + step));
+        e.preventDefault();
+        slots[next].focus();
+      });
+    });
+  }
+
+  // Ash drifting up from the bonfire glow. Static when reduced motion is requested.
+  var canvas = document.getElementById('ash');
+  if (canvas && canvas.getContext) {
+    var ctx = canvas.getContext('2d');
+    var motion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    var W = 0, H = 0, parts = [], raf = 0;
+
+    function spawn(anywhere) {
+      return {
+        x0: W * (0.5 + (Math.random() - 0.5) * 0.7),
+        y: anywhere ? Math.random() * H : H + Math.random() * 24,
+        x: 0,
+        r: 0.5 + Math.random() * 1.3,
+        vy: 0.25 + Math.random() * 0.6,
+        ph: Math.random() * 6.28,
+        sp: 0.008 + Math.random() * 0.016,
+        ember: Math.random() < 0.6,
+        a: 0.35 + Math.random() * 0.5
+      };
+    }
+
+    function size() {
+      var rect = canvas.getBoundingClientRect();
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      W = rect.width;
+      H = rect.height;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = Math.min(90, Math.round(W / 14));
+      parts = [];
+      for (var i = 0; i < n; i++) parts.push(spawn(true));
+    }
+
+    function draw(p) {
+      p.x = p.x0 + Math.sin(p.ph) * 14;
+      var alpha = p.a * Math.min(1, (H - p.y) / (H * 0.2)) * Math.min(1, p.y / (H * 0.5));
+      if (alpha <= 0) return;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+      ctx.fillStyle = p.ember
+        ? 'rgba(224,123,44,' + alpha.toFixed(3) + ')'
+        : 'rgba(216,210,196,' + (alpha * 0.45).toFixed(3) + ')';
+      ctx.fill();
+    }
+
+    function frame() {
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i];
+        p.y -= p.vy;
+        p.ph += p.sp;
+        if (p.y < -10) parts[i] = spawn(false);
+        draw(parts[i]);
+      }
+      raf = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      cancelAnimationFrame(raf);
+      size();
+      if (motion && motion.matches) {
+        ctx.clearRect(0, 0, W, H);
+        parts.forEach(draw);
+      } else {
+        raf = requestAnimationFrame(frame);
+      }
+    }
+
+    window.addEventListener('resize', start);
+    start();
+  }
+})();
+</script>
+</body>
+</html>
