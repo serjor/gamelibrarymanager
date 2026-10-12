@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Library Manager — Any% Library</title>
+<meta name="description" content="Game Library Manager puts the games you own on Steam, GOG and Epic in one local library. Removes duplicates, keeps your backlog notes, and never launches a game. Desktop app for Windows, Linux and macOS.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231E2633'/%3E%3Crect x='11' y='14' width='26' height='22' rx='4' fill='%233A5BD9'/%3E%3Crect x='19' y='22' width='26' height='22' rx='4' fill='%23E0703A'/%3E%3Crect x='31' y='33' width='20' height='16' rx='3' fill='%23E8B25A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap">
+<style>
+:root {
+  --bg: #0d0f12;
+  --bg-deep: #090b0e;
+  --panel: #13161b;
+  --panel-hi: #1a1e25;
+  --line: #262c35;
+  --text: #e7eaf0;
+  --muted: #8f99a6;
+  --gold: #FFC400;
+  --ahead: #29D16A;
+  --behind: #FF4D4D;
+  --neutral: #8f99a6;
+  --dev: #7fd3ff;
+  --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --display: "Rajdhani", "Barlow Condensed", "Arial Narrow", "Helvetica Neue", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+a { color: var(--text); }
+a:focus-visible,
+summary:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+code, kbd, .mono { font-family: var(--mono); }
+code { font-size: 0.85em; }
+
+h1, h2, h3 {
+  font-family: var(--display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  margin: 0;
+}
+
+p { margin: 0 0 0.9em; }
+
+.wrap {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 40px);
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -60px;
+  background: var(--gold);
+  color: #000;
+  padding: 8px 12px;
+  font-family: var(--mono);
+  font-size: 14px;
+  z-index: 10;
+}
+.skip:focus { top: 8px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-deep);
+}
+.topbar .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.logo { width: 30px; height: 30px; flex: none; }
+.topnav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.topnav a {
+  font-family: var(--mono);
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.topnav a:hover { color: var(--text); }
+
+/* ---------- hero ---------- */
+.hero {
+  padding: clamp(36px, 7vw, 80px) 0 clamp(40px, 6vw, 72px);
+  display: grid;
+  gap: 40px;
+  align-items: end;
+}
+.kicker {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-size: clamp(40px, 6vw, 80px);
+  line-height: 0.95;
+  margin-bottom: 18px;
+}
+.hero h1 .sep { color: var(--muted); font-weight: 500; }
+.hero h1 .pct { color: var(--gold); }
+.category {
+  font-family: var(--mono);
+  font-size: 15px;
+  color: var(--text);
+  margin-bottom: 22px;
+}
+.lede {
+  max-width: 34em;
+  color: var(--muted);
+  font-size: 19px;
+}
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 26px;
+}
+.btn {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: var(--panel);
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #0d0f12;
+}
+.btn.primary:hover { background: #ffd43a; }
+
+/* timer panel: the LiveSplit block */
+.timer-panel {
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+  padding: 18px 20px 20px;
+  min-width: 0;
+}
+.timer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+.timer {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: clamp(44px, 6.4vw, 84px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text);
+}
+.timer-note {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.pb {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  align-items: baseline;
+  background: var(--panel);
+  border-left: 3px solid var(--ahead);
+  padding: 12px 14px;
+}
+.pb-label {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ahead);
+}
+.pb-val {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text);
+}
+.pb-note {
+  grid-column: 1 / -1;
+  font-size: 16px;
+  color: var(--muted);
+}
+.timer-controls {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.timer-controls button {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.timer-controls button:hover { border-color: var(--muted); }
+.keys {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+}
+kbd {
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  color: var(--text);
+  background: var(--panel);
+  font-size: 12px;
+}
+
+/* ---------- sections ---------- */
+.section {
+  padding: clamp(40px, 6vw, 72px) 0;
+  border-top: 1px solid var(--line);
+}
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-bottom: 24px;
+}
+.section-head h2 { font-size: clamp(30px, 4.5vw, 44px); }
+.section-head p {
+  margin: 0;
+  color: var(--muted);
+  max-width: 30em;
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.main-grid {
+  display: grid;
+  gap: 40px;
+  align-items: start;
+}
+
+/* ---------- splits ---------- */
+.legend {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.legend li { display: flex; align-items: center; gap: 8px; }
+.sw { width: 10px; height: 10px; display: inline-block; }
+.sw.gold { background: var(--gold); }
+.sw.ahead { background: var(--ahead); }
+.sw.behind { background: var(--behind); }
+.sw.neutral { background: var(--neutral); }
+
+.split-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.split-head {
+  display: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 10px 0 10px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.split {
+  position: relative;
+  border-bottom: 1px solid var(--line);
+}
+.split::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+}
+.split.gold::before { background: var(--gold); }
+
+.split summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 16px;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  padding: 14px 4px 14px 16px;
+}
+.split summary::-webkit-details-marker { display: none; }
+.split summary:hover { background: var(--panel); }
+.split[open] summary { background: var(--panel); }
+
+.split .no {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+}
+.split .name {
+  grid-column: 2;
+  grid-row: 1;
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+.split.gold .name,
+.split.gold .no { color: var(--gold); }
+.split .tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #0d0f12;
+  background: var(--gold);
+  padding: 1px 6px;
+  margin-left: 10px;
+  vertical-align: 3px;
+  letter-spacing: 0.04em;
+}
+.split .needs {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.split .delta {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-align: right;
+  white-space: nowrap;
+}
+.delta.ahead { color: var(--ahead); }
+.delta.behind { color: var(--behind); }
+.delta.neutral { color: var(--neutral); }
+.split .chev {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+  font-family: var(--mono);
+  color: var(--muted);
+  text-align: center;
+}
+.split details[open] .chev { color: var(--text); }
+.split .chev::before { content: "+"; }
+.split details[open] .chev::before { content: "\2212"; }
+
+.segment {
+  padding: 4px 16px 22px 52px;
+  color: var(--muted);
+  font-size: 17px;
+  max-width: 62ch;
+}
+.segment p { margin: 0 0 10px; }
+.segment p:last-child { margin-bottom: 0; }
+.segment strong { color: var(--text); font-weight: 700; }
+.segment ul { margin: 0 0 10px; padding-left: 18px; }
+.segment li { margin-bottom: 4px; }
+.segment .line {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  margin: 6px 0 12px;
+  overflow-wrap: anywhere;
+}
+.segment .seg-line {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- chat ---------- */
+.chat {
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  min-width: 0;
+}
+.chat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.chat-head strong { color: var(--text); letter-spacing: 0.02em; text-transform: none; font-size: 13px; }
+.chat-log {
+  padding: 8px 0;
+  margin: 0;
+}
+.msg {
+  margin: 0;
+  padding: 6px 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.msg.reply { padding-left: 30px; color: var(--muted); }
+.who { font-weight: 700; margin-right: 6px; }
+.c-green { color: var(--ahead); }
+.c-gold { color: var(--gold); }
+.c-red { color: var(--behind); }
+.c-grey { color: #c2c9d3; }
+.c-dev { color: var(--dev); }
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--dev);
+  color: #05202b;
+  padding: 0 5px;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.chat-foot {
+  border-top: 1px solid var(--line);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- route notes ---------- */
+.notes {
+  display: grid;
+  gap: 28px 40px;
+  grid-template-columns: 1fr;
+}
+.note {
+  border-top: 2px solid var(--line);
+  padding-top: 14px;
+}
+.note .label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+  display: block;
+}
+.note h3 {
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+.note p { color: var(--muted); max-width: 52ch; }
+.note .hit { color: var(--behind); }
+
+/* ---------- run submission ---------- */
+.submit {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+}
+.submit-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.submit-head strong { color: var(--text); }
+.downloads {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dl {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) auto;
+  gap: 6px 18px;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.dl:last-child { border-bottom: 0; }
+.dl .os {
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.dl .file {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.dl .meta {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.dl .get {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 9px 14px;
+  white-space: nowrap;
+}
+.dl .get:hover { background: var(--gold); color: #0d0f12; }
+.dl .linux-cmd {
+  grid-column: 2 / -1;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  color: var(--text);
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+.submit-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ---------- footer ---------- */
+.site-foot {
+  border-top: 1px solid var(--line);
+  padding: 28px 0 40px;
+  background: var(--bg-deep);
+  font-size: 15px;
+  color: var(--muted);
+}
+.site-foot .wrap {
+  display: grid;
+  gap: 12px;
+}
+.site-foot p { margin: 0; }
+.site-foot a { color: var(--text); }
+.site-foot .fine {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* ---------- wider screens ---------- */
+@media (min-width: 760px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+  .split summary {
+    grid-template-columns: 64px minmax(0, 1.2fr) minmax(0, 1.1fr) 110px 20px;
+    grid-template-rows: auto;
+    padding-left: 18px;
+  }
+  .split .no { grid-row: 1; }
+  .split .name { grid-column: 2; grid-row: 1; }
+  .split .needs { grid-column: 3; grid-row: 1; }
+  .split .delta { grid-column: 4; grid-row: 1; }
+  .split .chev { grid-column: 5; grid-row: 1; }
+  .split-head {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1.2fr) minmax(0, 1.1fr) 110px 20px;
+    column-gap: 0;
+  }
+  .split-head .h-delta { text-align: right; }
+  .split-head .h-chev { visibility: hidden; }
+  .segment { padding-left: 64px; }
+  .notes { grid-template-columns: 1fr 1fr; }
+}
+
+@media (min-width: 960px) {
+  .main-grid { grid-template-columns: minmax(0, 1fr) 320px; }
+  .main-grid .chat { position: sticky; top: 16px; }
+}
+
+@media (min-width: 1100px) {
+  .hero { gap: 64px; }
+}
+
+@media (max-width: 420px) {
+  .topnav ul { gap: 4px 14px; }
+  .dl { grid-template-columns: minmax(0, 1fr); }
+  .dl .linux-cmd { grid-column: 1; }
+  .dl .get { justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#splits">Skip to splits</a>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Game Library Manager, top of page">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="14" fill="#1E2633"/>
+        <rect x="11" y="14" width="26" height="22" rx="4" fill="#3A5BD9"/>
+        <rect x="19" y="22" width="26" height="22" rx="4" fill="#E0703A"/>
+        <rect x="31" y="33" width="20" height="16" rx="3" fill="#E8B25A"/>
+      </svg>
+      GAME LIBRARY MANAGER
+    </a>
+    <nav class="topnav" aria-label="Page sections">
+      <ul>
+        <li><a href="#splits">Splits</a></li>
+        <li><a href="#chat">Chat</a></li>
+        <li><a href="#route">Route notes</a></li>
+        <li><a href="#submit">Submit</a></li>
+        <li><a href="https://github.com/serjor/gamelibrarymanager">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy">
+        <p class="kicker">Category</p>
+        <h1 id="title">Game Library Manager <span class="sep">—</span> <span class="pct">Any%</span> Library</h1>
+        <p class="category">Steam + GOG + Epic · Local-first · v0.10.0</p>
+        <p class="lede">One library for the games you own in three stores. The same game bought twice is one record. You set your own backlog status on each game. Everything stays in one file on your machine.</p>
+        <div class="cta">
+          <a class="btn primary" href="#submit">Download v0.10.0</a>
+          <a class="btn" href="https://github.com/serjor/gamelibrarymanager">Source on GitHub</a>
+        </div>
+      </div>
+
+      <aside class="timer-panel" aria-label="Run timer">
+        <div class="timer-head">
+          <span>Game Library Manager</span>
+          <span>Any% Library</span>
+        </div>
+        <p class="timer" id="timer">0:00.00</p>
+        <p class="timer-note">This timer counts your visit, not your run.</p>
+        <div class="pb">
+          <span class="pb-label">PB</span>
+          <span class="pb-val">--:--.--</span>
+          <span class="pb-note">Yours to set. Your first real run is the one that counts.</span>
+        </div>
+        <div class="timer-controls">
+          <button type="button" id="toggle" hidden>Pause</button>
+          <p class="keys" id="keys" hidden><kbd>Space</kbd> start / pause</p>
+        </div>
+      </aside>
+    </section>
+
+    <div class="main-grid">
+
+      <section id="splits" class="splits" aria-labelledby="splits-title">
+        <span class="section-tag">Run route · 9 splits</span>
+        <div class="section-head">
+          <h2 id="splits-title">Splits</h2>
+          <p>Setup, in order. Open a split to read its segment.</p>
+        </div>
+
+        <ul class="legend" aria-label="Split colours">
+          <li><span class="sw gold" aria-hidden="true"></span>Gold: free to use</li>
+          <li><span class="sw ahead" aria-hidden="true"></span>Ahead: official path</li>
+          <li><span class="sw behind" aria-hidden="true"></span>Behind: no public API, can break</li>
+          <li><span class="sw neutral" aria-hidden="true"></span>Neutral: optional</li>
+        </ul>
+
+        <ol class="split-list">
+          <li class="split-head" aria-hidden="true">
+            <span class="h-no">No.</span>
+            <span class="h-name">Split</span>
+            <span class="h-needs">Needs</span>
+            <span class="h-delta">Delta</span>
+            <span class="h-chev"></span>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">01</span>
+                <span class="name">Install <span class="tag">FREE</span></span>
+                <span class="needs">Nothing but a download</span>
+                <span class="delta ahead">−AHEAD</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Get the file for your system. Run it. That is the install.</p>
+                <ul>
+                  <li><strong>Windows:</strong> the setup <code>.exe</code> (there is also a <code>.msi</code>).</li>
+                  <li><strong>Linux:</strong> the <code>.AppImage</code>. Make it executable, then run it. A <code>.deb</code> and <code>.rpm</code> are there too.</li>
+                  <li><strong>macOS:</strong> the <code>.dmg</code>. It is the Apple silicon (aarch64) build.</li>
+                </ul>
+                <p>Building from source: <code>bun install</code>, then <code>bun run tauri dev</code>.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">02</span>
+                <span class="name">Connect Steam <span class="tag">FREE</span></span>
+                <span class="needs">Your own Steam API key</span>
+                <span class="delta ahead">−AHEAD</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Steam is the only one of the three with an official API.</p>
+                <p>The app reads your owned games through Steam's API, with your own key. The key goes to your system keyring. If there is no keyring, it goes to an encrypted file on your machine.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">03</span>
+                <span class="name">Connect GOG <span class="tag">FREE</span></span>
+                <span class="needs">You log in on GOG's own page</span>
+                <span class="delta behind">+BEHIND</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">GOG has no public API. This split can break.</p>
+                <p>The app never asks for your GOG password. You log in on GOG's login page. If the connector breaks, switch GOG off. Your GOG games stay in the library, with your notes and status.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">04</span>
+                <span class="name">Connect Epic <span class="tag">FREE</span></span>
+                <span class="needs">You log in on Epic's own page</span>
+                <span class="delta behind">+BEHIND</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Epic is RNG. If it breaks, skip the split.</p>
+                <p>Epic has no public API. The app uses the private API of the Epic launcher. It can change or stop any day. When it does, switch Epic off and carry on. Your Epic games stay, with your notes and status.</p>
+                <p>As with GOG, you log in on Epic's page. The app never sees your Epic password.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">05</span>
+                <span class="name">Dedupe <span class="tag">FREE</span></span>
+                <span class="needs">Nothing. It runs on your machine.</span>
+                <span class="delta ahead">−AHEAD</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">The same game on two stores is one record.</p>
+                <p>Duplicates are found across Steam, GOG and Epic. The app matches the titles that each store gives. You do not need IGDB for this.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">06</span>
+                <span class="name">Set backlog <span class="tag">FREE</span></span>
+                <span class="needs">Your own status for each game</span>
+                <span class="delta ahead">−AHEAD</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Your status and notes live with the game, not with the store.</p>
+                <p>Set a backlog status on each game. Your notes stay when you disconnect a store.</p>
+                <p>The <strong>Today</strong> screen proposes what to play next. The library shows as a cover wall or as a table. Theme is Light, Dark or System.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">07</span>
+                <span class="name">IGDB <span class="tag">OPTIONAL</span></span>
+                <span class="needs">Covers, metadata, time to beat</span>
+                <span class="delta neutral">±NEUTRAL</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Optional. Without it, everything still works.</p>
+                <p>IGDB adds covers and metadata. It also gives <strong>time to beat</strong>: main story, main plus extras, and completionist. These are what players report to IGDB, not your own times.</p>
+                <p>Without IGDB, the titles from the store are used, dedupe included.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split gold">
+            <details>
+              <summary>
+                <span class="no">08</span>
+                <span class="name">ITAD prices <span class="tag">OPTIONAL</span></span>
+                <span class="needs">Free IsThereAnyDeal key, your country</span>
+                <span class="delta neutral">±NEUTRAL</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">Wishlist prices, sorted by discount.</p>
+                <p>For each wish: the current price, the store that sells it, and the lowest price on record. The list sorts by discount.</p>
+                <p>You can also add wishes by hand, one for each device. A wish for a console gets no price.</p>
+              </div>
+            </details>
+          </li>
+
+          <li class="split">
+            <details>
+              <summary>
+                <span class="no">09</span>
+                <span class="name">Luna</span>
+                <span class="needs">Amazon Prime. No credential.</span>
+                <span class="delta neutral">±NEUTRAL</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="segment">
+                <p class="seg-line">A wish that is in Luna's Prime catalogue says "On Luna".</p>
+                <p>The app reads the Amazon Luna catalogue that Prime includes. No login to Amazon is needed. If the game is in the catalogue, the wish or game record says "On Luna".</p>
+                <p>If you have Prime, you can play it today without buying it.</p>
+              </div>
+            </details>
+          </li>
+        </ol>
+      </section>
+
+      <aside id="chat" class="chat" aria-label="Chat, frequently asked questions">
+        <div class="chat-head">
+          <strong>#any-percent</strong>
+          <span>chat</span>
+        </div>
+        <div class="chat-log">
+          <p class="msg"><span class="who c-green">mod_bot:</span>no, it never launches games. library, not launcher.</p>
+          <p class="msg"><span class="who c-gold">keyring_enjoyer:</span>do store credentials leave my machine?</p>
+          <p class="msg reply"><span class="badge">dev</span>no. they stay on your machine, in the system keyring. the app never asks for a store password.</p>
+          <p class="msg"><span class="who c-red">lurker_42:</span>does my library go to a server?</p>
+          <p class="msg reply"><span class="badge">dev</span>no server, no account. one SQLite file on your disk. you can export it any time.</p>
+          <p class="msg"><span class="who c-grey">wishlist_wiz:</span>where do the prices come from?</p>
+          <p class="msg reply"><span class="badge">dev</span>IsThereAnyDeal, with your own free key and your country. optional.</p>
+          <p class="msg"><span class="who c-red">epic_is_rng:</span>what if epic breaks?</p>
+          <p class="msg reply"><span class="badge">dev</span>switch epic off. the other stores keep running. your notes stay.</p>
+          <p class="msg"><span class="who c-dev">speedrun_newbie:</span>is the timer at the top real?</p>
+          <p class="msg reply"><span class="badge">dev</span>it times your visit to this page. your real run is on your own machine.</p>
+        </div>
+        <p class="chat-foot">Frequently asked. Not a live chat.</p>
+      </aside>
+
+    </div>
+
+    <section id="route" class="section" aria-labelledby="route-title">
+      <span class="section-tag">Notes on the route</span>
+      <div class="section-head">
+        <h2 id="route-title">Route notes</h2>
+        <p>Why the route is built this way.</p>
+      </div>
+      <div class="notes">
+        <article class="note">
+          <span class="label">Note 01 · the RNG split</span>
+          <h3>Epic is RNG. If it breaks, skip the split.</h3>
+          <p>Epic has no public API. The app uses the launcher's private one, and that can change on any day. Nothing you wrote is lost when it does. Switch Epic off, and your games and notes stay where they are.</p>
+        </article>
+        <article class="note">
+          <span class="label">Note 02 · one switch per store</span>
+          <h3>Each store has its own switch.</h3>
+          <p>A broken store is switched off on its own. The other stores carry on. Its games stay in the library, with your notes and status. Only you decide to switch a store off. The app does not do it for you.</p>
+        </article>
+        <article class="note">
+          <span class="label">Note 03 · why desktop</span>
+          <h3>Desktop, not web.</h3>
+          <p>GOG and Epic logins can only be defended on your own machine. A server that keeps their tokens breaks their terms, becomes an attack target, and one IP ban would stop everyone at once. Playnite, Heroic and Lutris are desktop apps for the same reason.</p>
+        </article>
+        <article class="note">
+          <span class="label">Note 04 · what is not on the route</span>
+          <h3>It never launches a game.</h3>
+          <p>It does not download games. It does not start them. It is a library, so the launcher you already use still starts the game. Your data can be exported at any time.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="submit" class="section" aria-labelledby="submit-title">
+      <span class="section-tag">Downloads · v0.10.0</span>
+      <div class="section-head">
+        <h2 id="submit-title">Run submission</h2>
+        <p>Pick your system. Every file is on the latest GitHub release.</p>
+      </div>
+
+      <div class="submit">
+        <div class="submit-head">
+          <span>Category <strong>Any% Library</strong></span>
+          <span>Version <strong>0.10.0</strong></span>
+        </div>
+        <ul class="downloads">
+          <li class="dl">
+            <div>
+              <span class="os">Windows</span>
+              <span class="meta">x64 · also .msi</span>
+            </div>
+            <code class="file">Game.Library.Manager_0.10.0_x64-setup.exe</code>
+            <a class="get" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Get</a>
+          </li>
+          <li class="dl">
+            <div>
+              <span class="os">Linux</span>
+              <span class="meta">amd64 · also .deb, .rpm</span>
+            </div>
+            <code class="file">Game.Library.Manager_0.10.0_amd64.AppImage</code>
+            <a class="get" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Get</a>
+            <pre class="linux-cmd">chmod +x Game.Library.Manager_*_amd64.AppImage &amp;&amp; ./Game.Library.Manager_*_amd64.AppImage</pre>
+          </li>
+          <li class="dl">
+            <div>
+              <span class="os">macOS</span>
+              <span class="meta">Apple silicon (aarch64)</span>
+            </div>
+            <code class="file">Game.Library.Manager_0.10.0_aarch64.dmg</code>
+            <a class="get" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Get</a>
+          </li>
+        </ul>
+        <p class="submit-foot">Prefer the source? The repository is on GitHub. Build it with <code>bun install</code> and <code>bun run tauri dev</code>.</p>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p>Game Library Manager · v0.10.0 · Licence GPL-3.0-or-later</p>
+    <p><a href="https://github.com/serjor/gamelibrarymanager">github.com/serjor/gamelibrarymanager</a></p>
+    <p class="fine">Not affiliated with Steam, GOG, Epic Games, IGDB, IsThereAnyDeal or Amazon.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var timer = document.getElementById('timer');
+  var toggle = document.getElementById('toggle');
+  var keys = document.getElementById('keys');
+  if (!timer || !toggle) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var running = false;
+  var base = 0;
+  var startedAt = 0;
+  var frame = 0;
+
+  function pad(n, w) { return String(n).padStart(w, '0'); }
+
+  function format(ms) {
+    var cs = Math.floor(ms / 10);
+    var c = cs % 100;
+    var s = Math.floor(cs / 100) % 60;
+    var m = Math.floor(cs / 6000) % 60;
+    var h = Math.floor(cs / 360000);
+    var core = pad(s, 2) + '.' + pad(c, 2);
+    return h > 0 ? h + ':' + pad(m, 2) + ':' + core : m + ':' + core;
+  }
+
+  function draw() {
+    timer.textContent = format(base + (running ? performance.now() - startedAt : 0));
+  }
+
+  function tick() {
+    draw();
+    if (running) frame = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    running = true;
+    startedAt = performance.now();
+    toggle.textContent = 'Pause';
+    tick();
+  }
+
+  function pause() {
+    base += performance.now() - startedAt;
+    running = false;
+    cancelAnimationFrame(frame);
+    toggle.textContent = 'Start';
+    draw();
+  }
+
+  function flip() { if (running) pause(); else start(); }
+
+  toggle.addEventListener('click', flip);
+  document.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' && (e.target === document.body || e.target === document.documentElement)) {
+      e.preventDefault();
+      flip();
+    }
+  });
+
+  toggle.hidden = false;
+  if (keys) keys.hidden = false;
+  start();
+})();
+</script>
+</body>
+</html>

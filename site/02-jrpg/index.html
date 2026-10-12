@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Game Library Manager</title>
+<meta name="description" content="Game Library Manager puts the games you own on Steam, GOG and Epic in one local library. Your data stays on your machine. Open source, GPL-3.0-or-later.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231E2633'/%3E%3Crect x='10' y='14' width='26' height='34' rx='4' fill='%23E8B25A'/%3E%3Crect x='20' y='20' width='26' height='34' rx='4' fill='%233A5BD9'/%3E%3Crect x='30' y='10' width='24' height='30' rx='4' fill='%23E0703A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #05072a;
+  --win-top: #1a2a8a;
+  --win-bottom: #0a1050;
+  --frame: #eef0ff;
+  --frame-dim: #8d96d2;
+  --edge: #3142a8;
+  --text: #ffffff;
+  --muted: #c8cffc;
+  --gold: #ffd966;
+  --red: #ff8a8a;
+  --green: #6fe39a;
+  --bg: #060820;
+  /* pixel hand, 16 x 12 grid, drawn as two paths (outline, fill) */
+  --hand: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 12' shape-rendering='crispEdges'%3E%3Cpath fill='%2305072a' d='M5 1h11v5h-11zM1 4h9v8h-9zM1 2h4v4h-4z'/%3E%3Cpath fill='%23ffffff' d='M6 2h9v3h-9zM2 5h7v6h-7zM2 3h2v2h-2z'/%3E%3C/svg%3E");
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-width: 0;
+  color: var(--text);
+  font-family: "DotGothic16", "Courier New", monospace;
+  font-size: 18px;
+  line-height: 1.6;
+  text-shadow: 1px 1px 0 var(--ink);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(45deg, #0b1040 25%, transparent 25%, transparent 75%, #0b1040 75%),
+    linear-gradient(45deg, #0b1040 25%, transparent 25%, transparent 75%, #0b1040 75%);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+img, svg { max-width: 100%; }
+a { color: var(--gold); }
+a:hover { color: #fff; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 4px; }
+code {
+  font-family: inherit;
+  color: var(--gold);
+  background: var(--ink);
+  border: 1px solid var(--edge);
+  padding: 1px 6px;
+  overflow-wrap: anywhere;
+}
+
+.sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; opacity: 0; margin: 0;
+}
+.skip {
+  position: absolute; left: -9999px; top: 8px; z-index: 10;
+  background: var(--ink); color: var(--gold); padding: 6px 10px; border: 2px solid var(--frame);
+}
+.skip:focus { left: 16px; }
+
+/* ---------- classic window ---------- */
+.win {
+  position: relative;
+  margin: 44px auto;
+  padding: 30px 22px 22px;
+  background: linear-gradient(180deg, var(--win-top) 0%, var(--win-bottom) 100%);
+  border: 4px double var(--frame);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 3px var(--ink),
+    0 0 0 6px var(--edge),
+    inset 0 0 0 3px rgba(255, 255, 255, 0.08),
+    0 12px 0 6px rgba(0, 0, 0, 0.35);
+}
+.win-title {
+  position: absolute;
+  top: -20px; left: 22px;
+  margin: 0;
+  padding: 2px 14px;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  background: var(--ink);
+  border: 2px solid var(--frame);
+  border-radius: 6px;
+}
+.win p { margin: 0 0 12px; }
+.win p:last-child { margin-bottom: 0; }
+.lede { color: var(--muted); }
+
+/* ---------- title screen ---------- */
+.title { padding: 52px 0 0; text-align: center; }
+.emblem svg { width: 112px; height: auto; display: block; margin: 0 auto; }
+.kicker {
+  margin: 18px 0 8px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  font-size: 16px;
+}
+h1 {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(30px, 8.4vw, 64px);
+  line-height: 1.12;
+  text-wrap: balance;
+  color: #fff;
+  text-shadow: 3px 3px 0 #e0703a, 6px 6px 0 var(--ink);
+}
+.tag { margin: 22px auto 0; max-width: 34em; color: var(--muted); }
+
+.menu-win { max-width: 430px; text-align: left; margin-top: 42px; padding: 26px 18px 16px 40px; }
+.menu { list-style: none; margin: 0; padding: 0; }
+.menu li + li { margin-top: 6px; }
+.menu a {
+  display: block;
+  position: relative;
+  padding: 6px 6px 8px 4px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 24px;
+  letter-spacing: 0.06em;
+}
+.menu a small {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.menu a::before {
+  content: "";
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  width: 24px;
+  height: 18px;
+  margin-top: -9px;
+  background: var(--hand) no-repeat center / contain;
+  opacity: 0;
+  transition: left 0.2s ease-out, opacity 0.15s linear;
+}
+.menu a:hover::before,
+.menu a:focus-visible::before { opacity: 1; left: -30px; }
+.menu a:hover, .menu a:focus-visible { color: var(--gold); }
+.menu a:focus-visible { outline-offset: 2px; }
+
+/* ---------- dialogue ---------- */
+.talk {
+  max-width: 760px;
+  min-height: 150px;
+  padding: 22px 26px 26px;
+  cursor: pointer;
+}
+.talk .line { margin: 0 0 10px; font-size: 20px; min-height: 1.6em; }
+.talk .line:last-of-type { margin-bottom: 0; }
+.cursor {
+  display: inline-block;
+  width: 0; height: 0;
+  margin-left: 6px;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 11px solid var(--gold);
+  visibility: hidden;
+  vertical-align: middle;
+}
+.talk.done .cursor { visibility: visible; animation: bob 0.9s steps(2, end) infinite; }
+
+/* ---------- headings and copy sections ---------- */
+.section-head { margin: 0; }
+.section-note { color: var(--muted); margin: 0 0 16px; }
+
+/* ---------- party ---------- */
+.party { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+@media (min-width: 820px) { .party { grid-template-columns: repeat(3, 1fr); } }
+.member {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px 14px;
+  margin: 0;
+  padding: 14px;
+  background: rgba(5, 7, 42, 0.38);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  align-content: start;
+}
+.member .portrait {
+  width: 64px; height: 64px;
+  display: grid; place-items: center;
+  background: var(--ink);
+  border: 3px double var(--frame);
+  border-radius: 6px;
+  font-size: 30px;
+  color: var(--gold);
+}
+.member .name { margin: 0; font-size: 22px; letter-spacing: 0.06em; }
+.badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0 8px;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--ink);
+  text-shadow: none;
+}
+.badge.fragile { background: var(--red); animation: blink 1.6s steps(2, start) infinite; }
+.badge.ok { background: var(--green); }
+.badge.none { background: #d8dcf5; }
+.hp { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 15px; }
+.bar {
+  flex: 1;
+  height: 12px;
+  background: #0b0f3c;
+  border: 2px solid var(--ink);
+  overflow: hidden;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: repeating-linear-gradient(90deg, var(--green) 0 8px, #3fb86e 8px 10px);
+  transition: width 0.4s steps(8, end);
+}
+.member .st { margin: 0 0 4px; font-size: 16px; color: var(--muted); }
+.member .toggle {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 4px;
+  padding: 4px 12px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  background: var(--ink);
+  border: 2px solid var(--frame-dim);
+  border-radius: 4px;
+  cursor: pointer;
+  text-shadow: none;
+}
+.member .toggle:hover { border-color: var(--gold); }
+.member input:focus-visible ~ .toggle { outline: 3px solid var(--gold); outline-offset: 3px; }
+.member input:not(:checked) ~ .info .st-in,
+.member input:checked ~ .info .st-out,
+.member input:not(:checked) ~ .toggle .t-in,
+.member input:checked ~ .toggle .t-out { display: none; }
+.member input:not(:checked) ~ .info .bar i { width: 0; }
+.member input:not(:checked) ~ .portrait { filter: grayscale(1); opacity: 0.45; }
+.party-note { margin: 18px 0 0; font-size: 16px; color: var(--muted); }
+
+/* ---------- items ---------- */
+.items-body { position: relative; display: grid; gap: 4px; }
+.items-body > label {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 40px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+}
+.items-body > label .qty { color: var(--muted); font-size: 18px; white-space: nowrap; }
+.items-body > label .opt-tag {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--muted);
+  padding: 0 5px;
+  letter-spacing: 0.06em;
+  text-shadow: none;
+  vertical-align: middle;
+}
+.items-body > label::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 24px; height: 18px;
+  margin-top: -9px;
+  background: var(--hand) no-repeat center / contain;
+  opacity: 0;
+}
+.items-body > input:checked + label {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(255, 217, 102, 0.1);
+}
+.items-body > input:checked + label::before { opacity: 1; }
+.items-body > input:focus-visible + label { outline: 3px solid var(--gold); outline-offset: 2px; }
+.items-body > label:hover { color: var(--gold); }
+.desc {
+  margin-top: 16px;
+  padding: 16px 18px;
+  min-height: 150px;
+  background: var(--ink);
+  border: 3px double var(--frame);
+  border-radius: 10px;
+}
+.desc p { display: none; margin: 0; }
+#i1:checked ~ .desc .d1,
+#i2:checked ~ .desc .d2,
+#i3:checked ~ .desc .d3 { display: block; }
+.desc .d-head { display: block; color: var(--gold); margin-bottom: 6px; font-size: 20px; }
+.items-foot { margin: 16px 0 0; font-size: 16px; color: var(--muted); }
+
+/* ---------- skills ---------- */
+.skills { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.skills li { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.skills b { font-weight: 400; color: var(--gold); min-width: 9.5em; letter-spacing: 0.06em; }
+.skills span { flex: 1; min-width: 12em; color: var(--muted); }
+
+/* ---------- status ---------- */
+.stats { margin: 0; display: grid; gap: 14px; }
+.stats div { display: grid; gap: 2px; }
+.stats dt { color: var(--gold); letter-spacing: 0.1em; font-size: 16px; }
+.stats dd { margin: 0; }
+.status-why {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 2px dashed var(--frame-dim);
+  color: var(--muted);
+}
+
+/* ---------- save screen ---------- */
+.slots { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+@media (min-width: 860px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+.slot {
+  margin: 0;
+  padding: 16px 16px 18px;
+  background: rgba(5, 7, 42, 0.4);
+  border: 3px double var(--frame-dim);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.slot-no { font-size: 14px; letter-spacing: 0.2em; color: var(--muted); }
+.slot h3 { margin: 0; font-weight: 400; font-size: 26px; letter-spacing: 0.08em; color: #fff; }
+.slot .file { margin: 4px 0 0; font-size: 14px; }
+.slot .also { margin: 0; font-size: 15px; color: var(--muted); }
+.slot pre {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--ink);
+  border: 1px solid var(--edge);
+  color: var(--gold);
+  font-family: inherit;
+  font-size: 15px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.btn {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 8px 14px;
+  color: var(--gold);
+  background: var(--ink);
+  border: 2px solid var(--frame);
+  border-radius: 6px;
+  text-decoration: none;
+  box-shadow: 0 4px 0 var(--edge);
+}
+.btn:hover { color: #fff; transform: translateY(2px); box-shadow: 0 2px 0 var(--edge); }
+.save-foot { margin: 20px 0 0; color: var(--muted); }
+
+/* ---------- footer ---------- */
+.end { padding: 30px 0 60px; text-align: center; }
+.end .the-end { margin: 0 0 14px; font-size: 28px; letter-spacing: 0.4em; color: var(--gold); }
+.end p { margin: 6px 0; color: var(--muted); font-size: 16px; }
+.end a { color: var(--gold); }
+
+/* ---------- motion ---------- */
+@keyframes blink { 50% { opacity: 0.35; } }
+@keyframes bob { 50% { transform: translateY(3px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 17px; }
+  .win { padding: 28px 16px 18px; }
+  .menu a { font-size: 22px; }
+  .menu-win { padding-left: 36px; }
+}
+</style>
+</head>
+<body id="top">
+<a class="skip" href="#save">Skip to the save slots</a>
+
+<main class="wrap">
+
+  <!-- ===== Title screen ===== -->
+  <header class="title">
+    <div class="emblem" aria-hidden="true">
+      <svg viewBox="0 0 64 64" role="img">
+        <rect width="64" height="64" rx="12" fill="#1E2633"/>
+        <rect x="10" y="14" width="26" height="34" rx="4" fill="#E8B25A"/>
+        <rect x="20" y="20" width="26" height="34" rx="4" fill="#3A5BD9"/>
+        <rect x="30" y="10" width="24" height="30" rx="4" fill="#E0703A"/>
+      </svg>
+    </div>
+    <p class="kicker">SAVE FILE 01</p>
+    <h1>Game Library Manager</h1>
+    <p class="tag">One library for the games you own, in every store.</p>
+
+    <nav class="win menu-win" aria-label="Title menu">
+      <ul class="menu">
+        <li>
+          <a href="https://github.com/serjor/gamelibrarymanager/releases/latest">NEW GAME
+            <small>Download for your system</small></a>
+        </li>
+        <li>
+          <a href="https://github.com/serjor/gamelibrarymanager">CONTINUE
+            <small>Read the code on GitHub</small></a>
+        </li>
+        <li>
+          <a href="#save">CONFIG
+            <small>Install it. Jump to the save slots.</small></a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- ===== Dialogue ===== -->
+  <section class="win talk" id="talk" aria-label="Innkeeper dialogue" title="Click to show the whole text">
+    <p class="line">The innkeeper says: your saves never leave this inn…</p>
+    <p class="line">Your library is one SQLite file on this machine. No server. No account.</p>
+    <p class="line">The same game on two stores is one record, not two. You are welcome.</p>
+    <span class="cursor" aria-hidden="true"></span>
+  </section>
+
+  <!-- ===== What it is ===== -->
+  <section class="win" id="what" aria-labelledby="h-what">
+    <h2 class="win-title" id="h-what">WHAT IT IS</h2>
+    <p>Game Library Manager puts the games you own in Steam, GOG and Epic into one library. Add your own backlog status to each game.</p>
+    <p class="lede">It is a library, not a launcher. It never downloads or launches a game.</p>
+  </section>
+
+  <!-- ===== Party ===== -->
+  <section class="win" id="party" aria-labelledby="h-party">
+    <h2 class="win-title" id="h-party">PARTY</h2>
+    <p class="section-note">Three stores. Each one has its own switch.</p>
+
+    <ul class="party">
+      <li class="member">
+        <input type="checkbox" id="p-steam" class="sr" checked>
+        <div class="portrait" aria-hidden="true">S</div>
+        <div class="info">
+          <p class="name">STEAM</p>
+          <span class="badge ok">OFFICIAL API</span>
+          <div class="hp"><span>HP</span><span class="bar"><i></i></span></div>
+          <p class="st st-in">Healthy. Uses the official Steam API with your own API key.</p>
+          <p class="st st-out">Out of party. Its games stay in your library, with your notes and status.</p>
+        </div>
+        <label class="toggle" for="p-steam"><span class="t-out">SWAP OUT</span><span class="t-in">SWAP IN</span></label>
+      </li>
+
+      <li class="member">
+        <input type="checkbox" id="p-gog" class="sr" checked>
+        <div class="portrait" aria-hidden="true">G</div>
+        <div class="info">
+          <p class="name">GOG</p>
+          <span class="badge none">NO PUBLIC API</span>
+          <div class="hp"><span>HP</span><span class="bar"><i></i></span></div>
+          <p class="st st-in">Healthy. GOG has no public API. You log in on GOG's own page.</p>
+          <p class="st st-out">Out of party. Its games stay in your library, with your notes and status.</p>
+        </div>
+        <label class="toggle" for="p-gog"><span class="t-out">SWAP OUT</span><span class="t-in">SWAP IN</span></label>
+      </li>
+
+      <li class="member">
+        <input type="checkbox" id="p-epic" class="sr" checked>
+        <div class="portrait" aria-hidden="true">E</div>
+        <div class="info">
+          <p class="name">EPIC</p>
+          <span class="badge fragile">FRAGILE</span>
+          <div class="hp"><span>HP</span><span class="bar"><i></i></span></div>
+          <p class="st st-in">Uses the private API of its launcher. It can break any day. If it does, switch it off.</p>
+          <p class="st st-out">Out of party. Its games stay in your library, with your notes and status.</p>
+        </div>
+        <label class="toggle" for="p-epic"><span class="t-out">SWAP OUT</span><span class="t-in">SWAP IN</span></label>
+      </li>
+    </ul>
+
+    <p class="party-note">Each store has its own switch. A switched-off store keeps its games, your notes and your status. The switches on this page only change this picture. They do not touch your library.</p>
+  </section>
+
+  <!-- ===== Items ===== -->
+  <section class="win" id="items" aria-labelledby="h-items">
+    <h2 class="win-title" id="h-items">ITEMS</h2>
+    <p class="section-note">Optional extras. The library works without any of them.</p>
+
+    <div class="items-body">
+      <input type="radio" name="item" id="i1" class="sr" checked>
+      <label for="i1">IGDB Tome of Lore <span class="opt-tag">OPTIONAL</span><span class="qty">x1</span></label>
+
+      <input type="radio" name="item" id="i2" class="sr">
+      <label for="i2">ITAD Merchant's Ledger <span class="opt-tag">OPTIONAL</span><span class="qty">x1</span></label>
+
+      <input type="radio" name="item" id="i3" class="sr">
+      <label for="i3">Luna Scroll <span class="opt-tag">OPTIONAL</span><span class="qty">x1</span></label>
+
+      <div class="desc" aria-live="polite">
+        <p class="d1"><span class="d-head">IGDB Tome of Lore</span>Covers and metadata from IGDB. Also time to beat: main story, main + extras, and completionist, as players report it to IGDB. Without IGDB, everything still works with the titles from the store, including the removal of duplicates.</p>
+        <p class="d2"><span class="d-head">ITAD Merchant's Ledger</span>Wishlist prices from IsThereAnyDeal: the current price, the store that sells it, the lowest price on record, and the list sorted by discount. Needs a free ITAD key and your country.</p>
+        <p class="d3"><span class="d-head">Luna Scroll</span>Amazon Luna needs no credential. A wish that is in the Prime Luna catalogue is marked On Luna: play it today without buying it.</p>
+      </div>
+    </div>
+    <p class="items-foot">Hover or select an item to read what it does.</p>
+  </section>
+
+  <!-- ===== Skills and status ===== -->
+  <section class="win" id="skills" aria-labelledby="h-skills">
+    <h2 class="win-title" id="h-skills">SKILLS</h2>
+    <ul class="skills">
+      <li><b>TODAY</b><span>Proposes what to play next.</span></li>
+      <li><b>WALL / TABLE</b><span>Two view modes for the library: a cover wall or a table.</span></li>
+      <li><b>THEME</b><span>Light, Dark or System.</span></li>
+      <li><b>WISHES</b><span>Add a wish by hand. One for each device, on the same game record as the store copies.</span></li>
+      <li><b>EXPORT</b><span>Take your data out, any time.</span></li>
+      <li><b>DISCONNECT</b><span>Disconnect a store. Your records, links and notes stay.</span></li>
+    </ul>
+  </section>
+
+  <section class="win" id="status" aria-labelledby="h-status">
+    <h2 class="win-title" id="h-status">STATUS</h2>
+    <dl class="stats">
+      <div>
+        <dt>WHERE YOUR DATA LIVES</dt>
+        <dd>One SQLite file on your machine.</dd>
+      </div>
+      <div>
+        <dt>ACCOUNTS</dt>
+        <dd>None. No server. No sign-up.</dd>
+      </div>
+      <div>
+        <dt>STORE CREDENTIALS</dt>
+        <dd>Stay on your computer. Kept in the system keyring, or in an encrypted file if there is no keyring. No store credential leaves your computer.</dd>
+      </div>
+      <div>
+        <dt>STORE PASSWORDS</dt>
+        <dd>Never asked. You log in to GOG or Epic on their own login page.</dd>
+      </div>
+    </dl>
+    <p class="status-why">Why a desktop app? GOG and Epic logins can only be guarded on your own machine. A server that keeps their tokens would break their terms, become an attack target, and one IP ban would stop everyone. Playnite, Heroic and Lutris are desktop apps for the same reason.</p>
+  </section>
+
+  <!-- ===== Save slots (install) ===== -->
+  <section class="win" id="save" aria-labelledby="h-save">
+    <h2 class="win-title" id="h-save">SAVE</h2>
+    <p class="section-note">Choose a save slot. Each slot is one system. Version 0.10.0.</p>
+
+    <ul class="slots">
+      <li class="slot">
+        <span class="slot-no">SLOT 01</span>
+        <h3>WINDOWS</h3>
+        <p class="file"><code>Game.Library.Manager_0.10.0_x64-setup.exe</code></p>
+        <p class="also">Also available as <code>.msi</code>.</p>
+        <a class="btn" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download for Windows</a>
+      </li>
+
+      <li class="slot">
+        <span class="slot-no">SLOT 02</span>
+        <h3>LINUX</h3>
+        <p class="file"><code>Game.Library.Manager_0.10.0_amd64.AppImage</code></p>
+        <p class="also">Also available as <code>.deb</code> and <code>.rpm</code>.</p>
+        <pre>chmod +x Game.Library.Manager_*_amd64.AppImage
+./Game.Library.Manager_*_amd64.AppImage</pre>
+        <a class="btn" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download for Linux</a>
+      </li>
+
+      <li class="slot">
+        <span class="slot-no">SLOT 03</span>
+        <h3>MACOS</h3>
+        <p class="file"><code>Game.Library.Manager_0.10.0_aarch64.dmg</code></p>
+        <p class="also">The aarch64 build.</p>
+        <a class="btn" href="https://github.com/serjor/gamelibrarymanager/releases/latest">Download for macOS</a>
+      </li>
+    </ul>
+
+    <p class="save-foot">No slot for your system? Build it from source: <code>bun install</code>, then <code>bun run tauri dev</code>.</p>
+  </section>
+
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <p class="the-end">THE END</p>
+    <p><a href="#top">Back to the title screen</a></p>
+    <p>Game Library Manager 0.10.0. Licence <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0-or-later</a>.</p>
+    <p>Source on <a href="https://github.com/serjor/gamelibrarymanager">GitHub</a>. Built with Tauri 2, Rust and React.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Items: hovering an item shows its description (the radios still work without this).
+  document.querySelectorAll('.items-body > label[for]').forEach(function (label) {
+    label.addEventListener('pointerenter', function () {
+      var radio = document.getElementById(label.htmlFor);
+      if (radio) radio.checked = true;
+    });
+  });
+
+  // Dialogue: typewriter. Without JS or with reduced motion, the full text is already there.
+  var talk = document.getElementById('talk');
+  if (!talk) return;
+  var lines = Array.prototype.slice.call(talk.querySelectorAll('.line'));
+  var texts = lines.map(function (p) { return p.textContent; });
+  var skip = false;
+
+  function typeLine(p, text, done) {
+    var i = 0;
+    p.textContent = '';
+    (function tick() {
+      if (skip) { p.textContent = text; done(); return; }
+      i += 1;
+      p.textContent = text.slice(0, i);
+      if (i < text.length) { setTimeout(tick, 22); } else { setTimeout(done, 280); }
+    })();
+  }
+
+  function typeAll(list, items, i) {
+    if (i >= list.length) { talk.classList.add('done'); return; }
+    typeLine(list[i], items[i], function () { typeAll(list, items, i + 1); });
+  }
+
+  talk.addEventListener('click', function () {
+    if (!talk.classList.contains('done')) skip = true;
+  });
+
+  if (reduce) {
+    talk.classList.add('done');
+  } else {
+    typeAll(lines, texts, 0);
+  }
+
+  // Easter egg: the Konami code adds one line to the innkeeper.
+  var code = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
+  var pos = 0;
+  document.addEventListener('keydown', function (e) {
+    var k = e.key.length === 1 ? e.key.toLowerCase() : e.key.toLowerCase();
+    if (k === code[pos]) {
+      pos += 1;
+      if (pos === code.length) {
+        pos = 0;
+        if (!talk.classList.contains('done') || talk.querySelector('.secret')) return;
+        var p = document.createElement('p');
+        p.className = 'line secret';
+        talk.insertBefore(p, talk.querySelector('.cursor'));
+        talk.classList.remove('done');
+        skip = false;
+        var msg = 'You found the secret room. The library still never launches your games.';
+        typeLine(p, msg, function () { talk.classList.add('done'); });
+      }
+    } else {
+      pos = k === code[0] ? 1 : 0;
+    }
+  });
+})();
+</script>
+</body>
+</html>
