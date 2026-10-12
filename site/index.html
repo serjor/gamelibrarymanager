@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Library Manager — Select stage</title>
+<meta name="description" content="Five landing page candidates for Game Library Manager.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='2' width='26' height='28' rx='5' fill='none' stroke='%231E2633' stroke-width='3'/%3E%3Crect x='5' y='7' width='10' height='18' rx='2' fill='%23E0703A'/%3E%3Crect x='9' y='5' width='11' height='20' rx='2' fill='%233A5BD9'/%3E%3Crect x='14' y='8' width='11' height='19' rx='2' fill='%23E8B25A'/%3E%3C/svg%3E">
+<style>
+  :root { --bg:#111; --fg:#eee; --dim:#888; --line:#333; --hi:#FFE600; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 ui-monospace, "Cascadia Mono", Menlo, monospace; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px; }
+  h1 { font-size: clamp(22px, 5vw, 34px); letter-spacing: .08em; margin: 0 0 4px; }
+  p { color: var(--dim); margin: 0 0 32px; }
+  ol { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); counter-reset: s; }
+  li { counter-increment: s; border-bottom: 1px solid var(--line); }
+  a { display: grid; grid-template-columns: 3ch 1fr; gap: 0 16px; padding: 18px 8px; color: inherit; text-decoration: none; }
+  a::before { content: counter(s, decimal-leading-zero); color: var(--dim); grid-row: span 2; }
+  a b { letter-spacing: .06em; }
+  a span { color: var(--dim); font-size: 14px; }
+  a:hover, a:focus-visible { background: #1c1c1c; outline: none; }
+  a:hover b, a:focus-visible b { color: var(--hi); }
+  a:hover::before, a:focus-visible::before { content: "▶"; color: var(--hi); }
+</style>
+</head>
+<body>
+<main>
+  <h1>SELECT STAGE</h1>
+  <p>Game Library Manager · five landing page candidates</p>
+  <ol>
+    <li><a href="01-arcade/"><b>INSERT COIN</b><span>80s arcade cabinet in attract mode</span></a></li>
+    <li><a href="02-jrpg/"><b>SAVE FILE</b><span>16-bit JRPG menu screens</span></a></li>
+    <li><a href="03-magazine/"><b>GLM MONTHLY</b><span>Mid-90s game magazine</span></a></li>
+    <li><a href="04-speedrun/"><b>ANY% LIBRARY</b><span>Speedrun timer and splits</span></a></li>
+    <li><a href="05-demoscene/"><b>GLM INTRO</b><span>Amiga demoscene intro and NFO</span></a></li>
+  </ol>
+</main>
+</body>
+</html>
