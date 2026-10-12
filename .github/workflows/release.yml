@@ -46,6 +46,35 @@ jobs:
           projectPath: .
           tagName: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           releaseName: Game Library Manager ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          releaseBody: Download the installer for your system.
+          releaseBody: |
+            Download the file for your system:
+
+            - **Windows**: `Game.Library.Manager_<version>_x64-setup.exe`. The `.msi` is the same application for an installation managed by an administrator.
+            - **Linux**: `Game.Library.Manager_<version>_amd64.AppImage`. Make it executable (`chmod +x`) and start it. The `.deb` and the `.rpm` are for the package manager of your distribution.
+            - **macOS**: `Game.Library.Manager_<version>_aarch64.dmg`.
           releaseDraft: true
           prerelease: false
+
+  # A release that has no Windows installer or no AppImage is not complete. The
+  # matrix does not stop the other systems when one fails (fail-fast: false), so
+  # this job examines the result and fails if one of the two is missing.
+  assets:
+    needs: release
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: The release has the Windows installer and the AppImage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          echo "$assets"
+          missing=0
+          for pattern in '_x64-setup\.exe$' '_amd64\.AppImage$'; do
+            if ! grep -qE "$pattern" <<< "$assets"; then
+              echo "::error::The release $TAG has no file that matches $pattern"
+              missing=1
+            fi
+          done
+          exit $missing
