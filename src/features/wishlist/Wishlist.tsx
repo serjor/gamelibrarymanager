@@ -5,6 +5,19 @@ import { LunaLink } from "../game/LunaLink";
 import { lunaCatalogueLabel } from "./luna";
 import { wishes, money, atAllTimeLow, type Wish } from "./prices";
 import { ManualWishForm, FAMILIES, deviceLabel } from "./ManualWishForm";
+import { WishlistFilters } from "./WishlistFilters";
+import {
+  DEFAULT_WISH_SORT,
+  EMPTY_WISH_FILTERS,
+  applyWishFilters,
+  applyWishSort,
+  collectWishDevices,
+  collectWishStores,
+  firstDirection,
+  type WishFilters,
+  type WishSort,
+  type WishSortField,
+} from "./view";
 
 /**
  * The base of the ITAD pages. It is written as a constant and the slug is added
@@ -13,8 +26,17 @@ import { ManualWishForm, FAMILIES, deviceLabel } from "./ManualWishForm";
  */
 const ITAD_GAME_URL = "https://isthereanydeal.com/game/";
 
+const COLUMNS: { field: WishSortField; label: string; width?: string }[] = [
+  { field: "title", label: "Game" },
+  { field: "price", label: "Best price", width: "9rem" },
+  { field: "discount", label: "Discount", width: "7rem" },
+  { field: "low", label: "All-time low", width: "9rem" },
+  { field: "year", label: "Low of the year", width: "8rem" },
+];
+
 /**
- * The wished-for games, sorted by discount.
+ * The wished-for games, sorted by discount unless the user selects another
+ * column, and with filters of their own.
  *
  * It is the only screen that speaks not about what you have but about what it
  * would cost to have it, and thus it is not a third view mode of the library: it
@@ -84,7 +106,22 @@ export function Wishlist({
   const [editFamily, setEditFamily] = useState<PlatformFamily>("pc");
   const [editModel, setEditModel] = useState("");
   const [saving, setSaving] = useState(false);
+  const [filters, setFilters] = useState<WishFilters>(EMPTY_WISH_FILTERS);
+  const [sort, setSort] = useState<WishSort>(DEFAULT_WISH_SORT);
   const list = useMemo(() => wishes(rows, prices), [rows, prices]);
+  const visible = useMemo(
+    () => applyWishSort(applyWishFilters(list, filters), sort),
+    [list, filters, sort],
+  );
+  const stores = useMemo(() => collectWishStores(list), [list]);
+  const devices = useMemo(() => collectWishDevices(list), [list]);
+  // A click on the column that already sorts inverts the direction; a change of
+  // column starts in the direction that the column is read in.
+  const sortBy = (field: WishSortField) =>
+    setSort((current) => ({
+      field,
+      desc: current.field === field ? !current.desc : firstDirection(field),
+    }));
   const withPrice = list.filter((wish) => wish.price !== null).length;
   const onLuna = list.filter((wish) => wish.game.luna !== undefined).length;
   const hasPriceTargets = list.some(({ game }) =>
@@ -181,28 +218,66 @@ export function Wishlist({
       )}
 
       {list.length > 0 && (
+        <div className="command-toolbar wishlist-filter-bar">
+          <WishlistFilters
+            filters={filters}
+            stores={stores}
+            devices={devices}
+            luna={luna !== null}
+            total={list.length}
+            shown={visible.length}
+            onChange={setFilters}
+          />
+        </div>
+      )}
+
+      {list.length > 0 && visible.length === 0 && (
+        <div className="empty-state" role="status">
+          <strong className="empty-state-title">No game matches the filters</strong>
+          <p className="hint">
+            <button type="button" className="link" onClick={() => setFilters(EMPTY_WISH_FILTERS)}>
+              Clear the filters
+            </button>
+          </p>
+        </div>
+      )}
+
+      {visible.length > 0 && (
         <div className="wishlist-viewport">
           <table className="wishlist-table command-table" aria-label="Wishlist prices">
             <colgroup>
-              <col />
-              <col style={{ width: "9rem" }} />
-              <col style={{ width: "7rem" }} />
-              <col style={{ width: "9rem" }} />
-              <col style={{ width: "8rem" }} />
+              {COLUMNS.map((column) => (
+                <col key={column.field} style={column.width ? { width: column.width } : undefined} />
+              ))}
               <col style={{ width: "8rem" }} />
             </colgroup>
             <thead>
               <tr>
-                <th>Game</th>
-                <th className="num">Best price</th>
-                <th className="num">Discount</th>
-                <th className="num">All-time low</th>
-                <th className="num">Low of the year</th>
+                {COLUMNS.map((column) => (
+                  <th
+                    key={column.field}
+                    className={column.field === "title" ? undefined : "num"}
+                    aria-sort={
+                      sort.field === column.field
+                        ? sort.desc
+                          ? "descending"
+                          : "ascending"
+                        : "none"
+                    }
+                  >
+                    <button type="button" className="th" onClick={() => sortBy(column.field)}>
+                      {column.label}
+                      {sort.field === column.field && (
+                        <span aria-hidden="true">{sort.desc ? " ↓" : " ↑"}</span>
+                      )}
+                    </button>
+                  </th>
+                ))}
                 <th />
               </tr>
             </thead>
             <tbody>
-              {list.map((wish) => (
+              {visible.map((wish) => (
                 <Row key={wish.game.game_id} wish={wish} onOpen={open} onError={setError}
                   editing={editing} editFamily={editFamily} editModel={editModel} saving={saving}
                   onStartEdit={(id, family, model) => { setEditing(id); setEditFamily(family); setEditModel(model); setError(null); }}
