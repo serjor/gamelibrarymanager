@@ -1007,7 +1007,7 @@ button.link {
   padding: 0;
 }
 
-/* The wished-for games, sorted by discount.
+/* The wished-for games, sorted by discount unless a header says otherwise.
    In columns for the same reason as the library: of forty games you compare the
    numbers, and vertically you cannot compare them.
    Its range starts at 58rem, which is the sum of the five fixed columns plus the
@@ -1035,6 +1035,33 @@ button.link {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* The headers are buttons that sort, as in the library table. */
+.wishlist-table th:has(.th) {
+  padding: 0;
+}
+
+.wishlist-table th .th {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: var(--e-2) var(--e-3);
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
+.wishlist-table th.num .th {
+  text-align: right;
+}
+
+.wishlist-filter-bar {
+  margin-bottom: var(--e-3);
+}
+
+.wishlist-filter-bar .filters {
+  flex: 1;
 }
 
 /* At the top, as in the review: the cell of the game has two lines and the

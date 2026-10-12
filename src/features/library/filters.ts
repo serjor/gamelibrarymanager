@@ -22,7 +22,7 @@ export function isNoLongerInStore(row: LibraryRow): boolean {
 }
 
 /** No accents and no capitals: a search for "pokemon" must find "Pokémon". */
-function fold(text: string): string {
+export function fold(text: string): string {
   return text
     .toLowerCase()
     .normalize("NFD")

@@ -1337,6 +1337,38 @@ describe("App", () => {
     expect(screen.getByText("Tunic").closest("tr")?.textContent).toContain("no price");
   });
 
+  it("a click on a column sorts the wishlist by it, and the filters narrow it", async () => {
+    state.accounts = [steamAccount];
+    state.rows = WISHES;
+    state.prices = [
+      price(WISHES[0]!.game_id, { cut: 40, amount: 2399 }),
+      price(WISHES[1]!.game_id, { cut: 75, amount: 899, shop: "Steam" }),
+    ];
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+    const titles = () =>
+      screen.getAllByText(/./, { selector: ".wish-title" }).map((e) => e.textContent);
+
+    // A price is read from the lowest; a second click inverts it, and the game
+    // with no price stays last.
+    fireEvent.click(screen.getByRole("button", { name: "Best price" }));
+    expect(titles()).toEqual(["Silksong", "Blasphemous", "Tunic"]);
+    fireEvent.click(screen.getByRole("button", { name: /^Best price/ }));
+    expect(titles()).toEqual(["Blasphemous", "Silksong", "Tunic"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Game" }));
+    expect(titles()).toEqual(["Blasphemous", "Silksong", "Tunic"]);
+
+    fireEvent.change(screen.getByLabelText("Price"), { target: { value: "none" } });
+    expect(titles()).toEqual(["Tunic"]);
+
+    fireEvent.change(screen.getByLabelText("Search in the wishlist"), { target: { value: "zzz" } });
+    expect(screen.getByText("No game matches the filters")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Clear the filters" }));
+    expect(titles()).toEqual(["Blasphemous", "Silksong", "Tunic"]);
+  });
+
   it("an owned game does not come into the wishlist", async () => {
     state.accounts = [steamAccount];
     state.rows = [...WISHES, row({ title: "Hades", sort_title: "hades" })];
