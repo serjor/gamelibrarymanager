@@ -84,9 +84,9 @@ chmod +x Game.Library.Manager_*_amd64.AppImage
 ```
 
 The release also has a `.msi` for Windows, and a `.deb` and a `.rpm` for Linux.
-A tag `v*` starts `release.yml`, which makes the release as a draft. The
-release becomes visible when a person publishes it. The workflow fails if the
-release has no Windows installer or no AppImage.
+A tag `v*` starts `release.yml`, which makes the release as a draft. When the
+release has the Windows installer and the AppImage, the workflow publishes it.
+If one of the two is missing, the release stays a draft and the workflow fails.
 
 ## Development
 

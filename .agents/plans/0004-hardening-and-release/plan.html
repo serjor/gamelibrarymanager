@@ -35,6 +35,7 @@ strong{font-weight:600}
 <h2>Status</h2>
 <p><strong>The plan is done: the eight phases</strong>, merged together in commit <code>621f6d3</code> (#2). The version is <code>0.9.0</code>. The user reviewed the result on 2026-09-30.</p>
 <p>The phases 1 to 7 have no tag of their own, because they merged in one change. The tag <code>v0.9.0</code> is on <code>f265719</code>, the head of <code>main</code> on 2026-09-30, and it starts <code>release.yml</code>. The release stays a draft until a person publishes it.</p>
+<p><strong>Reopened on 2026-10-12 by the user, for v0.11.0:</strong> the release does not wait for a person. The <code>assets</code> job publishes the draft when it has the Windows installer and the AppImage. If one of the two is missing, the release stays a draft and the job fails. The rule "do not publish a release that is not a draft" below applies to the job <code>release</code>, which still makes a draft.</p>
 
 <h2>Goal</h2>
 <p>The application stops in the three places where it can stop badly today: a request with no answer, two long operations at the same time, and a delete that compares against a list of thousands. It gains the two operations that a local-first application must have and does not have: to disconnect a store, and to take the data out. And the repository gains a way to publish what it builds.</p>
