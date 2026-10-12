@@ -64,6 +64,30 @@ system, or in an encrypted file if your desktop has no keyring.
 The complete plan, with the decisions made and the alternatives refused, is in
 [`.agents/plans/0001-game-library-manager/plan.html`](.agents/plans/0001-game-library-manager/plan.html).
 
+## Install
+
+Each version has a release on the
+[releases page](https://github.com/serjor/gamelibrarymanager/releases) with
+the files for each system:
+
+| System | File |
+| --- | --- |
+| Windows | `Game.Library.Manager_<version>_x64-setup.exe` |
+| Linux | `Game.Library.Manager_<version>_amd64.AppImage` |
+| macOS | `Game.Library.Manager_<version>_aarch64.dmg` |
+
+On Linux, make the AppImage executable and start it:
+
+```sh
+chmod +x Game.Library.Manager_*_amd64.AppImage
+./Game.Library.Manager_*_amd64.AppImage
+```
+
+The release also has a `.msi` for Windows, and a `.deb` and a `.rpm` for Linux.
+A tag `v*` starts `release.yml`, which makes the release as a draft. The
+release becomes visible when a person publishes it. The workflow fails if the
+release has no Windows installer or no AppImage.
+
 ## Development
 
 You need stable Rust, [Bun](https://bun.sh) and, on Linux, the Tauri system
@@ -96,6 +120,27 @@ The only check that CI cannot make needs a desktop session with secret-service:
 ```sh
 cargo test -p secrets --test keyring_real -- --ignored
 ```
+
+### Build for Windows from Linux
+
+You can make the Windows executable on Linux, with no Windows machine.
+[`cargo-xwin`](https://github.com/rust-cross/cargo-xwin) downloads the Windows
+SDK, and `clang`, `lld` and `llvm` do the compilation and the link. Install the
+three from your distribution, and then:
+
+```sh
+rustup target add x86_64-pc-windows-msvc
+cargo install --locked cargo-xwin
+bun run tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle
+```
+
+The result is
+`target/x86_64-pc-windows-msvc/release/gamelibrarymanager.exe`. It is the
+complete application in one file, and it uses the WebView2 that Windows 10 and
+11 already have. It is not an installer. If you remove `--no-bundle` and
+`makensis` is installed (the package `nsis`), Tauri also makes the `-setup.exe`.
+The `.msi` needs WiX, which operates only on Windows. Use this build to test on
+Windows; the release workflow makes the installers that people download.
 
 ## Architecture
 
