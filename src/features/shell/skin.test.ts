@@ -228,11 +228,12 @@ describe("applySkin", () => {
     expect(document.documentElement.style.getPropertyValue("--accent")).toBe("#3157d5");
   });
 
-  it("finds a stored skin by its included key and nothing else", () => {
+  it("finds a stored skin by its key, included or from the folder", () => {
     const included = [skin()];
-    expect(findSkin("builtin:test-skin", included)).toBe(included[0]!);
-    expect(findSkin("user:test-skin", included)).toBeNull();
-    expect(findSkin(null, included)).toBeNull();
+    expect(findSkin("builtin:test-skin", [], included)).toBe(included[0]!);
+    expect(findSkin("user:test-skin", [], included)).toBeNull();
+    expect(findSkin("user:test-skin", included, [])).toBe(included[0]!);
+    expect(findSkin(null, included, included)).toBeNull();
   });
 });
 

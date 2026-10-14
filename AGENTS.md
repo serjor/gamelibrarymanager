@@ -42,7 +42,7 @@ Before you write code, read also:
 - `.agents/plans/0009-skins/plan.html` — skins that only give values to the
   tokens: ten included, from the ten landing styles, and the skins of other
   persons from a folder. It reopens custom themes (`0005`, `0006`) and bundled
-  fonts (`0002`, `0005`) for this purpose only. **In progress.**
+  fonts (`0002`, `0005`) for this purpose only. **Waiting for the review of the user.**
 
 All of these plans are done, except `0009`. Their decisions are closed.
 
@@ -91,6 +91,7 @@ All of these plans are done, except `0009`. Their decisions are closed.
 | [One state for the two view modes: the views only show](docs/ui/one-state-for-the-two-view-modes.md) | The filter, the sort and the selection live in `Library.tsx`; the table and the wall show what they receive. And a screen that makes its own divisions is not a view mode. |
 | [One region scrolls, and it reaches the edges of the window](docs/ui/one-region-that-scrolls.md) | The height is divided with `flex` and `min-height: 0`; the piece sets the maximum width and the frame does not, or the space at the sides stops answering the wheel. |
 | [A record with no live copy stays visible](docs/ui/record-with-no-live-copy.md) | A record with no owned store and no wishlist store keeps the user's state, and "Today" does not propose it. |
+| [A skin gives values to tokens, and never CSS](docs/ui/a-skin-only-sets-tokens.md) | Each value goes through `validateSkin` and `setProperty`. A new token goes in `SKIN_TOKENS`, and a renamed one keeps its old name as an alias. |
 
 ### `docs/testing/` — the tests
 

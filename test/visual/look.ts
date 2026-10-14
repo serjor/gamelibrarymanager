@@ -970,6 +970,83 @@ check(
 );
 check("Default removes the skin and its key", skinFlow.back.background === "" && skinFlow.back.stored === null);
 
+console.log("\nSkins from the folder");
+const NEON = JSON.stringify({
+  format: 1,
+  id: "neon",
+  name: "Neon",
+  author: "Ana",
+  light: { background: "#f4f1ff", surface: "#ffffff", text: "#1a1033", accent: "#5a1cc8" },
+  dark: { background: "#0b0618", surface: "#140c2a", text: "#efe8ff", accent: "#b48cff" },
+});
+const PALE = JSON.stringify({ format: 1, id: "pale", name: "Pale", light: { text: "#f5f1e8" }, dark: {} });
+const FOLDER = "/home/user/.local/share/com.serjor.gamelibrarymanager/skins";
+
+const fromFolder = await withTheApp(
+  async (page) => {
+    await openUtilities(page);
+    const before = await page.evaluate(() => {
+      const select = document.getElementById("utility-skin") as HTMLSelectElement;
+      return {
+        groups: [...select.querySelectorAll("optgroup")].map((group) => group.label),
+        names: [...select.options].map((option) => option.text),
+        notices: document.querySelector('[aria-label="Skin files"]')?.textContent ?? "",
+      };
+    });
+    await page.selectOption("#utility-skin", "user:neon");
+    const after = await page.evaluate(() => ({
+      background: document.documentElement.style.getPropertyValue("--background"),
+      stored: window.localStorage.getItem("gamelibrarymanager.skin"),
+      cached: window.localStorage.getItem("gamelibrarymanager.skin.user") !== null,
+    }));
+    return { ...before, ...after };
+  },
+  {
+    theme: "light",
+    answers: {
+      ...ALL,
+      list_user_skins: {
+        dir: FOLDER,
+        files: [
+          { file: "big.json", error: "it has more than 64 KB" },
+          { file: "neon.json", text: NEON },
+          { file: "pale.json", text: PALE },
+        ],
+      },
+    },
+  },
+);
+check("a skin of the folder is offered in its own group", fromFolder.groups.join("|") === "Included|From the skins folder");
+check("the name of a skin of the folder shows its author", fromFolder.names.includes("Neon · Ana"));
+check(
+  "each file that is not applied says why",
+  fromFolder.notices.includes("big.json is not applied: it has more than 64 KB") &&
+    fromFolder.notices.includes("pale.json is not applied: light · text on background is"),
+);
+check(
+  "a skin of the folder applies, and its text is kept for the next start",
+  fromFolder.background === "#f4f1ff" && fromFolder.stored === "user:neon" && fromFolder.cached,
+);
+
+const startWithout = await withTheApp(
+  async (page) => {
+    await page.getByRole("navigation").waitFor();
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue("--background") === "");
+    const seen = await page.evaluate(() => (window as unknown as Record<string, string[]>)["__skinBackgrounds"]!);
+    await openUtilities(page);
+    const notice = await page.locator("dialog[open] [role=alert]").textContent();
+    const stored = await page.evaluate(() => window.localStorage.getItem("gamelibrarymanager.skin"));
+    return { seen, notice, stored };
+  },
+  { theme: "light", skin: "user:neon", skinCache: NEON, recordSkin: true, answers: { ...ALL } },
+);
+check("the start paints the kept skin before the folder answers", startWithout.seen[0] === "#f4f1ff");
+check("a skin that left the folder gives way to Default", startWithout.seen.at(-1) === "");
+check(
+  "and the choice stays, with the reason",
+  startWithout.stored === "user:neon" && (startWithout.notice ?? "").includes('"neon" is not in the skins folder'),
+);
+
 console.log("\nThe contrast of \"at its low\"");
 for (const theme of ["light", "dark"] as const) {
   const ratio = await withTheApp(

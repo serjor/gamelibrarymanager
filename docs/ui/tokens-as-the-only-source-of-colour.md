@@ -10,6 +10,11 @@ The theme module resolves `System` with `matchMedia` and puts the active mode on
 `html[data-theme]`. After that, no rule and no component writes a colour: it
 writes `var(--token)`.
 
+A skin can give other values to the tokens. It puts them on `html` with
+`style.setProperty`, and it never writes a rule. The tokens stay the only source
+of colour; only their values come from another place. See
+[A skin gives values to tokens, and never CSS](a-skin-only-sets-tokens.md).
+
 A colour that is not a token does not exist. That includes the colours that look
 harmless:
 
@@ -115,6 +120,8 @@ the bar covers with a colour that is not the colour of the page.
   colours of the game status and the scrim of the record sheet.
 - [`src/features/shell/theme.ts`](../../src/features/shell/theme.ts) resolves the
   stored preference and the operating-system mode before the interface starts.
+- [`src/skins/`](../../src/skins/) holds the included skins. They are JSON with
+  values for the tokens, and the only colour literals outside `src/styles.css`.
 - [`test/visual/look.ts`](../../test/visual/look.ts) measures the real contrast
   of the text and of the muted text against its background, in the light theme
   and in the dark theme, and against the background of the sheet, which is the
@@ -130,4 +137,6 @@ the bar covers with a colour that is not the colour of the page.
   — why the contrast is calculated and is not seen in a screenshot.
 - [One state for the two view modes](one-state-for-the-two-view-modes.md)
   — the same idea applied to state and not to colour: one source, many users.
+- [A skin gives values to tokens, and never CSS](a-skin-only-sets-tokens.md)
+  — how a skin changes the values without a second source of colour.
 - [`AGENTS.md`](../../AGENTS.md) — the index of all of the conventions.

@@ -110,6 +110,7 @@ mock.module("./lib/api", () => ({
       return Promise.resolve();
     },
     connectorStates: () => Promise.resolve(state.connectors),
+    listUserSkins: () => Promise.resolve({ dir: "/data/skins", files: [] }),
     setConnectorEnabled: (store: string, enabled: boolean) => {
       state.connectors = state.connectors.map((connector) =>
         connector.store === store ? { ...connector, enabled } : connector,

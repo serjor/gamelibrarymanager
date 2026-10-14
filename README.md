@@ -58,6 +58,14 @@ day. When it fails, the marks of the last catalogue stay and nothing else
 stops. Amazon selects the catalogue from your connection, not from the country
 that you select.
 
+You can change how the application looks. Utilities offers Light, Dark or
+System, and a skin: Default and ten included skins, each with a light and a
+dark mode. A skin changes the colours, the fonts and the corners, and never the
+layout. You can also write a skin, a small JSON file, and put it in the skins
+folder. [`SKINS.md`](SKINS.md) tells how. The application examines each skin
+before it applies it, and a skin with text that is hard to read is refused
+with the reason.
+
 None of these credentials leaves your computer. They live in the keyring of the
 system, or in an encrypted file if your desktop has no keyring.
 

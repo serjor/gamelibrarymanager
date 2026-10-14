@@ -221,3 +221,31 @@ fn export_has_permission_to_open_the_save_dialog() {
         "the save permission must explain why the application needs it"
     );
 }
+
+#[test]
+fn only_the_skins_folder_can_be_opened_as_a_path() {
+    let raw = std::fs::read_to_string(root().join("capabilities/default.json"))
+        .expect("read the capability");
+    let capability: serde_json::Value =
+        serde_json::from_str(&raw).expect("the capability must be valid JSON");
+    let paths: Vec<&serde_json::Value> = capability["permissions"]
+        .as_array()
+        .expect("permissions is a list")
+        .iter()
+        .filter(|permission| permission["identifier"] == "opener:allow-open-path")
+        .collect();
+
+    assert_eq!(paths.len(), 1, "one open-path permission, the skins folder");
+    // The folder and nothing inside it: `list_user_skins` reads the files, and
+    // opening one of them would run whatever application the desktop chooses.
+    assert_eq!(
+        paths[0]["allow"],
+        serde_json::json!([{ "path": "$APPDATA/skins" }])
+    );
+    assert!(
+        paths[0]["comment"]
+            .as_str()
+            .is_some_and(|comment| !comment.trim().is_empty()),
+        "the open-path permission must explain why the application needs it"
+    );
+}

@@ -7,7 +7,7 @@ import type {
   LunaView,
 } from "../../lib/api";
 import { lunaCatalogueLabel } from "../wishlist/luna";
-import { skinChoices, THEME_PREFERENCES, type ThemePreference } from "./theme";
+import { skinChoices, THEME_PREFERENCES, type SkinPreferenceState, type ThemePreference } from "./theme";
 
 export type SetupTarget = "steam" | "gog" | "epic" | "igdb" | "itad";
 
@@ -16,7 +16,7 @@ export interface StoreOption {
   name: string;
 }
 
-export interface UtilityPanelProps {
+export interface UtilityPanelProps extends SkinPreferenceState {
   open: boolean;
   onClose: () => void;
   accounts: Account[];
@@ -29,8 +29,6 @@ export interface UtilityPanelProps {
   busy: string | null;
   theme: ThemePreference;
   onThemeChange: (preference: ThemePreference) => void;
-  skin: string;
-  onSkinChange: (key: string) => void;
   summary: LibrarySummary | null;
   storeName: (store: string) => string;
   onSetup: (target: SetupTarget) => void;
@@ -72,6 +70,13 @@ export function UtilityPanel({
   onThemeChange,
   skin,
   onSkinChange,
+  userSkins,
+  skinsFolder,
+  refusedSkins,
+  skinWarnings,
+  skinNotice,
+  onReloadSkins,
+  onOpenSkinsFolder,
   summary,
   storeName,
   onSetup,
@@ -85,6 +90,7 @@ export function UtilityPanel({
   onLunaDisable,
 }: UtilityPanelProps) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const choices = skinChoices(userSkins);
 
   useEffect(() => {
     const element = dialog.current;
@@ -188,17 +194,63 @@ export function UtilityPanel({
                 value={skin}
                 onChange={(event) => onSkinChange(event.currentTarget.value)}
               >
-                {skinChoices().map((choice) => (
-                  <option key={choice.key} value={choice.key}>
-                    {choice.name}
-                  </option>
-                ))}
+                {choices.user.length === 0 ? (
+                  choices.included.map((choice) => (
+                    <option key={choice.key} value={choice.key}>
+                      {choice.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <optgroup label="Included">
+                      {choices.included.map((choice) => (
+                        <option key={choice.key} value={choice.key}>
+                          {choice.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="From the skins folder">
+                      {choices.user.map((choice) => (
+                        <option key={choice.key} value={choice.key}>
+                          {choice.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
               </select>
             </div>
             <p className="hint utility-help">
               System follows the operating-system theme. A skin changes the colours, the fonts
               and the corners, in the two themes.
             </p>
+            {skinNotice !== null && <p role="alert">{skinNotice}</p>}
+            <div className="utility-actions utility-actions-wrap">
+              <button onClick={onReloadSkins}>Reload skins</button>
+              <button onClick={onOpenSkinsFolder} disabled={skinsFolder === null}>
+                Open skins folder
+              </button>
+            </div>
+            {skinsFolder !== null && (
+              <p className="hint utility-help">
+                Put a skin file in <code className="utility-path">{skinsFolder}</code>, then reload.
+                SKINS.md in the repository gives the format.
+              </p>
+            )}
+            {refusedSkins.length + skinWarnings.length > 0 && (
+              <ul className="utility-status-list utility-skin-notices" aria-label="Skin files">
+                {refusedSkins.map((notice) => (
+                  <li key={`refused-${notice.file}-${notice.message}`}>
+                    <strong>{notice.file}</strong> is not applied: {notice.message}
+                  </li>
+                ))}
+                {skinWarnings.map((notice) => (
+                  <li key={`warning-${notice.file}-${notice.message}`} className="hint">
+                    <strong>{notice.file}</strong>: {notice.message}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="utility-section" aria-labelledby="utility-accounts">

@@ -1769,6 +1769,18 @@ button.link {
   margin: var(--e-3) 0 0;
 }
 
+/* A path of the machine is long and has no spaces: it breaks where it must. */
+.utility-path {
+  overflow-wrap: anywhere;
+}
+
+.utility-skin-notices {
+  display: grid;
+  gap: var(--e-2);
+  margin-top: var(--e-3);
+  overflow-wrap: anywhere;
+}
+
 .utility-list,
 .utility-status-list {
   list-style: none;

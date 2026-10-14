@@ -50,7 +50,7 @@ function nameOf(store: string): string {
 
 export function App() {
   const { theme, onThemeChange } = useThemePreference();
-  const { skin, onSkinChange } = useSkinPreference();
+  const skinPreference = useSkinPreference();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
@@ -424,8 +424,7 @@ export function App() {
         busy,
         theme,
         onThemeChange,
-        skin,
-        onSkinChange,
+        ...skinPreference,
         summary,
         storeName: nameOf,
         onSetup: (target) => setSetup(target),

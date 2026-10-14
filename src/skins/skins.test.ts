@@ -77,3 +77,17 @@ describe("skin.schema.json", () => {
     expect(readFileSync(join(import.meta.dir, "skin.schema.json"), "utf8")).toBe(skinSchemaText());
   });
 });
+
+describe("SKINS.md", () => {
+  it("gives an example that the application applies with no warning", () => {
+    const guide = readFileSync(join(root, "../SKINS.md"), "utf8");
+    const example = /## A complete example\s+```json\n([\s\S]*?)```/.exec(guide)![1]!;
+    const result = validateSkin(example, defaults);
+    expect(result.ok ? result.warnings : result.error).toEqual([]);
+  });
+
+  it("names each font family that a skin can use", () => {
+    const guide = readFileSync(join(root, "../SKINS.md"), "utf8");
+    for (const family of Object.keys(SKIN_FONT_FAMILIES)) expect(guide).toContain(family);
+  });
+});

@@ -444,3 +444,31 @@ export function applySkin(skin: Skin | null, mode: SkinMode, root: HTMLElement =
     if (stack !== undefined) set(SKIN_FONT_TOKENS[slot as SkinFontSlot], stack);
   }
 }
+
+/**
+ * Reads the values of the default skin from the stylesheet that the document
+ * has: the `:root` block and the dark block. Then `validateSkin` measures the
+ * contrast against what the interface really draws.
+ */
+export function readSkinDefaults(doc: Document = document): SkinDefaults {
+  const light: Record<string, string> = {};
+  const dark: Record<string, string> = {};
+  for (const sheet of [...doc.styleSheets]) {
+    let rules: CSSRuleList;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+    for (const rule of [...rules]) {
+      if (!(rule instanceof CSSStyleRule)) continue;
+      const target =
+        rule.selectorText === ":root" ? light : rule.selectorText === ':root[data-theme="dark"]' ? dark : null;
+      if (target === null) continue;
+      for (const property of [...rule.style]) {
+        if (property.startsWith("--")) target[property.slice(2)] = rule.style.getPropertyValue(property).trim();
+      }
+    }
+  }
+  return { light, dark: { ...light, ...dark } };
+}

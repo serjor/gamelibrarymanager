@@ -239,6 +239,18 @@ export interface IdentityReport {
   timed: number;
 }
 
+/** One file of the skins folder: its text, or why Rust did not read it. */
+export interface UserSkinFile {
+  file: string;
+  text?: string;
+  error?: string;
+}
+
+export interface UserSkins {
+  dir: string;
+  files: UserSkinFile[];
+}
+
 /** The only door to Rust. Nobody else calls `invoke` directly. */
 export const api = {
   appInfo: () => invoke<AppInfo>("app_info"),
@@ -321,6 +333,8 @@ export const api = {
   /** The same save over more than one game, in one call and one transaction. */
   setUserStateMany: (updates: StateUpdate[]) =>
     invoke<LibraryRow[]>("set_user_state_many", { updates }),
+  /** The skins folder. The text of each file is examined in `validateSkin`, not in Rust. */
+  listUserSkins: () => invoke<UserSkins>("list_user_skins"),
 };
 
 /** The errors cross the bridge as plain text; they are normalised here. */

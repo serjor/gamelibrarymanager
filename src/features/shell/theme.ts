@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { openPath } from "@tauri-apps/plugin-opener";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, errorMessage } from "../../lib/api";
 import { INCLUDED_SKINS } from "../../skins";
-import { applySkin, type Skin } from "./skin";
+import { applySkin, readSkinDefaults, validateSkin, type Skin } from "./skin";
+import { examineUserSkins, type SkinNotice, type UserSkin } from "./userSkins";
 
 export const THEME_PREFERENCES = ["system", "light", "dark"] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
@@ -14,6 +17,13 @@ export const SKIN_STORAGE_KEY = "gamelibrarymanager.skin";
 
 /** The value of the selector for the default skin, which is never stored. */
 export const DEFAULT_SKIN_KEY = "default";
+
+/**
+ * The text of the active skin from the skins folder. The start reads it and
+ * examines it again before React, thus the window does not paint Default and
+ * then jump. The folder stays the source: when its list arrives, it decides.
+ */
+export const USER_SKIN_CACHE_KEY = "gamelibrarymanager.skin.user";
 
 // The skin goes with the mode: each change of mode applies the values of the
 // skin for the new mode.
@@ -73,9 +83,25 @@ export function readSkinPreference(): string | null {
   }
 }
 
+export function includedSkinKey(skin: Skin): string {
+  return `builtin:${skin.id}`;
+}
+
+export function userSkinKey(skin: Skin): string {
+  return `user:${skin.id}`;
+}
+
 /** Gives the skin of a stored key, or `null` (the default skin) when no skin has that key. */
-export function findSkin(key: string | null, skins: readonly Skin[] = INCLUDED_SKINS): Skin | null {
-  return skins.find((skin) => `builtin:${skin.id}` === key) ?? null;
+export function findSkin(
+  key: string | null,
+  user: readonly Skin[] = [],
+  included: readonly Skin[] = INCLUDED_SKINS,
+): Skin | null {
+  return (
+    included.find((skin) => includedSkinKey(skin) === key) ??
+    user.find((skin) => userSkinKey(skin) === key) ??
+    null
+  );
 }
 
 /** Makes a skin the active one. The next `applyTheme` puts it on the document. */
@@ -83,27 +109,63 @@ export function setActiveSkin(skin: Skin | null): void {
   activeSkin = skin;
 }
 
-/** The options of the selector: the default skin first, then the included ones. */
-export function skinChoices(skins: readonly Skin[] = INCLUDED_SKINS): { key: string; name: string }[] {
-  return [
-    { key: DEFAULT_SKIN_KEY, name: "Default" },
-    ...skins.map((skin) => ({ key: `builtin:${skin.id}`, name: skin.name })),
-  ];
+export interface SkinChoice {
+  key: string;
+  name: string;
 }
 
-export function persistSkinPreference(key: string): boolean {
+/** The options of the selector: the default skin, the included ones and the ones of the folder. */
+export function skinChoices(
+  user: readonly Skin[] = [],
+  included: readonly Skin[] = INCLUDED_SKINS,
+): { included: SkinChoice[]; user: SkinChoice[] } {
+  return {
+    included: [
+      { key: DEFAULT_SKIN_KEY, name: "Default" },
+      ...included.map((skin) => ({ key: includedSkinKey(skin), name: skin.name })),
+    ],
+    user: user.map((skin) => ({
+      key: userSkinKey(skin),
+      name: skin.author === undefined ? skin.name : `${skin.name} · ${skin.author}`,
+    })),
+  };
+}
+
+function storage(): Storage | null {
   try {
-    if (typeof window === "undefined") return false;
-    if (key === DEFAULT_SKIN_KEY) window.localStorage.removeItem(SKIN_STORAGE_KEY);
-    else window.localStorage.setItem(SKIN_STORAGE_KEY, key);
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+/** Stores the key, and the text of a skin of the folder for the next start. */
+export function persistSkinPreference(key: string, userText: string | null = null): boolean {
+  const store = storage();
+  if (store === null) return false;
+  try {
+    if (key === DEFAULT_SKIN_KEY) store.removeItem(SKIN_STORAGE_KEY);
+    else store.setItem(SKIN_STORAGE_KEY, key);
+    if (userText === null) store.removeItem(USER_SKIN_CACHE_KEY);
+    else store.setItem(USER_SKIN_CACHE_KEY, userText);
     return true;
   } catch {
     return false;
   }
 }
 
+/** The skin of the folder that the last start used, examined again. */
+function cachedUserSkin(key: string | null): Skin | null {
+  if (key === null || !key.startsWith("user:")) return null;
+  const text = storage()?.getItem(USER_SKIN_CACHE_KEY) ?? null;
+  if (text === null) return null;
+  const result = validateSkin(text, readSkinDefaults());
+  return result.ok && userSkinKey(result.skin) === key ? result.skin : null;
+}
+
 export function bootstrapTheme(): EffectiveTheme {
-  setActiveSkin(findSkin(readSkinPreference()));
+  const key = readSkinPreference();
+  setActiveSkin(findSkin(key) ?? cachedUserSkin(key));
   const preference = readThemePreference();
   const media = systemMediaQuery();
   const theme = resolveEffectiveTheme(preference, media?.matches ?? false);
@@ -150,26 +212,101 @@ export function useThemePreference(): ThemePreferenceState {
 }
 
 export interface SkinPreferenceState {
+  /** The value of the selector. */
   skin: string;
   onSkinChange: (key: string) => void;
+  userSkins: readonly Skin[];
+  /** The folder of the skins of other persons, or `null` until it is known. */
+  skinsFolder: string | null;
+  refusedSkins: readonly SkinNotice[];
+  skinWarnings: readonly SkinNotice[];
+  /** Why the stored skin is not applied, or `null`. */
+  skinNotice: string | null;
+  onReloadSkins: () => void;
+  onOpenSkinsFolder: () => void;
+}
+
+function reapply(): void {
+  if (typeof document === "undefined") return;
+  // The skin changes and the mode does not: apply the mode that is there.
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
 }
 
 export function useSkinPreference(): SkinPreferenceState {
-  const [skin, setSkin] = useState<string>(() => {
-    const key = readSkinPreference();
-    return findSkin(key) === null ? DEFAULT_SKIN_KEY : (key as string);
-  });
+  // The stored key, also when its skin is not there: a file that goes away
+  // for a moment does not change the choice of the user.
+  const [stored, setStored] = useState<string | null>(() => readSkinPreference());
+  const storedRef = useRef(stored);
+  const [user, setUser] = useState<UserSkin[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [folder, setFolder] = useState<string | null>(null);
+  const [refused, setRefused] = useState<SkinNotice[]>([]);
+  const [warnings, setWarnings] = useState<SkinNotice[]>([]);
+  const [folderError, setFolderError] = useState<string | null>(null);
 
-  const onSkinChange = useCallback((key: string) => {
-    const next = findSkin(key);
-    const stored = next === null ? DEFAULT_SKIN_KEY : key;
-    setSkin(stored);
-    persistSkinPreference(stored);
-    setActiveSkin(next);
-    if (typeof document === "undefined") return;
-    // The skin changes and the mode does not: apply the mode that is there.
-    applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  const onReloadSkins = useCallback(() => {
+    api
+      .listUserSkins()
+      .then((result) => {
+        const examined = examineUserSkins(result.files, readSkinDefaults());
+        setFolder(result.dir);
+        setUser(examined.skins);
+        setRefused(examined.refused);
+        setWarnings(examined.warnings);
+        setFolderError(null);
+        const key = storedRef.current;
+        if (key !== null && key.startsWith("user:")) {
+          const found = examined.skins.find(({ skin }) => userSkinKey(skin) === key);
+          // The file decides: its new text, or Default while it is not there.
+          setActiveSkin(found?.skin ?? null);
+          if (found !== undefined) persistSkinPreference(key, found.text);
+          reapply();
+        }
+      })
+      .catch((cause: unknown) => setFolderError(errorMessage(cause)))
+      .finally(() => setLoaded(true));
   }, []);
 
-  return { skin, onSkinChange };
+  useEffect(() => {
+    onReloadSkins();
+  }, [onReloadSkins]);
+
+  const onSkinChange = useCallback(
+    (key: string) => {
+      const included = findSkin(key);
+      const fromFolder = user.find(({ skin }) => userSkinKey(skin) === key);
+      const next = included ?? fromFolder?.skin ?? null;
+      const value = next === null ? DEFAULT_SKIN_KEY : key;
+      storedRef.current = next === null ? null : key;
+      setStored(storedRef.current);
+      persistSkinPreference(value, fromFolder?.text ?? null);
+      setActiveSkin(next);
+      reapply();
+    },
+    [user],
+  );
+
+  const onOpenSkinsFolder = useCallback(() => {
+    if (folder === null) return;
+    openPath(folder).catch((cause: unknown) => setFolderError(errorMessage(cause)));
+  }, [folder]);
+
+  const userList = user.map(({ skin }) => skin);
+  const active = findSkin(stored, userList);
+  let skinNotice: string | null = folderError;
+  if (skinNotice === null && loaded && active === null && stored !== null && stored.startsWith("user:")) {
+    skinNotice = `The skin "${stored.slice("user:".length)}" is not in the skins folder or is not valid. Default is applied until it comes back.`;
+  }
+
+  return {
+    skin: active === null ? DEFAULT_SKIN_KEY : (stored as string),
+    onSkinChange,
+    userSkins: userList,
+    skinsFolder: folder,
+    refusedSkins: refused,
+    skinWarnings: warnings,
+    skinNotice,
+    onReloadSkins,
+    onOpenSkinsFolder,
+  };
 }
