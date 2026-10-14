@@ -42,9 +42,9 @@ Before you write code, read also:
 - `.agents/plans/0009-skins/plan.html` — skins that only give values to the
   tokens: ten included, from the ten landing styles, and the skins of other
   persons from a folder. It reopens custom themes (`0005`, `0006`) and bundled
-  fonts (`0002`, `0005`) for this purpose only. **Waiting for the review of the user.**
+  fonts (`0002`, `0005`) for this purpose only.
 
-All of these plans are done, except `0009`. Their decisions are closed.
+All of these plans are done. Their decisions are closed.
 
 ## Conventions
 
