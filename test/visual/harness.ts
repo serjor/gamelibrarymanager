@@ -34,7 +34,7 @@ import type {
   PriceRow,
   ReviewItem,
 } from "../../src/lib/api";
-import { THEME_STORAGE_KEY, type ThemePreference } from "../../src/features/shell/theme";
+import { SKIN_STORAGE_KEY, THEME_STORAGE_KEY, type ThemePreference } from "../../src/features/shell/theme";
 
 /**
  * What Rust would answer. Each key is the name of a Tauri command.
@@ -291,6 +291,8 @@ export interface Options {
   height?: number;
   theme?: "light" | "dark";
   themePreference?: ThemePreference;
+  /** The stored skin, as the selector stores it: `builtin:<id>`. */
+  skin?: string;
   setup?: SetupTarget;
   lockedSecretStore?: boolean;
   emptyLibrary?: boolean;
@@ -354,12 +356,25 @@ export async function withTheApp<T>(
     }
     if (options.setup === "igdb") answers.has_igdb_credentials = false;
     await page.addInitScript(
-      ({ preference, storageKey }: { preference?: ThemePreference; storageKey: string }) => {
+      ({ preference, storageKey, skin, skinKey }: {
+        preference?: ThemePreference;
+        storageKey: string;
+        skin?: string;
+        skinKey: string;
+      }) => {
         if (preference !== undefined) {
           window.localStorage.setItem(storageKey, preference);
         }
+        if (skin !== undefined) {
+          window.localStorage.setItem(skinKey, skin);
+        }
       },
-      { preference: options.themePreference, storageKey: THEME_STORAGE_KEY },
+      {
+        preference: options.themePreference,
+        storageKey: THEME_STORAGE_KEY,
+        skin: options.skin,
+        skinKey: SKIN_STORAGE_KEY,
+      },
     );
     if (options.setup === "itad") answers.has_itad_credentials = false;
 

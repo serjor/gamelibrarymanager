@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { INCLUDED_SKINS } from "../../skins";
 import { applySkin, type Skin } from "./skin";
 
 export const THEME_PREFERENCES = ["system", "light", "dark"] as const;
@@ -11,8 +12,8 @@ const DARK_MODE_QUERY = "(prefers-color-scheme: dark)";
 /** The key of the stored skin. The default skin is the absence of a key. */
 export const SKIN_STORAGE_KEY = "gamelibrarymanager.skin";
 
-/** The skins that the application includes, by key: `builtin:<id>`. */
-export const INCLUDED_SKINS: readonly Skin[] = [];
+/** The value of the selector for the default skin, which is never stored. */
+export const DEFAULT_SKIN_KEY = "default";
 
 // The skin goes with the mode: each change of mode applies the values of the
 // skin for the new mode.
@@ -82,6 +83,25 @@ export function setActiveSkin(skin: Skin | null): void {
   activeSkin = skin;
 }
 
+/** The options of the selector: the default skin first, then the included ones. */
+export function skinChoices(skins: readonly Skin[] = INCLUDED_SKINS): { key: string; name: string }[] {
+  return [
+    { key: DEFAULT_SKIN_KEY, name: "Default" },
+    ...skins.map((skin) => ({ key: `builtin:${skin.id}`, name: skin.name })),
+  ];
+}
+
+export function persistSkinPreference(key: string): boolean {
+  try {
+    if (typeof window === "undefined") return false;
+    if (key === DEFAULT_SKIN_KEY) window.localStorage.removeItem(SKIN_STORAGE_KEY);
+    else window.localStorage.setItem(SKIN_STORAGE_KEY, key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function bootstrapTheme(): EffectiveTheme {
   setActiveSkin(findSkin(readSkinPreference()));
   const preference = readThemePreference();
@@ -127,4 +147,29 @@ export function useThemePreference(): ThemePreferenceState {
   }, [theme]);
 
   return { theme, onThemeChange };
+}
+
+export interface SkinPreferenceState {
+  skin: string;
+  onSkinChange: (key: string) => void;
+}
+
+export function useSkinPreference(): SkinPreferenceState {
+  const [skin, setSkin] = useState<string>(() => {
+    const key = readSkinPreference();
+    return findSkin(key) === null ? DEFAULT_SKIN_KEY : (key as string);
+  });
+
+  const onSkinChange = useCallback((key: string) => {
+    const next = findSkin(key);
+    const stored = next === null ? DEFAULT_SKIN_KEY : key;
+    setSkin(stored);
+    persistSkinPreference(stored);
+    setActiveSkin(next);
+    if (typeof document === "undefined") return;
+    // The skin changes and the mode does not: apply the mode that is there.
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+  }, []);
+
+  return { skin, onSkinChange };
 }

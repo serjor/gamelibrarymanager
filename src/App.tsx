@@ -31,7 +31,7 @@ import { Library, type View } from "./features/library/Library";
 import { Today } from "./features/today/Today";
 import { ActivityStrip } from "./features/shell/ActivityStrip";
 import { AppShell, type AppTab } from "./features/shell/AppShell";
-import { useThemePreference } from "./features/shell/theme";
+import { useSkinPreference, useThemePreference } from "./features/shell/theme";
 import { Wishlist } from "./features/wishlist/Wishlist";
 import { lunaIsStale } from "./features/wishlist/luna";
 
@@ -50,6 +50,7 @@ function nameOf(store: string): string {
 
 export function App() {
   const { theme, onThemeChange } = useThemePreference();
+  const { skin, onSkinChange } = useSkinPreference();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [connectors, setConnectors] = useState<ConnectorState[]>([]);
@@ -423,6 +424,8 @@ export function App() {
         busy,
         theme,
         onThemeChange,
+        skin,
+        onSkinChange,
         summary,
         storeName: nameOf,
         onSetup: (target) => setSetup(target),

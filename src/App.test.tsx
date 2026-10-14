@@ -1420,7 +1420,7 @@ describe("App", () => {
     fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
 
     expect(screen.getByText(/84 wished-for copies/)).toBeDefined();
-    expect(screen.getByText(/Click/)).toBeDefined();
+    expect(screen.getByText(/Click "Match"/)).toBeDefined();
   });
 
   it("with no wished-for game it does not offer to update prices that do not exist", async () => {

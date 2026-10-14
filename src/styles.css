@@ -1703,12 +1703,18 @@ button.link {
   background: var(--surface);
 }
 
+/* One row for each preference: the labels in one column and the selects in
+   the other, thus Theme and Skin line up. */
 .utility-preferences {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  justify-items: end;
   gap: var(--e-3) var(--e-5);
+}
+
+.utility-preferences label {
+  justify-self: start;
 }
 
 .utility-preferences label {

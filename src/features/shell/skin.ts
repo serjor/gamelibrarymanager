@@ -118,7 +118,21 @@ export const SKIN_TOKEN_ALIASES: Readonly<Record<string, string>> = {};
  * becomes. A skin names a family from this list or `"system"`; it never brings
  * a font file.
  */
-export const SKIN_FONT_FAMILIES: Readonly<Record<string, string>> = {};
+export const SKIN_FONT_FAMILIES: Readonly<Record<string, string>> = {
+  "Press Start 2P": '"Press Start 2P", ui-monospace, monospace',
+  VT323: '"VT323", ui-monospace, monospace',
+  DotGothic16: '"DotGothic16", ui-monospace, monospace',
+  Anton: '"Anton", Impact, sans-serif',
+  "Archivo Narrow": '"Archivo Narrow", "Arial Narrow", sans-serif',
+  Rajdhani: '"Rajdhani", "Arial Narrow", sans-serif',
+  "JetBrains Mono": '"JetBrains Mono", ui-monospace, monospace',
+  "IBM Plex Mono": '"IBM Plex Mono", ui-monospace, monospace',
+  Saira: '"Saira", system-ui, sans-serif',
+  Silkscreen: '"Silkscreen", ui-monospace, monospace',
+  Cinzel: '"Cinzel", Georgia, serif',
+  "EB Garamond": '"EB Garamond", Georgia, serif',
+  "Pixelify Sans": '"Pixelify Sans", system-ui, sans-serif',
+};
 
 export interface Skin {
   format: typeof SKIN_FORMAT;
@@ -279,7 +293,13 @@ export const CONTRAST_PAIRS: readonly { text: string; on: string; minimum: numbe
       { text, on: "surface", minimum: 4.5 },
     ],
   ),
+  { text: "accent", on: "background", minimum: 4.5 },
+  { text: "accent", on: "surface", minimum: 4.5 },
+  { text: "accent-hover", on: "surface", minimum: 4.5 },
+  { text: "archive-accent-strong", on: "background", minimum: 4.5 },
   { text: "on-accent", on: "accent", minimum: 4.5 },
+  { text: "on-accent", on: "command-accent", minimum: 4.5 },
+  { text: "on-accent", on: "command-accent-hover", minimum: 4.5 },
   { text: "error", on: "surface-error", minimum: 4.5 },
   { text: "price-low", on: "surface", minimum: 4.5 },
   { text: "focus", on: "background", minimum: 3 },

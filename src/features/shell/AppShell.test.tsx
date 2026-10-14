@@ -27,6 +27,7 @@ const connector: ConnectorState = {
 describe("AppShell", () => {
   it("keeps navigation and maintenance actions reachable", async () => {
     const selectedTheme = { value: null as ThemePreference | null };
+    const selectedSkin = { value: null as string | null };
     render(
       <AppShell
         tab="library"
@@ -48,6 +49,10 @@ describe("AppShell", () => {
           theme: "system",
           onThemeChange: (preference) => {
             selectedTheme.value = preference;
+          },
+          skin: "default",
+          onSkinChange: (key) => {
+            selectedSkin.value = key;
           },
           summary,
           storeName: (store) => store,
@@ -93,6 +98,24 @@ describe("AppShell", () => {
     expect(theme.disabled).toBe(false);
     fireEvent.change(theme, { target: { value: "dark" } });
     expect(selectedTheme.value).toBe("dark");
+
+    const skin = within(dialog).getByRole("combobox", { name: "Skin" }) as HTMLSelectElement;
+    expect(skin.value).toBe("default");
+    expect([...skin.options].map((option) => option.text)).toEqual([
+      "Default",
+      "Arcade",
+      "JRPG",
+      "Magazine",
+      "Speedrun",
+      "Demoscene",
+      "Memory Card",
+      "Handheld",
+      "Cards",
+      "Point & Click",
+      "Souls",
+    ]);
+    fireEvent.change(skin, { target: { value: "builtin:souls" } });
+    expect(selectedSkin.value).toBe("builtin:souls");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Close Utilities" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());

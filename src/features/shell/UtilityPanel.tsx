@@ -7,7 +7,7 @@ import type {
   LunaView,
 } from "../../lib/api";
 import { lunaCatalogueLabel } from "../wishlist/luna";
-import { THEME_PREFERENCES, type ThemePreference } from "./theme";
+import { skinChoices, THEME_PREFERENCES, type ThemePreference } from "./theme";
 
 export type SetupTarget = "steam" | "gog" | "epic" | "igdb" | "itad";
 
@@ -29,6 +29,8 @@ export interface UtilityPanelProps {
   busy: string | null;
   theme: ThemePreference;
   onThemeChange: (preference: ThemePreference) => void;
+  skin: string;
+  onSkinChange: (key: string) => void;
   summary: LibrarySummary | null;
   storeName: (store: string) => string;
   onSetup: (target: SetupTarget) => void;
@@ -68,6 +70,8 @@ export function UtilityPanel({
   busy,
   theme,
   onThemeChange,
+  skin,
+  onSkinChange,
   summary,
   storeName,
   onSetup,
@@ -178,8 +182,23 @@ export function UtilityPanel({
                   </option>
                 ))}
               </select>
+              <label htmlFor="utility-skin">Skin</label>
+              <select
+                id="utility-skin"
+                value={skin}
+                onChange={(event) => onSkinChange(event.currentTarget.value)}
+              >
+                {skinChoices().map((choice) => (
+                  <option key={choice.key} value={choice.key}>
+                    {choice.name}
+                  </option>
+                ))}
+              </select>
             </div>
-            <p className="hint utility-help">System follows the operating-system theme.</p>
+            <p className="hint utility-help">
+              System follows the operating-system theme. A skin changes the colours, the fonts
+              and the corners, in the two themes.
+            </p>
           </section>
 
           <section className="utility-section" aria-labelledby="utility-accounts">

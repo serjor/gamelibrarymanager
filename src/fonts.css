@@ -1,0 +1,122 @@
+/* The font families that a skin can name.
+ *
+ * Each one lives in src/assets/fonts/<family>/ with its OFL.txt, and NOTICE
+ * records where it comes from. The files are Latin subsets, except Press
+ * Start 2P: its licence reserves the name for the original font, thus it goes
+ * complete. No font comes from the network: the CSP permits fonts only from
+ * the application itself.
+ *
+ * `SKIN_FONT_FAMILIES` in src/features/shell/skin.ts lists the same families,
+ * and a test compares the two lists. */
+
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("./assets/fonts/press-start-2p/PressStart2P-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "VT323";
+  src: url("./assets/fonts/vt323/VT323-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DotGothic16";
+  src: url("./assets/fonts/dotgothic16/DotGothic16-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Anton";
+  src: url("./assets/fonts/anton/Anton-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Archivo Narrow";
+  src: url("./assets/fonts/archivo-narrow/ArchivoNarrow-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Rajdhani";
+  src: url("./assets/fonts/rajdhani/Rajdhani-SemiBold.woff2") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Rajdhani";
+  src: url("./assets/fonts/rajdhani/Rajdhani-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/jetbrains-mono/JetBrainsMono-Variable.woff2") format("woff2");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./assets/fonts/ibm-plex-mono/IBMPlexMono-Regular.woff2") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("./assets/fonts/ibm-plex-mono/IBMPlexMono-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Saira";
+  src: url("./assets/fonts/saira/Saira-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("./assets/fonts/silkscreen/Silkscreen-Regular.woff2") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("./assets/fonts/silkscreen/Silkscreen-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Cinzel";
+  src: url("./assets/fonts/cinzel/Cinzel-Variable.woff2") format("woff2");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("./assets/fonts/eb-garamond/EBGaramond-Variable.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("./assets/fonts/pixelify-sans/PixelifySans-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
