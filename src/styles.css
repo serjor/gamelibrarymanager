@@ -58,6 +58,10 @@
 
   /* Typography. The system stack stays local to the desktop application. */
   --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* A skin puts its character in the titles and the figures and keeps the body
+     legible. Here the two are the body font, thus they change nothing. */
+  --font-display: var(--font);
+  --font-mono: var(--font);
   --t-xs: 0.75rem;
   --t-s: 0.8125rem;
   --t-m: 0.875rem;
@@ -243,6 +247,12 @@ header {
 h1,
 h2 {
   margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 /* The setup screens are one column of fields, and `main` has grown so that the
@@ -774,6 +784,7 @@ button.link {
    the same width. This applies to the two tables: the library and the review. */
 .num {
   text-align: right;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

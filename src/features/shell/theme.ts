@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { applySkin, type Skin } from "./skin";
 
 export const THEME_PREFERENCES = ["system", "light", "dark"] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
@@ -6,6 +7,16 @@ export type EffectiveTheme = Exclude<ThemePreference, "system">;
 export const THEME_STORAGE_KEY = "gamelibrarymanager.theme";
 
 const DARK_MODE_QUERY = "(prefers-color-scheme: dark)";
+
+/** The key of the stored skin. The default skin is the absence of a key. */
+export const SKIN_STORAGE_KEY = "gamelibrarymanager.skin";
+
+/** The skins that the application includes, by key: `builtin:<id>`. */
+export const INCLUDED_SKINS: readonly Skin[] = [];
+
+// The skin goes with the mode: each change of mode applies the values of the
+// skin for the new mode.
+let activeSkin: Skin | null = null;
 
 function isThemePreference(value: string | null): value is ThemePreference {
   return value === "system" || value === "light" || value === "dark";
@@ -49,9 +60,30 @@ export function resolveEffectiveTheme(
 export function applyTheme(theme: EffectiveTheme): void {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.theme = theme;
+  applySkin(activeSkin, theme);
+}
+
+export function readSkinPreference(): string | null {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(SKIN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Gives the skin of a stored key, or `null` (the default skin) when no skin has that key. */
+export function findSkin(key: string | null, skins: readonly Skin[] = INCLUDED_SKINS): Skin | null {
+  return skins.find((skin) => `builtin:${skin.id}` === key) ?? null;
+}
+
+/** Makes a skin the active one. The next `applyTheme` puts it on the document. */
+export function setActiveSkin(skin: Skin | null): void {
+  activeSkin = skin;
 }
 
 export function bootstrapTheme(): EffectiveTheme {
+  setActiveSkin(findSkin(readSkinPreference()));
   const preference = readThemePreference();
   const media = systemMediaQuery();
   const theme = resolveEffectiveTheme(preference, media?.matches ?? false);

@@ -831,6 +831,28 @@ for (const width of WIDTHS) {
  * that reads well on the light background becomes weak on the dark background,
  * and that is exactly where it marks the data that users most look for.
  */
+console.log("\nThe default skin");
+for (const theme of ["light", "dark"] as const) {
+  // The default skin is `src/styles.css` alone: it puts no value on `html`,
+  // and the font tokens for titles and figures are the body font.
+  const r = await withTheApp(
+    (page) =>
+      page.evaluate(() => {
+        const root = getComputedStyle(document.documentElement);
+        const heading = document.querySelector("h1, h2, h3");
+        return {
+          inline: document.documentElement.style.length,
+          display: root.getPropertyValue("--font-display").trim() === root.getPropertyValue("--font").trim(),
+          mono: root.getPropertyValue("--font-mono").trim() === root.getPropertyValue("--font").trim(),
+          heading: heading !== null && getComputedStyle(heading).fontFamily === getComputedStyle(document.body).fontFamily,
+        };
+      }),
+    { theme, answers: ALL },
+  );
+  check(`${theme} · default skin puts no value on html`, r.inline === 0);
+  check(`${theme} · title and figure fonts are the body font`, r.display && r.mono && r.heading);
+}
+
 console.log("\nThe contrast of \"at its low\"");
 for (const theme of ["light", "dark"] as const) {
   const ratio = await withTheApp(
