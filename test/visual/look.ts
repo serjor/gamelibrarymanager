@@ -11,6 +11,7 @@
  *
  *     bun run build && bun run visual
  */
+import { INCLUDED_SKINS } from "../../src/skins";
 import { LONG_PROVIDER_ERROR, exampleLibrary, exampleQueue, exampleWishlist, openUtilities, withTheApp } from "./harness";
 
 /**
@@ -831,6 +832,221 @@ for (const width of WIDTHS) {
  * that reads well on the light background becomes weak on the dark background,
  * and that is exactly where it marks the data that users most look for.
  */
+console.log("\nThe default skin");
+for (const theme of ["light", "dark"] as const) {
+  // The default skin is `src/styles.css` alone: it puts no value on `html`,
+  // and the font tokens for titles and figures are the body font.
+  const r = await withTheApp(
+    (page) =>
+      page.evaluate(() => {
+        const root = getComputedStyle(document.documentElement);
+        const heading = document.querySelector("h1, h2, h3");
+        return {
+          inline: document.documentElement.style.length,
+          display: root.getPropertyValue("--font-display").trim() === root.getPropertyValue("--font").trim(),
+          mono: root.getPropertyValue("--font-mono").trim() === root.getPropertyValue("--font").trim(),
+          heading: heading !== null && getComputedStyle(heading).fontFamily === getComputedStyle(document.body).fontFamily,
+        };
+      }),
+    { theme, answers: ALL },
+  );
+  check(`${theme} · default skin puts no value on html`, r.inline === 0);
+  check(`${theme} · title and figure fonts are the body font`, r.display && r.mono && r.heading);
+}
+
+console.log("\nThe included skins");
+// Each skin changes the fonts, and a font with other metrics is what breaks a
+// layout: the table keeps its rhythm of 38 px, nothing goes sideways, and only
+// the region scrolls. The validator measured the contrast of the tokens; here
+// it is measured on what the browser draws.
+for (const skin of INCLUDED_SKINS) {
+  for (const theme of ["light", "dark"] as const) {
+    const r = await withTheApp(
+      async (page) => {
+        await page.getByRole("columnheader").first().waitFor();
+        const layout = await page.evaluate(async (display) => {
+          await document.fonts.ready;
+          const numbers = (s: string) => (s.match(/[0-9.]+/g) ?? []).map(Number);
+          const light = (c: number[]) => {
+            const channel = (v: number) => {
+              const x = v / 255;
+              return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+            };
+            return 0.2126 * channel(c[0] ?? 0) + 0.7152 * channel(c[1] ?? 0) + 0.0722 * channel(c[2] ?? 0);
+          };
+          const ratio = (a: number[], b: number[]) => {
+            const [high, low] = [light(a), light(b)].sort((x, y) => y - x) as [number, number];
+            return (high + 0.05) / (low + 0.05);
+          };
+          const root = document.documentElement;
+          const frame = document.querySelector(".shell-workspace")!;
+          const region = document.querySelector(".table-viewport")!;
+          const rows = [...document.querySelectorAll(".table.command-table tbody tr:not([style])")];
+          const cellOverflow = rows
+            .flatMap((row) => [...row.querySelectorAll("td")])
+            .filter((cell) => {
+              const box = cell.getBoundingClientRect();
+              return [...cell.querySelectorAll("*")].some(
+                (inner) => inner.getBoundingClientRect().right > box.right + 0.5,
+              );
+            }).length;
+          const brand = document.querySelector(".brand-title h1");
+          const background = numbers(getComputedStyle(document.body).backgroundColor);
+          const muted = document.querySelector(".hint, .filter-count");
+          return {
+            applied: root.style.getPropertyValue("--background") !== "",
+            // A family loads only the faces that the page uses: the titles are bold.
+            fontLoaded:
+              display === null ||
+              [...document.fonts].some(
+                (face) => face.family.replace(/"/g, "") === display && face.status === "loaded",
+              ),
+            pageScrolls: root.scrollHeight > root.clientHeight + 1,
+            frameScrolls: frame.scrollHeight > frame.clientHeight + 1,
+            regionHeight: Math.round(region.getBoundingClientRect().height),
+            rowHeight: rows[0]?.getBoundingClientRect().height ?? 0,
+            cellOverflow,
+            brandCut: brand !== null && brand.scrollWidth > brand.clientWidth + 1,
+            sideways: root.scrollWidth > root.clientWidth,
+            text: ratio(numbers(getComputedStyle(document.body).color), background),
+            muted: muted ? ratio(numbers(getComputedStyle(muted).color), background) : Number.NaN,
+          };
+        }, skin.fonts.display ?? null);
+        await openUtilities(page);
+        const dialog = await page.locator("dialog[open]").evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return {
+            inside: box.top >= -0.5 && box.left >= -0.5 &&
+              box.bottom <= window.innerHeight + 0.5 && box.right <= window.innerWidth + 0.5,
+            selected: (document.getElementById("utility-skin") as HTMLSelectElement).value,
+          };
+        });
+        return { ...layout, ...dialog };
+      },
+      { width: 1000, height: 900, theme, skin: `builtin:${skin.id}`, answers: ALL },
+    );
+
+    const where = `${skin.id} · ${theme}`;
+    check(`${where} · the skin is applied and selected`, r.applied && r.selected === `builtin:${skin.id}`);
+    check(`${where} · its display font loads from the application`, r.fontLoaded);
+    check(`${where} · only the region scrolls (${r.regionHeight} px)`, !r.pageScrolls && !r.frameScrolls && r.regionHeight > 400);
+    check(`${where} · virtual rows keep their 38 px rhythm`, Math.abs(r.rowHeight - 38) < 0.5);
+    check(`${where} · library cells stay inside their columns`, r.cellOverflow === 0);
+    check(`${where} · the brand title is not cut`, !r.brandCut);
+    check(`${where} · the page does not go sideways`, !r.sideways);
+    check(`${where} · text ${r.text.toFixed(2)}:1, muted ${r.muted.toFixed(2)}:1`, r.text >= 4.5 && r.muted >= 4.5);
+    check(`${where} · the utility dialog stays inside the window`, r.inside);
+  }
+}
+
+const skinFlow = await withTheApp(
+  async (page) => {
+    const read = () =>
+      page.evaluate(() => ({
+        background: document.documentElement.style.getPropertyValue("--background"),
+        stored: window.localStorage.getItem("gamelibrarymanager.skin"),
+      }));
+    await openUtilities(page);
+    await page.selectOption("#utility-skin", "builtin:souls");
+    const chosen = await read();
+    await page.reload();
+    await page.getByRole("navigation").waitFor();
+    const persisted = await read();
+    await openUtilities(page);
+    await page.selectOption("#utility-skin", "default");
+    const back = await read();
+    return { chosen, persisted, back };
+  },
+  { theme: "dark", answers: ALL },
+);
+const souls = INCLUDED_SKINS.find((skin) => skin.id === "souls")!;
+check(
+  "the skin selector applies and stores a skin",
+  skinFlow.chosen.background === souls.dark.background && skinFlow.chosen.stored === "builtin:souls",
+);
+check(
+  "the skin survives a reload",
+  skinFlow.persisted.background === souls.dark.background && skinFlow.persisted.stored === "builtin:souls",
+);
+check("Default removes the skin and its key", skinFlow.back.background === "" && skinFlow.back.stored === null);
+
+console.log("\nSkins from the folder");
+const NEON = JSON.stringify({
+  format: 1,
+  id: "neon",
+  name: "Neon",
+  author: "Ana",
+  light: { background: "#f4f1ff", surface: "#ffffff", text: "#1a1033", accent: "#5a1cc8" },
+  dark: { background: "#0b0618", surface: "#140c2a", text: "#efe8ff", accent: "#b48cff" },
+});
+const PALE = JSON.stringify({ format: 1, id: "pale", name: "Pale", light: { text: "#f5f1e8" }, dark: {} });
+const FOLDER = "/home/user/.local/share/com.serjor.gamelibrarymanager/skins";
+
+const fromFolder = await withTheApp(
+  async (page) => {
+    await openUtilities(page);
+    const before = await page.evaluate(() => {
+      const select = document.getElementById("utility-skin") as HTMLSelectElement;
+      return {
+        groups: [...select.querySelectorAll("optgroup")].map((group) => group.label),
+        names: [...select.options].map((option) => option.text),
+        notices: document.querySelector('[aria-label="Skin files"]')?.textContent ?? "",
+      };
+    });
+    await page.selectOption("#utility-skin", "user:neon");
+    const after = await page.evaluate(() => ({
+      background: document.documentElement.style.getPropertyValue("--background"),
+      stored: window.localStorage.getItem("gamelibrarymanager.skin"),
+      cached: window.localStorage.getItem("gamelibrarymanager.skin.user") !== null,
+    }));
+    return { ...before, ...after };
+  },
+  {
+    theme: "light",
+    answers: {
+      ...ALL,
+      list_user_skins: {
+        dir: FOLDER,
+        files: [
+          { file: "big.json", error: "it has more than 64 KB" },
+          { file: "neon.json", text: NEON },
+          { file: "pale.json", text: PALE },
+        ],
+      },
+    },
+  },
+);
+check("a skin of the folder is offered in its own group", fromFolder.groups.join("|") === "Included|From the skins folder");
+check("the name of a skin of the folder shows its author", fromFolder.names.includes("Neon · Ana"));
+check(
+  "each file that is not applied says why",
+  fromFolder.notices.includes("big.json is not applied: it has more than 64 KB") &&
+    fromFolder.notices.includes("pale.json is not applied: light · text on background is"),
+);
+check(
+  "a skin of the folder applies, and its text is kept for the next start",
+  fromFolder.background === "#f4f1ff" && fromFolder.stored === "user:neon" && fromFolder.cached,
+);
+
+const startWithout = await withTheApp(
+  async (page) => {
+    await page.getByRole("navigation").waitFor();
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue("--background") === "");
+    const seen = await page.evaluate(() => (window as unknown as Record<string, string[]>)["__skinBackgrounds"]!);
+    await openUtilities(page);
+    const notice = await page.locator("dialog[open] [role=alert]").textContent();
+    const stored = await page.evaluate(() => window.localStorage.getItem("gamelibrarymanager.skin"));
+    return { seen, notice, stored };
+  },
+  { theme: "light", skin: "user:neon", skinCache: NEON, recordSkin: true, answers: { ...ALL } },
+);
+check("the start paints the kept skin before the folder answers", startWithout.seen[0] === "#f4f1ff");
+check("a skin that left the folder gives way to Default", startWithout.seen.at(-1) === "");
+check(
+  "and the choice stays, with the reason",
+  startWithout.stored === "user:neon" && (startWithout.notice ?? "").includes('"neon" is not in the skins folder'),
+);
+
 console.log("\nThe contrast of \"at its low\"");
 for (const theme of ["light", "dark"] as const) {
   const ratio = await withTheApp(

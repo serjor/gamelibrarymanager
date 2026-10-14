@@ -9,6 +9,7 @@ pub mod export;
 pub mod gog;
 pub mod luna;
 pub mod manual_wish;
+pub mod skins;
 
 use domain::{
     AuthContext, ConnectorState, EntryKind, GameId, GameLink, LinkMethod, PlayStatus,

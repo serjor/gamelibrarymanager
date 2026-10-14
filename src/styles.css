@@ -58,6 +58,10 @@
 
   /* Typography. The system stack stays local to the desktop application. */
   --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* A skin puts its character in the titles and the figures and keeps the body
+     legible. Here the two are the body font, thus they change nothing. */
+  --font-display: var(--font);
+  --font-mono: var(--font);
   --t-xs: 0.75rem;
   --t-s: 0.8125rem;
   --t-m: 0.875rem;
@@ -243,6 +247,12 @@ header {
 h1,
 h2 {
   margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
 }
 
 /* The setup screens are one column of fields, and `main` has grown so that the
@@ -774,6 +784,7 @@ button.link {
    the same width. This applies to the two tables: the library and the review. */
 .num {
   text-align: right;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1692,12 +1703,18 @@ button.link {
   background: var(--surface);
 }
 
+/* One row for each preference: the labels in one column and the selects in
+   the other, thus Theme and Skin line up. */
 .utility-preferences {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
+  justify-items: end;
   gap: var(--e-3) var(--e-5);
+}
+
+.utility-preferences label {
+  justify-self: start;
 }
 
 .utility-preferences label {
@@ -1750,6 +1767,18 @@ button.link {
 
 .utility-help {
   margin: var(--e-3) 0 0;
+}
+
+/* A path of the machine is long and has no spaces: it breaks where it must. */
+.utility-path {
+  overflow-wrap: anywhere;
+}
+
+.utility-skin-notices {
+  display: grid;
+  gap: var(--e-2);
+  margin-top: var(--e-3);
+  overflow-wrap: anywhere;
 }
 
 .utility-list,

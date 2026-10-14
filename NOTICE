@@ -56,6 +56,67 @@ honesty, although no licence makes that necessary:
   launcher. That pair is published in legendary. This program does **not** carry
   it inside: the user supplies it when they connect their account.
 
+Fonts
+-----
+The skins can use these font families. All of them are under the SIL Open Font
+License 1.1, which permits to bundle them with software under any licence. Each
+one lives in src/assets/fonts/<family>/ with its OFL.txt. They were taken from
+https://github.com/google/fonts (ofl/<directory>) on 2026-10-14 and converted
+to WOFF2 with a subset of the Latin characters (fontTools pyftsubset), unless
+the entry says something different.
+
+  Press Start 2P (src/assets/fonts/press-start-2p/, from ofl/pressstart2p)
+    Copyright 2012 The Press Start 2P Project Authors (cody@zone38.net),
+    with Reserved Font Name "Press Start 2P"
+    Converted to WOFF2 with no subset and no other change, because the
+    licence reserves the name for the original font.
+
+  VT323 (src/assets/fonts/vt323/, from ofl/vt323)
+    Copyright 2011, The VT323 Project Authors (peter.hull@oikoi.com)
+
+  DotGothic16 (src/assets/fonts/dotgothic16/, from ofl/dotgothic16)
+    Copyright 2020 The DotGothic16 Project Authors
+    (https://github.com/fontworks-fonts/DotGothic16/)
+
+  Anton (src/assets/fonts/anton/, from ofl/anton)
+    Copyright 2020 The Anton Project Authors
+    (https://github.com/googlefonts/AntonFont.git)
+
+  Archivo Narrow (src/assets/fonts/archivo-narrow/, from ofl/archivonarrow)
+    Copyright 2019 The Archivo Narrow Project Authors
+    (https://github.com/Omnibus-Type/ArchivoNarrow)
+
+  Rajdhani (src/assets/fonts/rajdhani/, from ofl/rajdhani)
+    Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com)
+
+  JetBrains Mono (src/assets/fonts/jetbrains-mono/, from ofl/jetbrainsmono)
+    Copyright 2020 The JetBrains Mono Project Authors
+    (https://github.com/JetBrains/JetBrainsMono)
+
+  IBM Plex Mono (src/assets/fonts/ibm-plex-mono/, from ofl/ibmplexmono)
+    Copyright 2017 IBM Corp.
+
+  Saira (src/assets/fonts/saira/, from ofl/saira)
+    Copyright 2020 The Saira Project Authors
+    (https://github.com/Omnibus-Type/Saira)
+    The width axis is fixed at 100.
+
+  Silkscreen (src/assets/fonts/silkscreen/, from ofl/silkscreen)
+    Copyright 2001 The Silkscreen Project Authors
+    (https://github.com/googlefonts/silkscreen)
+
+  Cinzel (src/assets/fonts/cinzel/, from ofl/cinzel)
+    Copyright 2020 The Cinzel Project Authors
+    (https://github.com/NDISCOVER/Cinzel)
+
+  EB Garamond (src/assets/fonts/eb-garamond/, from ofl/ebgaramond)
+    Copyright 2017 The EB Garamond Project Authors
+    (https://github.com/octaviopardo/EBGaramond12)
+
+  Pixelify Sans (src/assets/fonts/pixelify-sans/, from ofl/pixelifysans)
+    Copyright 2021 The Pixelify Sans Project Authors
+    (https://github.com/eifetx/Pixelify-Sans)
+
 About the stores
 ----------------
 This project has no relation to Valve, GOG, CD PROJEKT or Epic Games. The

@@ -1,0 +1,521 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Game Library Manager skin",
+  "description": "A skin gives values to the tokens of the interface. See SKINS.md.",
+  "type": "object",
+  "required": [
+    "format",
+    "id",
+    "name",
+    "light",
+    "dark"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "format": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{1,40}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "fonts": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "enum": [
+            "system",
+            "Press Start 2P",
+            "VT323",
+            "DotGothic16",
+            "Anton",
+            "Archivo Narrow",
+            "Rajdhani",
+            "JetBrains Mono",
+            "IBM Plex Mono",
+            "Saira",
+            "Silkscreen",
+            "Cinzel",
+            "EB Garamond",
+            "Pixelify Sans"
+          ]
+        },
+        "display": {
+          "enum": [
+            "system",
+            "Press Start 2P",
+            "VT323",
+            "DotGothic16",
+            "Anton",
+            "Archivo Narrow",
+            "Rajdhani",
+            "JetBrains Mono",
+            "IBM Plex Mono",
+            "Saira",
+            "Silkscreen",
+            "Cinzel",
+            "EB Garamond",
+            "Pixelify Sans"
+          ]
+        },
+        "mono": {
+          "enum": [
+            "system",
+            "Press Start 2P",
+            "VT323",
+            "DotGothic16",
+            "Anton",
+            "Archivo Narrow",
+            "Rajdhani",
+            "JetBrains Mono",
+            "IBM Plex Mono",
+            "Saira",
+            "Silkscreen",
+            "Cinzel",
+            "EB Garamond",
+            "Pixelify Sans"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "shared": {
+      "type": "object",
+      "properties": {
+        "t-xs": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-s": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-m": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-base": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-l": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-xl": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "t-2xl": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "leading-tight": {
+          "type": "string",
+          "pattern": "^-?\\d*\\.?\\d+$"
+        },
+        "leading-copy": {
+          "type": "string",
+          "pattern": "^-?\\d*\\.?\\d+$"
+        },
+        "e-1": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-2": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-3": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-4": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-5": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-6": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-7": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "e-8": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "radius-s": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "radius-m": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "radius-l": {
+          "type": "string",
+          "pattern": "^(0|-?\\d*\\.?\\d+(px|rem))$"
+        },
+        "motion-fast": {
+          "type": "string",
+          "pattern": "^\\d+ms$"
+        },
+        "motion-base": {
+          "type": "string",
+          "pattern": "^\\d+ms$"
+        },
+        "motion-slow": {
+          "type": "string",
+          "pattern": "^\\d+ms$"
+        },
+        "motion-ease": {
+          "type": "string",
+          "pattern": "^(linear|ease|ease-in|ease-out|ease-in-out|cubic-bezier\\(.*\\))$"
+        }
+      },
+      "additionalProperties": true
+    },
+    "light": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-raised": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-sunken": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-selected": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-backlog": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-error": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "placeholder": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "border": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "border-strong": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "text-muted": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "accent-hover": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "on-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "command-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "command-accent-hover": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-accent-strong": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-surface": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "focus": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "error": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "scrim": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-frame": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-a": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-b": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-c": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-a": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-b": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-c": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-d": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-backlog": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-playing": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-finished": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-abandoned": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "price-low": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "shadow-soft": {
+          "type": "string",
+          "pattern": "^(none|(inset\\s+)?.+\\s(#[0-9a-fA-F]{3,8}|rgba?\\(.*\\)))$"
+        },
+        "shadow-raised": {
+          "type": "string",
+          "pattern": "^(none|(inset\\s+)?.+\\s(#[0-9a-fA-F]{3,8}|rgba?\\(.*\\)))$"
+        }
+      },
+      "additionalProperties": true
+    },
+    "dark": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-raised": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-sunken": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-selected": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-backlog": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "surface-error": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "placeholder": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "border": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "border-strong": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "text": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "text-muted": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "accent-hover": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "on-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "command-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "command-accent-hover": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-accent": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-accent-strong": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "archive-surface": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "focus": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "error": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "scrim": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-frame": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-a": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-b": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "icon-card-c": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-a": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-b": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-c": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "art-pattern-d": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-backlog": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-playing": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-finished": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "status-abandoned": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "price-low": {
+          "type": "string",
+          "pattern": "^(#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|rgba?\\(.*\\))$"
+        },
+        "shadow-soft": {
+          "type": "string",
+          "pattern": "^(none|(inset\\s+)?.+\\s(#[0-9a-fA-F]{3,8}|rgba?\\(.*\\)))$"
+        },
+        "shadow-raised": {
+          "type": "string",
+          "pattern": "^(none|(inset\\s+)?.+\\s(#[0-9a-fA-F]{3,8}|rgba?\\(.*\\)))$"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

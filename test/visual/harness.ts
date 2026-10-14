@@ -33,8 +33,14 @@ import type {
   LibrarySummary,
   PriceRow,
   ReviewItem,
+  UserSkins,
 } from "../../src/lib/api";
-import { THEME_STORAGE_KEY, type ThemePreference } from "../../src/features/shell/theme";
+import {
+  SKIN_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  USER_SKIN_CACHE_KEY,
+  type ThemePreference,
+} from "../../src/features/shell/theme";
 
 /**
  * What Rust would answer. Each key is the name of a Tauri command.
@@ -56,6 +62,7 @@ export interface Answers {
   library: LibraryRow[];
   prices: PriceRow[];
   luna_settings: LunaView;
+  list_user_skins: UserSkins;
 }
 
 /**
@@ -249,6 +256,7 @@ function defaultAnswers(library: LibraryRow[]): Answers {
     library,
     prices: [],
     luna_settings: { settings: null, countries: ["ES"] },
+    list_user_skins: { dir: "/home/user/.local/share/com.serjor.gamelibrarymanager/skins", files: [] },
   };
 }
 
@@ -291,6 +299,16 @@ export interface Options {
   height?: number;
   theme?: "light" | "dark";
   themePreference?: ThemePreference;
+  /** The stored skin, as the selector stores it: `builtin:<id>` or `user:<id>`. */
+  skin?: string;
+  /** The text of a skin of the folder that the last start kept. */
+  skinCache?: string;
+  /**
+   * Records in `window.__skinBackgrounds` each value of `--background` that a
+   * skin puts on `html`, from before the first script. It shows what the start
+   * painted before the folder answered.
+   */
+  recordSkin?: boolean;
   setup?: SetupTarget;
   lockedSecretStore?: boolean;
   emptyLibrary?: boolean;
@@ -354,12 +372,44 @@ export async function withTheApp<T>(
     }
     if (options.setup === "igdb") answers.has_igdb_credentials = false;
     await page.addInitScript(
-      ({ preference, storageKey }: { preference?: ThemePreference; storageKey: string }) => {
+      ({ preference, storageKey, skin, skinKey, cache, cacheKey, record }: {
+        preference?: ThemePreference;
+        storageKey: string;
+        skin?: string;
+        skinKey: string;
+        cache?: string;
+        cacheKey: string;
+        record: boolean;
+      }) => {
         if (preference !== undefined) {
           window.localStorage.setItem(storageKey, preference);
         }
+        if (skin !== undefined) {
+          window.localStorage.setItem(skinKey, skin);
+        }
+        if (cache !== undefined) {
+          window.localStorage.setItem(cacheKey, cache);
+        }
+        if (record) {
+          const seen: string[] = [];
+          (window as unknown as Record<string, unknown>)["__skinBackgrounds"] = seen;
+          // Before the first script there is no `html` yet: the observer
+          // watches the document and reads `html` when a style changes.
+          new MutationObserver(() => {
+            const value = document.documentElement.style.getPropertyValue("--background");
+            if (seen[seen.length - 1] !== value) seen.push(value);
+          }).observe(document, { attributes: true, attributeFilter: ["style"], subtree: true });
+        }
       },
-      { preference: options.themePreference, storageKey: THEME_STORAGE_KEY },
+      {
+        preference: options.themePreference,
+        storageKey: THEME_STORAGE_KEY,
+        skin: options.skin,
+        skinKey: SKIN_STORAGE_KEY,
+        cache: options.skinCache,
+        cacheKey: USER_SKIN_CACHE_KEY,
+        record: options.recordSkin ?? false,
+      },
     );
     if (options.setup === "itad") answers.has_itad_credentials = false;
 

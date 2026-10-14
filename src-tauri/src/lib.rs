@@ -13,6 +13,9 @@ pub mod testing {
     pub use crate::commands::manual_wish::{
         WishTarget, add_manual_wish_for, remove_manual_wish_for, update_manual_wish_for,
     };
+    pub use crate::commands::skins::{
+        MAX_SKIN_BYTES, MAX_SKIN_FILES, UserSkinFile, UserSkins, read_skins_dir,
+    };
     pub use crate::commands::{
         LibrarySummary, StateUpdate, disconnect_account_for, export::ExportFormat,
         export::export_library_for, save_states, summary,
@@ -84,6 +87,7 @@ pub fn run() {
             commands::manual_wish::remove_manual_wish,
             commands::set_user_state,
             commands::set_user_state_many,
+            commands::skins::list_user_skins,
         ])
         .run(tauri::generate_context!())
         .expect("error while the application started");
