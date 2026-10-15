@@ -74,6 +74,9 @@ pub struct AppState {
     pub itad: ItadClient,
     pub luna: LunaClient,
     pub connectors: HashMap<StoreId, Arc<dyn StoreConnector>>,
+    /// Steam once more, as itself and not as a `StoreConnector`: the family is
+    /// not a part of the contract of a store, and only Steam has it.
+    pub steam: SteamConnector,
     /// The store can not yet exist: with no keyring, the user must write a
     /// passphrase before the application can keep anything.
     secrets: RwLock<Option<Arc<dyn SecretStore>>>,
@@ -127,6 +130,7 @@ impl AppState {
         let http_for_igdb = http.clone();
         let http_for_itad = http.clone();
         let http_for_luna = http.clone();
+        let steam = SteamConnector::new(http.clone());
         let mut connectors: HashMap<StoreId, Arc<dyn StoreConnector>> = HashMap::new();
         connectors.insert(StoreId::Steam, Arc::new(SteamConnector::new(http.clone())));
         connectors.insert(StoreId::Gog, Arc::new(GogConnector::new(http.clone())));
@@ -147,6 +151,7 @@ impl AppState {
             itad: ItadClient::new(http_for_itad),
             luna: LunaClient::new(http_for_luna),
             connectors,
+            steam,
             secrets: RwLock::new(secrets),
             backend,
             secrets_path,

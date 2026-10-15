@@ -1,8 +1,12 @@
-use domain::{GameId, LunaIndex, LunaMark, LunaOffer, ManualWish, PlayStatus, TimeToBeat};
+use domain::{
+    FamilyIndex, FamilyMark, GameId, LunaIndex, LunaMark, LunaOffer, ManualWish, PlayStatus,
+    TimeToBeat,
+};
 use serde::Serialize;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 
+use super::steam_family::app_from_row;
 use crate::mapping::{game_id_from_text, game_id_to_text, status_from_str};
 use crate::{Database, Result, StorageError};
 
@@ -50,10 +54,25 @@ pub struct LibraryRow {
     /// the user takes out must not change because Luna is on.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub luna: Option<LunaMark>,
+    /// A member of the Steam family of the user owns the game and can lend
+    /// it. Absent when the family is switched off.
+    ///
+    /// It is not written when it is absent, and the export removes it, for the
+    /// same reason as `luna`: it is data of Steam and of other persons, and it
+    /// expires.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steam_family: Option<FamilyMark>,
     /// The titles of the live copies of the record, as each store writes them.
-    /// They are only for the match with Luna and the interface never sees them.
+    /// They are only for the match with Luna and with the family, and the
+    /// interface never sees them.
     #[serde(skip)]
     pub store_titles: Vec<String>,
+    /// The Steam appids of the live copies of the record, and its IGDB record.
+    /// They are only for the match with the family.
+    #[serde(skip)]
+    pub steam_app_ids: Vec<String>,
+    #[serde(skip)]
+    pub igdb_id: Option<i64>,
 }
 
 pub struct LibraryRepository<'a>(pub &'a Database);
@@ -87,6 +106,7 @@ async fn rows(db: &Database, game_id: Option<GameId>) -> Result<Vec<LibraryRow>>
         .map(hydrate)
         .collect::<Result<Vec<_>>>()?;
     mark_luna(db, &mut rows).await?;
+    mark_family(db, &mut rows).await?;
     Ok(rows)
 }
 
@@ -136,6 +156,57 @@ async fn mark_luna(db: &Database, rows: &mut [LibraryRow]) -> Result<()> {
     Ok(())
 }
 
+/// Marks the rows that a member of the Steam family can lend.
+///
+/// One statement more, as for Luna, whatever the size of the library, and the
+/// match at each read for the same reasons: a wish added after the last
+/// synchronisation is matched at once, and the rule of the match lives in the
+/// domain. The appid of a Steam copy goes first, then the IGDB record, and the
+/// title only when neither one decides.
+async fn mark_family(db: &Database, rows: &mut [LibraryRow]) -> Result<()> {
+    // With no settings the `LEFT JOIN` gives no row, and with settings and an
+    // empty list it gives one row with no appid.
+    let list = sqlx::query(
+        "SELECT a.app_id, a.title, a.owners, a.igdb_id
+           FROM steam_family f
+           LEFT JOIN steam_family_app a
+          ORDER BY a.title, a.app_id",
+    )
+    .fetch_all(db.pool())
+    .await?;
+
+    let apps = list
+        .iter()
+        .filter(|row| row.get::<Option<String>, _>("app_id").is_some())
+        .map(app_from_row)
+        .collect::<Result<Vec<_>>>()?;
+    if apps.is_empty() {
+        return Ok(());
+    }
+
+    let index = FamilyIndex::new(&apps);
+    for row in rows {
+        let titles =
+            std::iter::once(row.title.as_str()).chain(row.store_titles.iter().map(String::as_str));
+        // The page of the game in the store: the same address that the Steam
+        // connector gives to each copy, and the one that the capability
+        // permits.
+        row.steam_family = index
+            .find(
+                row.steam_app_ids.iter().map(String::as_str),
+                row.igdb_id,
+                titles,
+            )
+            .map(|app| {
+                FamilyMark::of(
+                    app,
+                    format!("https://store.steampowered.com/app/{}", app.app_id),
+                )
+            });
+    }
+    Ok(())
+}
+
 /// The query for all of the library.
 ///
 /// `CROSS JOIN` is not a Cartesian product: in SQLite it is the documented way
@@ -149,7 +220,7 @@ async fn mark_luna(db: &Database, rows: &mut [LibraryRow]) -> Result<()> {
 /// `the_planner_starts_at_game_link` makes sure of it.
 const SQL: &str = "SELECT
                  g.id, g.canonical_title, g.sort_title, g.cover_url, g.released_at, g.genres,
-                 g.summary,
+                 g.summary, g.igdb_id,
                  t.hastily, t.normally, t.completely, t.submissions,
                  us.status, us.rating, us.notes,
                  (SELECT GROUP_CONCAT(DISTINCT e.store) FROM game_link l
@@ -171,6 +242,10 @@ const SQL: &str = "SELECT
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.deleted_at IS NULL
                  ) AS store_titles,
+                 (SELECT json_group_array(DISTINCT e.store_app_id) FROM game_link l
+                    CROSS JOIN store_entry e ON e.id = l.store_entry_id
+                   WHERE l.game_id = g.id AND e.store = 'steam' AND e.deleted_at IS NULL
+                 ) AS steam_app_ids,
                  (SELECT COALESCE(SUM(e.playtime_minutes), 0) FROM game_link l
                     CROSS JOIN store_entry e ON e.id = l.store_entry_id
                    WHERE l.game_id = g.id AND e.deleted_at IS NULL
@@ -227,6 +302,11 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         column: "store_titles",
         value: titles_json,
     })?;
+    let app_ids_json: String = row.get("steam_app_ids");
+    let steam_app_ids = serde_json::from_str(&app_ids_json).map_err(|_| StorageError::Corrupt {
+        column: "steam_app_ids",
+        value: app_ids_json,
+    })?;
 
     let time_to_beat = TimeToBeat {
         hastily: row.get("hastily"),
@@ -255,7 +335,10 @@ fn hydrate(row: &SqliteRow) -> Result<LibraryRow> {
         rating: row.get::<Option<i64>, _>("rating").map(|r| r as u8),
         notes: row.get("notes"),
         luna: None,
+        steam_family: None,
         store_titles,
+        steam_app_ids,
+        igdb_id: row.get("igdb_id"),
     })
 }
 

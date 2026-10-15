@@ -1,4 +1,4 @@
-import type { ConnectorState, SyncProgress, SyncReport } from "../../lib/api";
+import type { ConnectorState, FamilyOutcome, SyncProgress, SyncReport } from "../../lib/api";
 
 /**
  * The state that must stay visible while the utility dialog is closed.
@@ -29,6 +29,8 @@ function operationLabel(operation: string): string {
       return "Updating prices";
     case "luna":
       return "Reading the Luna catalogue";
+    case "steam-family":
+      return "Reading the Steam family";
     case "disconnect":
       return "Disconnecting";
     case "connector":
@@ -52,8 +54,21 @@ function reportSummary(report: SyncReport): string {
     (report.removed > 0
       ? "; removed " + String(report.removed) + " copies"
       : "") +
+    familySummary(report.family) +
     "."
   );
+}
+
+/** The part of the summary that the stage of the family gives, when it ended. */
+function familySummary(family: FamilyOutcome | null): string {
+  switch (family?.outcome) {
+    case "updated":
+      return "; your Steam family can lend " + String(family.games) + " games";
+    case "not_member":
+      return "; Steam says that you are in no family";
+    default:
+      return "";
+  }
 }
 export function ActivityStrip({
   operation,
@@ -68,10 +83,15 @@ export function ActivityStrip({
 }: ActivityStripProps) {
   const failures = report?.failures ?? [];
   const skipped = report?.skipped ?? [];
+  // A family that did not update is a warning and not a failure: the copies
+  // of every store are written, and the marks of the last read stay.
+  const familySkipped =
+    report?.family?.outcome === "skipped" ? report.family.reason : null;
   const hasReport = report !== null;
   const hasWarnings =
     failures.length > 0 ||
     skipped.length > 0 ||
+    familySkipped !== null ||
     providerProblems.length > 0;
   const passStopped =
     stoppedPass ??
@@ -180,6 +200,15 @@ export function ActivityStrip({
           {skipped.map((store) => (
             <li key={store}>{storeName(store)} was skipped because its connector is switched off.</li>
           ))}
+        </ul>
+      )}
+
+      {familySkipped !== null && (
+        <ul className="activity-skipped activity-warning-list" aria-label="Steam Family">
+          <li>
+            Steam Family was not updated: {familySkipped}. Its marks are the marks of the last
+            read.
+          </li>
         </ul>
       )}
 

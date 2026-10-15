@@ -4,7 +4,7 @@
 
 Every table in this schema marks a row as gone with `deleted_at` and keeps it.
 The caches of the data of a provider are the only exception: their rows are
-deleted for real, and a refresh replaces them in one transaction. They are four
+deleted for real, and a refresh replaces them in one transaction. They are five
 tables, and the list is closed:
 
 | Table | Provider | What a refresh replaces |
@@ -13,6 +13,7 @@ tables, and the list is closed:
 | `price_low` | ITAD | The historical low of one game. |
 | `igdb_time_to_beat` | IGDB | The durations of one record. |
 | `luna_catalog` | Amazon Luna | The whole catalogue that Prime includes. |
+| `steam_family_app` | Steam | The whole list of the games that the family of the user can lend. |
 
 The prices are the example of this document, because they were the first.
 
@@ -35,7 +36,8 @@ So, three parts:
    which belongs to the user.
 
 The whole set of price tables can be dropped and rebuilt with one refresh. The
-same is true of the durations and of the Luna catalogue. If that ever stops
+same is true of the durations, of the Luna catalogue and of the list of the
+Steam family. If that ever stops
 being true, something that is not a cache got in.
 
 A new table goes in the list above only if all of this is true of it: it holds
@@ -126,6 +128,14 @@ games.upsert(&game).await?;
 - [`crates/storage/tests/luna.rs`](../../crates/storage/tests/luna.rs) — a game
   that left the catalogue goes, and switching Luna off touches no record and no
   state.
+- [`migrations/0011_steam_family.up.sql`](../../migrations/0011_steam_family.up.sql)
+  and [`crates/storage/src/repositories/steam_family.rs`](../../crates/storage/src/repositories/steam_family.rs)
+  — the fifth table: the games belong to other persons and leave with them.
+  The replacement keeps the `igdb_id` of an appid that stays, because the
+  identity pass writes it and the synchronisation does not ask IGDB.
+- [`crates/storage/tests/steam_family.rs`](../../crates/storage/tests/steam_family.rs)
+  — a game that left the family goes, and switching the family off touches no
+  record and no state.
 
 ## 🔗 Related agreements
 

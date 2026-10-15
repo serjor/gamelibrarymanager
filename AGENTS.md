@@ -43,6 +43,12 @@ Before you write code, read also:
   tokens: ten included, from the ten landing styles, and the skins of other
   persons from a folder. It reopens custom themes (`0005`, `0006`) and bundled
   fonts (`0002`, `0005`) for this purpose only.
+- `.agents/plans/0010-steam-family/plan.html` — the games that the Steam family
+  of the user can lend, kept as a cache like Luna. A wish of any store, or a
+  wish added by hand, says "Steam Family" when a member owns the game. It
+  reopens "Steam goes through the key of the user" from the plan `0001` for this
+  purpose only: the service of the family wants a session of the store, and
+  the session stays in the webview.
 
 All of these plans are done. Their decisions are closed.
 
@@ -69,7 +75,7 @@ All of these plans are done. Their decisions are closed.
 | Convention | What it is about |
 | --- | --- |
 | [To add metadata to a record writes its row again; it does not make a new one](docs/storage/enrich-records-in-place.md) | `user_state` is attached to the `game_id`: to use it again is what prevents the loss of what the user wrote. |
-| [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to a closed list of four caches (prices, durations, Luna): an offer that ended cannot continue to look like an offer. |
+| [A price is a cache of the data of another person, and it is replaced complete](docs/storage/prices-are-a-cache-that-is-replaced.md) | The one exception to the logical delete, limited to a closed list of five caches (prices, durations, Luna, the Steam family): an offer that ended cannot continue to look like an offer. |
 | [A database backup uses `VACUUM INTO`](docs/storage/database-backup-uses-vacuum-into.md) | Before a pending migration, SQLite writes a complete copy through the open WAL connection and only the three newest copies stay. |
 | [A delete that compares against a list of the provider uses a temporary table](docs/storage/compare-against-a-temporary-table.md) | Never a `NOT IN` with thousands of placeholders, and never a comparison divided into batches: each batch would delete what is in the other batches. |
 

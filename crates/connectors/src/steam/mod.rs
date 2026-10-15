@@ -18,7 +18,11 @@
 //! `store.steampowered.com/api/appdetails` **answers only one appid for each
 //! request**, and gives `null` for all of the request as soon as you send two.
 //! `titles` gives the details.
+//!
+//! The family of the user is apart, in `family`: that service does not accept
+//! the key and wants the token of a session signed in to the store.
 
+pub mod family;
 mod parse;
 
 use async_trait::async_trait;
@@ -27,6 +31,7 @@ use domain::{
 };
 use serde::{Deserialize, Serialize};
 
+pub use family::{StoreToken, TokenPage};
 pub use parse::{parse_owned, parse_wishlist};
 
 const DEFAULT_API: &str = "https://api.steampowered.com";

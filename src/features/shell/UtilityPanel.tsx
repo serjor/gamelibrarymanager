@@ -5,7 +5,9 @@ import type {
   ExportFormat,
   LibrarySummary,
   LunaView,
+  SteamFamilyView,
 } from "../../lib/api";
+import { familyLabel } from "../wishlist/family";
 import { lunaCatalogueLabel } from "../wishlist/luna";
 import { skinChoices, THEME_PREFERENCES, type SkinPreferenceState, type ThemePreference } from "./theme";
 
@@ -26,6 +28,8 @@ export interface UtilityPanelProps extends SkinPreferenceState {
   hasItad: boolean;
   /** `null` until it loads. Its `settings` are `null` when Luna is off. */
   luna: LunaView | null;
+  /** `null` until it loads. Its `settings` are `null` when the family is off. */
+  steamFamily: SteamFamilyView | null;
   busy: string | null;
   theme: ThemePreference;
   onThemeChange: (preference: ThemePreference) => void;
@@ -41,6 +45,9 @@ export interface UtilityPanelProps extends SkinPreferenceState {
   onLunaCountry: (country: string) => void;
   onLunaRefresh: () => void;
   onLunaDisable: () => void;
+  /** Opens the Steam store, with its sign in if it has no session. */
+  onFamilyEnable: () => void;
+  onFamilyDisable: () => void;
 }
 
 function syncLabel(account: Account): string {
@@ -65,6 +72,7 @@ export function UtilityPanel({
   hasIgdb,
   hasItad,
   luna,
+  steamFamily,
   busy,
   theme,
   onThemeChange,
@@ -88,6 +96,8 @@ export function UtilityPanel({
   onLunaCountry,
   onLunaRefresh,
   onLunaDisable,
+  onFamilyEnable,
+  onFamilyDisable,
 }: UtilityPanelProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const choices = skinChoices(userSkins);
@@ -343,6 +353,15 @@ export function UtilityPanel({
                   onDisable={onLunaDisable}
                 />
               )}
+              {steamFamily !== null && (
+                <SteamFamilyRow
+                  family={steamFamily}
+                  hasSteam={accounts.some((account) => account.store === "steam")}
+                  busy={busy}
+                  onEnable={onFamilyEnable}
+                  onDisable={onFamilyDisable}
+                />
+              )}
             </div>
           </section>
 
@@ -478,6 +497,65 @@ function LunaRow({
               Switch Luna off
             </button>
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Steam Family: the games that the other members of your Steam family can
+ * lend, to mark the wishes that you can already play.
+ *
+ * It is the one part of Steam that does not accept the API key: it needs a
+ * sign in to the Steam store, on the page of Steam. The row says that, and
+ * says where the session stays, because the session is more than the key: it
+ * is the store, and the key only reads. The family is read again at each
+ * synchronisation, thus there is no button to update it.
+ */
+function SteamFamilyRow({
+  family,
+  hasSteam,
+  busy,
+  onEnable,
+  onDisable,
+}: {
+  family: SteamFamilyView;
+  hasSteam: boolean;
+  busy: string | null;
+  onEnable: () => void;
+  onDisable: () => void;
+}) {
+  const settings = family.settings;
+  const working = busy === "steam-family";
+
+  return (
+    <div className="utility-status-row utility-family">
+      <div className="utility-item-copy">
+        <strong>Steam Family</strong>
+        <span className="hint">
+          {settings !== null
+            ? familyLabel(settings)
+            : hasSteam
+              ? "Switched off: switch it on to mark the wished games that your Steam family can lend you"
+              : "Connect Steam first: the family is the family of that account"}
+        </span>
+        <span className="hint">
+          Steam does not accept the API key here, thus it asks you to sign in to
+          the Steam store, on the page of Steam. The session stays in this
+          application, as in a browser, and only reads your family at each
+          synchronisation. Switching it off removes the session.
+        </span>
+      </div>
+      <div className="utility-family-actions">
+        {settings === null ? (
+          <button disabled={busy !== null || !hasSteam} onClick={onEnable}>
+            {working ? "Reading the family…" : "Switch Steam Family on"}
+          </button>
+        ) : (
+          <button className="link" disabled={busy !== null} onClick={onDisable}>
+            Switch Steam Family off
+          </button>
         )}
       </div>
     </div>

@@ -58,6 +58,21 @@ day. When it fails, the marks of the last catalogue stay and nothing else
 stops. Amazon selects the catalogue from your connection, not from the country
 that you select.
 
+Steam Family is optional too. When you switch it on in Utilities, each
+wished-for game that a member of your Steam family owns, and can lend to you,
+says "Steam Family" with the names of the owners. That includes a wish of GOG,
+of Epic or a wish that you added by hand: the match is by the Steam appid, then
+by IGDB, then by the exact title. The family is read again at each
+synchronisation, after the stores. This is the one part of Steam that does not
+accept your API key: Steam wants a session of its store. Thus the application
+opens the sign in page of Steam, and you sign in there; your password does not
+come through here. The session stays in the application, as in a browser, and
+it only reads your family. Switching the family off, or disconnecting Steam,
+removes the session. When the session expires, the synchronisation shows the
+sign in again; if you close it, the stores synchronise and the family keeps the
+marks of its last read. The family is not a store here: it gives no copy, and a
+game whose owner leaves the family leaves the marks, not your library.
+
 You can change how the application looks. Utilities offers Light, Dark or
 System, and a skin: Default and ten included skins, each with a light and a
 dark mode. A skin changes the colours, the fonts and the corners, and never the

@@ -29,7 +29,22 @@ export interface SyncReport {
   /** The stores left out because their connector is switched off. */
   skipped: string[];
   cancelled: boolean;
+  /**
+   * How the stage of the Steam family ended. `null` when the family is switched
+   * off, or when the user stopped before it.
+   */
+  family: FamilyOutcome | null;
 }
+
+/**
+ * The stage of the Steam family. `skipped` is a result and not an error: the
+ * copies of every store are already written, and the list of the last stage
+ * stays.
+ */
+export type FamilyOutcome =
+  | { outcome: "updated"; games: number }
+  | { outcome: "not_member" }
+  | { outcome: "skipped"; reason: string };
 
 /**
  * The state of a connector. Only the connectors that have something to say come
@@ -144,6 +159,39 @@ export interface LibraryRow {
    * switched off or the game is not in it: Rust does not write the field then.
    */
   luna?: LunaMark;
+  /**
+   * A member of the Steam family of the user owns the game and can lend it.
+   * Absent when the family is switched off or nobody in it owns the game.
+   */
+  steam_family?: FamilyMark;
+}
+
+/**
+ * The game as Steam names it in the family, the names of the members who own
+ * it, and the address of its page in the store. `owners` can be empty: the
+ * family can still lend the game when Steam did not give the names.
+ */
+export interface FamilyMark {
+  app_id: string;
+  title: string;
+  owners: string[];
+  url: string;
+}
+
+export interface SteamFamilySettings {
+  /** `null` before the first read, and when Steam says there is no family. */
+  family_groupid: string | null;
+  /** Seconds from the epoch. `null` until the first read ends. */
+  refreshed_at: number | null;
+  /** Why the last read did not end. */
+  last_error: string | null;
+  /** How many games the family can lend. */
+  games: number;
+}
+
+export interface SteamFamilyView {
+  /** `null` when the family is switched off. */
+  settings: SteamFamilySettings | null;
 }
 
 /** The title as Luna writes it, and the address of its page. */
@@ -237,6 +285,8 @@ export interface IdentityReport {
   stopped: string | null;
   /** The records whose durations were asked for in this pass. */
   timed: number;
+  /** The games of the Steam family that this pass joined to IGDB. */
+  family_joined: number;
 }
 
 /** One file of the skins folder: its text, or why Rust did not read it. */
@@ -290,6 +340,13 @@ export const api = {
   /** Switches Luna off: the catalogue and every mark go. Nothing else changes. */
   disableLuna: () => invoke<void>("disable_luna"),
   refreshLuna: () => invoke<LunaReport>("refresh_luna"),
+  steamFamilySettings: () => invoke<SteamFamilyView>("steam_family_settings"),
+  /** Opens the Steam store, signs in if it has no session, and reads the
+   *  family. Nothing stays switched on if the first read fails. */
+  enableSteamFamily: () => invoke<FamilyOutcome>("enable_steam_family"),
+  /** Switches the family off: the list goes, and the Steam session leaves the
+   *  application. Nothing else changes. */
+  disableSteamFamily: () => invoke<void>("disable_steam_family"),
   prices: () => invoke<PriceRow[]>("prices"),
   resolveIdentities: () => invoke<IdentityReport>("resolve_identities"),
   reviewQueue: () => invoke<ReviewItem[]>("review_queue"),

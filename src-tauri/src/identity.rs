@@ -24,8 +24,13 @@
 //! (`refresh_time_to_beat`). The pass is what makes the first figure appear with
 //! no wait; the open is what keeps the figure on screen current.
 //!
-//! It writes in `game`, `game_link`, `match_candidate` and `igdb_time_to_beat`.
-//! Never in `store_entry`
+//! Last, it joins the games of the Steam family to IGDB by their appid, as the
+//! copies of Steam are joined. That is what marks a wish of GOG or of Epic
+//! whose title is not the title of Steam. The synchronisation does not do it,
+//! because IGDB is a third party and the synchronisation does not wait for one.
+//!
+//! It writes in `game`, `game_link`, `match_candidate`, `igdb_time_to_beat` and
+//! the `igdb_id` of `steam_family_app`. Never in `store_entry`
 //! — that belongs to the store — and never in `user_state` — that belongs to the
 //! user.
 
@@ -39,8 +44,8 @@ use metadata::igdb::{ExternalSource, IgdbCredentials, IgdbToken};
 use serde::Serialize;
 use storage::Database;
 use storage::repositories::{
-    GameLinkRepository, GameRepository, MatchCandidateRepository, StoreEntryRepository,
-    TimeToBeatRepository,
+    GameLinkRepository, GameRepository, MatchCandidateRepository, SteamFamilyRepository,
+    StoreEntryRepository, TimeToBeatRepository,
 };
 use time::{Duration, OffsetDateTime};
 
@@ -68,6 +73,8 @@ pub struct IdentityReport {
     pub stopped: Option<String>,
     /// The records whose durations were asked for in this pass.
     pub timed: usize,
+    /// The games of the Steam family that this pass joined to IGDB.
+    pub family_joined: usize,
 }
 
 /// How many games the pass matches before it keeps the result.
@@ -229,7 +236,51 @@ pub async fn resolve(
     if !report.cancelled && report.stopped.is_none() {
         times_to_beat(db, igdb, credentials, token, progress, &mut report).await?;
     }
+    if !report.cancelled && report.stopped.is_none() {
+        family_identities(db, igdb, credentials, token, progress, &mut report).await?;
+    }
     Ok(report)
+}
+
+/// Joins the games of the Steam family that have no IGDB record yet.
+///
+/// One question for each 500 appids, as for the copies. An appid that IGDB
+/// does not know is asked again in the next pass: the list of a family is
+/// small, and IGDB can learn the game later. A stop from the provider is a
+/// result, as in the rest of the pass.
+async fn family_identities(
+    db: &Database,
+    igdb: &IgdbClient,
+    credentials: &IgdbCredentials,
+    token: &IgdbToken,
+    progress: &dyn ProgressSink,
+    report: &mut IdentityReport,
+) -> Result<(), AppError> {
+    let family = SteamFamilyRepository(db);
+    let missing = family.missing_igdb().await?;
+    if missing.is_empty() {
+        return Ok(());
+    }
+    progress.report(SyncProgress {
+        store: "igdb".to_owned(),
+        stage: "steam family",
+        done: 0,
+        total: missing.len(),
+    });
+
+    let joins = match igdb
+        .by_external_ids(credentials, token, ExternalSource::Steam, &missing)
+        .await
+    {
+        Ok(joins) => joins,
+        Err(error) => {
+            report.stopped = Some(error.to_string());
+            return Ok(());
+        }
+    };
+    family.set_igdb_ids(&joins).await?;
+    report.family_joined = joins.len();
+    Ok(())
 }
 
 /// Asks for the durations of the records that are due, in batches, and keeps

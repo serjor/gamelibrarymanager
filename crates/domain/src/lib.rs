@@ -4,6 +4,7 @@
 //! `architecture` step of CI runs `cargo tree -p domain` and fails if it finds
 //! reqwest, sqlx or tauri in the tree.
 
+pub mod family;
 pub mod library;
 pub mod luna;
 pub mod matching;
@@ -11,6 +12,7 @@ pub mod model;
 pub mod ports;
 pub mod prices;
 
+pub use family::{FamilyApp, FamilyGroup, FamilyIndex, FamilyMark, FamilyOwner};
 pub use library::{
     Game, GameLink, LinkMethod, ManualWish, StoreAccount, StoreEntry, TimeToBeat, UserState,
 };

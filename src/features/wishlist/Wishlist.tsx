@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { errorMessage, type LibraryRow, type LunaSettings, type PlatformFamily, type PriceRow, type WishTarget } from "../../lib/api";
+import { errorMessage, type LibraryRow, type LunaSettings, type PlatformFamily, type PriceRow, type SteamFamilySettings, type WishTarget } from "../../lib/api";
+import { FamilyLink } from "../game/FamilyLink";
 import { LunaLink } from "../game/LunaLink";
+import { familyLabel } from "./family";
 import { lunaCatalogueLabel } from "./luna";
 import { wishes, money, atAllTimeLow, type Wish } from "./prices";
 import { ManualWishForm, FAMILIES, deviceLabel } from "./ManualWishForm";
@@ -55,8 +57,9 @@ const COLUMNS: { field: WishSortField; label: string; width?: string }[] = [
  * one host.
  *
  * "On Luna" is the other half of the decision: a game that Prime already
- * includes on Luna is a game that you do not need to buy to play. The mark
- * comes in the row from Rust, and this screen only shows it.
+ * includes on Luna is a game that you do not need to buy to play. "Steam
+ * Family" is the same half: a member of your family owns it and can lend it.
+ * The marks come in the row from Rust, and this screen only shows them.
  */
 export function Wishlist({
   rows,
@@ -67,6 +70,7 @@ export function Wishlist({
   busy,
   luna,
   lunaNotice,
+  family,
   onRefresh,
   onSetup,
   onAdd,
@@ -94,6 +98,8 @@ export function Wishlist({
    * the marks of the last catalogue stay, and the list operates the same.
    */
   lunaNotice: string | null;
+  /** `null` when the Steam family is switched off. */
+  family: SteamFamilySettings | null;
   onRefresh: () => void;
   onSetup: () => void;
   onAdd: (target: WishTarget, family: PlatformFamily, model: string) => Promise<void>;
@@ -124,6 +130,7 @@ export function Wishlist({
     }));
   const withPrice = list.filter((wish) => wish.price !== null).length;
   const onLuna = list.filter((wish) => wish.game.luna !== undefined).length;
+  const inFamily = list.filter((wish) => wish.game.steam_family !== undefined).length;
   const hasPriceTargets = list.some(({ game }) =>
     game.wishlist_stores.length > 0 || game.manual_wishes.some((wish) => wish.family === "pc"),
   );
@@ -162,10 +169,12 @@ export function Wishlist({
             {list.length} wished for
             {withPrice > 0 && ` · ${withPrice} with a price`}
             {luna !== null && ` · ${onLuna} on Luna`}
+            {family !== null && ` · ${inFamily} in your Steam family`}
             {captured > 0 && ` · read on ${new Date(captured * 1000).toLocaleString()}`}
           </p>
           {luna !== null && <p className="hint">{lunaCatalogueLabel(luna)}</p>}
           {lunaNotice && <p className="hint">{lunaNotice}</p>}
+          {family !== null && <p className="hint">{familyLabel(family)}</p>}
         </div>
         <div className="wishlist-actions">
           <button type="button" disabled={busy || saving} onClick={() => setAdding((value) => !value)}>
@@ -315,6 +324,7 @@ function Row({ wish, onOpen, onError, editing, editFamily, editModel, saving, on
       <td>
         <strong className="wish-title">{game.title}</strong>
         <LunaLink row={game} onError={onError} />
+        <FamilyLink row={game} onError={onError} />
         <span className="hint">
           {game.wishlist_stores.length > 0 && `Store wishlist: ${game.wishlist_stores.join(" · ")}`}
           {/* You have it and you still want it: that occurs when you want it in

@@ -15,6 +15,7 @@ import {
   type PriceRow,
   type PlatformFamily,
   type ReviewItem,
+  type SteamFamilyView,
   type SyncProgress,
   type SyncReport,
   type WishTarget,
@@ -61,6 +62,7 @@ export function App() {
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [prices, setPrices] = useState<PriceRow[]>([]);
   const [luna, setLuna] = useState<LunaView | null>(null);
+  const [steamFamily, setSteamFamily] = useState<SteamFamilyView | null>(null);
   const [lunaNotice, setLunaNotice] = useState<string | null>(null);
   // One automatic refresh of Luna for each start of the application. A Luna
   // that fails must not be asked again at each visit to the wishlist; the
@@ -103,6 +105,7 @@ export function App() {
         nextRows,
         nextPrices,
         nextLuna,
+        nextFamily,
       ] = await Promise.all([
         api.listAccounts(),
         api.connectorStates(),
@@ -113,6 +116,7 @@ export function App() {
         api.library(),
         api.prices(),
         api.lunaSettings(),
+        api.steamFamilySettings(),
       ]);
       if (!alive()) return;
       setAccounts(nextAccounts);
@@ -124,6 +128,7 @@ export function App() {
       setRows(nextRows);
       setPrices(nextPrices);
       setLuna(nextLuna);
+      setSteamFamily(nextFamily);
     } catch (cause) {
       if (alive()) setError(errorMessage(cause));
     }
@@ -275,6 +280,17 @@ export function App() {
     void run("luna", api.disableLuna);
   };
 
+  const disableFamily = () => {
+    if (
+      !window.confirm(
+        "Switch Steam Family off? The family marks go and the Steam session leaves the application. Your library and your notes stay.",
+      )
+    ) {
+      return;
+    }
+    void run("steam-family", api.disableSteamFamily);
+  };
+
   const exportLibrary = async (format: ExportFormat) => {
     setBusy(`export-${format}`);
     setError(null);
@@ -421,6 +437,7 @@ export function App() {
         hasIgdb,
         hasItad,
         luna,
+        steamFamily,
         busy,
         theme,
         onThemeChange,
@@ -445,6 +462,8 @@ export function App() {
           void run("luna", api.refreshLuna);
         },
         onLunaDisable: disableLuna,
+        onFamilyEnable: () => void run("steam-family", api.enableSteamFamily),
+        onFamilyDisable: disableFamily,
       }}
     >
       {tab === "library" && (
@@ -461,6 +480,7 @@ export function App() {
           busy={busy !== null}
           luna={luna?.settings ?? null}
           lunaNotice={lunaNotice}
+          family={steamFamily?.settings ?? null}
           onRefresh={() => void run("prices", api.refreshPrices)}
           onSetup={() => setSetup("itad")}
           onAdd={(target: WishTarget, family: PlatformFamily, model: string) => changeWish(() => api.addManualWish(target, family, model))}

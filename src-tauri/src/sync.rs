@@ -24,6 +24,7 @@ use storage::repositories::{
 use time::OffsetDateTime;
 
 use crate::error::AppError;
+use crate::family::{self, FamilyOutcome, FamilyTokenSource};
 use crate::state::{AppState, credential_key};
 
 /// What occurs during a synchronisation. The interface receives it through
@@ -67,6 +68,9 @@ pub struct SyncReport {
     /// The user stopped in the middle. The data already written stays: the
     /// operation is idempotent.
     pub cancelled: bool,
+    /// How the stage of the Steam family ended. `None` when the family is
+    /// switched off, or when the user stopped before it.
+    pub family: Option<FamilyOutcome>,
 }
 
 #[derive(Debug, Serialize)]
@@ -79,9 +83,18 @@ pub struct SyncFailure {
 pub async fn sync_all(
     state: &AppState,
     progress: &dyn ProgressSink,
+    tokens: &dyn FamilyTokenSource,
 ) -> Result<SyncReport, AppError> {
     let secrets = state.secrets().await?;
-    sync_stores(&state.db, secrets.as_ref(), &state.connectors, progress).await
+    let mut report = sync_stores(&state.db, secrets.as_ref(), &state.connectors, progress).await?;
+    // The family goes last: its sign in can wait for the user, and the copies
+    // of every store are already written when it does.
+    if !report.cancelled && !progress.cancelled() {
+        report.family =
+            family::sync_family(&state.db, secrets.as_ref(), &state.steam, tokens, progress)
+                .await?;
+    }
+    Ok(report)
 }
 
 /// Every connected account, one after another.

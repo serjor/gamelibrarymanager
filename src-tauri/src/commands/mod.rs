@@ -10,6 +10,7 @@ pub mod gog;
 pub mod luna;
 pub mod manual_wish;
 pub mod skins;
+pub mod steam_family;
 
 use domain::{
     AuthContext, ConnectorState, EntryKind, GameId, GameLink, LinkMethod, PlayStatus,
@@ -20,8 +21,8 @@ use metadata::itad::ItadCredentials;
 use serde::{Deserialize, Serialize};
 use storage::repositories::{
     ConnectorStateRepository, GameLinkRepository, GameRepository, LibraryRepository, LibraryRow,
-    MatchCandidateRepository, PriceRepository, PriceRow, StoreAccountRepository,
-    StoreEntryRepository, UserStateRepository,
+    MatchCandidateRepository, PriceRepository, PriceRow, SteamFamilyRepository,
+    StoreAccountRepository, StoreEntryRepository, UserStateRepository,
 };
 use tauri::{AppHandle, Emitter, State};
 use time::OffsetDateTime;
@@ -124,14 +125,23 @@ pub async fn list_accounts(state: State<'_, AppState>) -> Result<Vec<AccountView
 /// in the library. The secret is removed only after the database transaction
 /// succeeds, so a failed transaction never leaves a connected account without
 /// its credential.
+///
+/// A Steam account takes its family with it, and its session of the store
+/// leaves the webview: a family with no account would mark games for a person
+/// who is no longer here.
 #[tauri::command]
 pub async fn disconnect_account(
+    app: AppHandle,
     state: State<'_, AppState>,
     store: StoreId,
     account_ref: String,
 ) -> Result<(), AppError> {
     let secrets = state.secrets().await?;
-    disconnect_account_for(&state.db, secrets.as_ref(), store, &account_ref).await
+    disconnect_account_for(&state.db, secrets.as_ref(), store, &account_ref).await?;
+    if store == StoreId::Steam {
+        steam_family::forget_steam_session(&app)?;
+    }
+    Ok(())
 }
 
 /// The disconnect use case without Tauri state. Integration tests use this
@@ -155,6 +165,9 @@ pub async fn disconnect_account_for(
         })?;
 
     StoreAccountRepository(db).soft_delete(account.id).await?;
+    if store == StoreId::Steam {
+        SteamFamilyRepository(db).disable().await?;
+    }
     secrets.delete(&credential_key(&account))?;
     Ok(())
 }
@@ -196,9 +209,9 @@ pub async fn set_connector_enabled(
 }
 
 /// Sends the progress to the window and reads the cancel flag.
-struct WindowProgress<'a> {
-    app: AppHandle,
-    state: &'a AppState,
+pub(crate) struct WindowProgress<'a> {
+    pub(crate) app: AppHandle,
+    pub(crate) state: &'a AppState,
 }
 
 impl ProgressSink for WindowProgress<'_> {
@@ -224,7 +237,8 @@ pub async fn sync_now(app: AppHandle, state: State<'_, AppState>) -> Result<Sync
         app: app.clone(),
         state: &state,
     };
-    sync::sync_all(&state, &progress).await
+    let tokens = steam_family::WebviewTokens { app, state: &state };
+    sync::sync_all(&state, &progress, &tokens).await
 }
 
 /// This applies to the three long operations: all of them stop at the next safe

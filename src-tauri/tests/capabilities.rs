@@ -249,3 +249,31 @@ fn only_the_skins_folder_can_be_opened_as_a_path() {
         "the open-path permission must explain why the application needs it"
     );
 }
+
+/// The login windows of GOG and Epic and the window of the Steam family open
+/// remote pages. A capability that named one of them would give that page the
+/// commands of the application, the export and the disconnect included.
+#[test]
+fn only_the_main_window_gets_the_commands() {
+    let files: Vec<String> = std::fs::read_dir(root().join("capabilities"))
+        .expect("read the capabilities")
+        .map(|entry| {
+            entry
+                .expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    assert_eq!(
+        files,
+        ["default.json"],
+        "one capability, for the main window"
+    );
+
+    let raw = std::fs::read_to_string(root().join("capabilities/default.json"))
+        .expect("read the capability");
+    let capability: serde_json::Value =
+        serde_json::from_str(&raw).expect("the capability must be valid JSON");
+    assert_eq!(capability["windows"], serde_json::json!(["main"]));
+}
