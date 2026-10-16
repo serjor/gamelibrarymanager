@@ -84,6 +84,9 @@ export function App() {
   const [busy, setBusy] = useState<string | null>(null);
   const [stoppedPass, setStoppedPass] = useState<string | null>(null);
   const [exportedPath, setExportedPath] = useState<string | null>(null);
+  // The matching that runs after a synchronisation finished its work. Until it
+  // does, the new copies of the report have no record and the strip says so.
+  const [matchedAfterSync, setMatchedAfterSync] = useState(false);
   const [localStart, setLocalStart] = useState(false);
 
   // `alive` prevents a load in progress from writing state on a component that
@@ -220,11 +223,20 @@ export function App() {
     };
   }, []);
 
-  const run = async (label: string, action: () => Promise<unknown>) => {
+  // `keepReport` is for the matching that follows a synchronisation: the report
+  // of the synchronisation stays on screen after the matching.
+  const run = async <T,>(
+    label: string,
+    action: () => Promise<T>,
+    keepReport = false,
+  ): Promise<T | undefined> => {
     setBusy(label);
     setError(null);
     setStoppedPass(null);
-    setReport(null);
+    if (!keepReport) {
+      setReport(null);
+      setMatchedAfterSync(false);
+    }
     try {
       const result = await action();
       if (label === "sync") {
@@ -257,11 +269,28 @@ export function App() {
         );
       }
       await refresh();
+      return result;
     } catch (cause) {
       setError(errorMessage(cause));
+      return undefined;
     } finally {
       setBusy(null);
       setProgress(null);
+    }
+  };
+
+  // The library shows records, and a synchronisation writes copies: with no
+  // matching after it, a new wish is in the database and not on screen. The
+  // matching runs as a second operation and not inside the synchronisation,
+  // because IGDB is a third party and cannot stop a synchronisation (plan
+  // 0010). The copies are already written when it starts, and a matching that
+  // stops says so as any other matching.
+  const synchronise = async () => {
+    const synced = await run("sync", api.syncNow);
+    if (synced === undefined || synced.cancelled) return;
+    const matched = await run("identity", api.resolveIdentities, true);
+    if (matched !== undefined && matched.stopped === null && !matched.cancelled) {
+      setMatchedAfterSync(true);
     }
   };
 
@@ -428,6 +457,15 @@ export function App() {
           exportedPath={exportedPath}
           storeName={nameOf}
           onCancel={() => void api.cancelOperation()}
+          unmatched={matchedAfterSync || report === null ? 0 : report.unmatched}
+          onMatch={() => void run("identity", api.resolveIdentities, true)}
+          onDismiss={() => {
+            setError(null);
+            setReport(null);
+            setStoppedPass(null);
+            setExportedPath(null);
+            setMatchedAfterSync(false);
+          }}
         />
       }
       utility={{
@@ -445,7 +483,7 @@ export function App() {
         summary,
         storeName: nameOf,
         onSetup: (target) => setSetup(target),
-        onSync: () => void run("sync", api.syncNow),
+        onSync: () => void synchronise(),
         onMatch: () => void run("identity", api.resolveIdentities),
         onExport: (format) => void exportLibrary(format),
         onDisconnect: disconnect,

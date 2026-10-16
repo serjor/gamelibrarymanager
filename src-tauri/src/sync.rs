@@ -59,6 +59,10 @@ pub struct SyncReport {
     pub owned: usize,
     pub wishlist: usize,
     pub removed: u64,
+    /// The copies that this synchronisation saw for the first time. None of
+    /// them has a record yet, and the library shows records: they appear after
+    /// the user runs the matching.
+    pub unmatched: u64,
     /// The accounts that failed, with the reason. A store that is down cannot
     /// prevent the synchronisation of the other stores.
     pub failures: Vec<SyncFailure>,
@@ -204,14 +208,14 @@ pub async fn sync_account(
 
     let owned = connector.owned(&session, account.id).await?;
     report.owned += owned.len();
-    entries.upsert_many(&owned).await?;
+    report.unmatched += entries.upsert_many(&owned).await?;
     report.removed += entries
         .soft_delete_missing(account.id, EntryKind::Owned, &app_ids(&owned))
         .await?;
 
     let wishlist = connector.wishlist(&session, account.id).await?;
     report.wishlist += wishlist.len();
-    entries.upsert_many(&wishlist).await?;
+    report.unmatched += entries.upsert_many(&wishlist).await?;
     report.removed += entries
         .soft_delete_missing(account.id, EntryKind::Wishlist, &app_ids(&wishlist))
         .await?;

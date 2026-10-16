@@ -170,8 +170,8 @@ export function UtilityPanel({
               </button>
             </div>
             <p className="hint utility-help">
-              Synchronise store copies first. Match records when metadata needs an
-              update.
+              Synchronise reads the stores and then matches the new copies, so that
+              they appear in the library. Match runs the matching again alone.
             </p>
           </section>
 

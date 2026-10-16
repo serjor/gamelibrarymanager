@@ -1638,6 +1638,10 @@ button.link {
   margin-left: auto;
 }
 
+.activity-dismiss {
+  align-self: flex-end;
+}
+
 .activity-error,
 .activity-errors,
 .activity-problems {
