@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Plan — La familia de Steam en Deseados</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f8fafc;--text:#172033;--muted:#667085;
+  --line:#dce2ea;--accent:#3157d5;--accent-solid:#3157d5;--on-accent:#fff;--accent-soft:#edf1ff;--good:#16734b;
+  --accent-strong:#233fa6;--good-soft:#e9f7f0;--warn:#9a6700;--warn-soft:#fff6d8;--danger:#b42318;
+  --danger-soft:#fff0ee;--code:#eef1f5;--shadow:0 12px 35px rgba(23,32,51,.08)
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#10141d;--surface:#171d28;--surface-2:#1d2532;--text:#edf1f7;--muted:#a6b0c0;
+    --line:#303a49;--accent:#91a7ff;--accent-strong:#bec9ff;--accent-soft:#222d57;--good:#70d6aa;
+    --good-soft:#15382c;--warn:#f0c46b;--warn-soft:#3c3015;--danger:#ff9b91;
+    --danger-soft:#49231f;--code:#242d3a;--shadow:0 14px 38px rgba(0,0,0,.22)
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.58 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:clip}
+main{width:100%;max-width:74rem;min-width:0;margin:0 auto;padding:2rem 1.25rem 5rem}
+a{color:var(--accent);text-decoration-thickness:.08em;text-underline-offset:.18em}
+a:hover{text-decoration-thickness:.14em}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+header,section,.phase{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+header{padding:2rem}
+section{padding:1.5rem;margin-top:1rem}
+.phase{padding:0;margin-top:1rem;overflow:hidden}
+.eyebrow{margin:0 0 .45rem;color:var(--accent);font-size:.76rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(1.85rem,5vw,3.15rem);line-height:1.08;letter-spacing:-.035em;margin:.15rem 0 .8rem;max-width:18ch}
+h2{font-size:1.32rem;line-height:1.25;margin:0 0 .85rem;letter-spacing:-.015em}
+h3{font-size:1.03rem;line-height:1.3;margin:0 0 .45rem}
+h4{font-size:.92rem;line-height:1.35;margin:0 0 .35rem}
+p{margin:.4rem 0}
+ul,ol{margin:.55rem 0;padding-left:1.2rem}
+li{margin:.3rem 0}
+.lede{max-width:68ch;font-size:1.07rem;color:var(--muted);margin:0}
+.meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.phase-facts,.triptych{display:grid;gap:.75rem}
+.meta{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:1.4rem}
+.meta div,.stat,.decision,.decision-fact,.option,.impact,.fact,.triptych article{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+dt,.label{color:var(--muted);font-size:.72rem;font-weight:750;letter-spacing:.06em;text-transform:uppercase}
+dd{margin:.18rem 0 0;font-weight:650}
+.status{display:inline-flex;align-items:center;gap:.35rem;border:1px solid currentColor;border-radius:999px;padding:.15rem .52rem;font-size:.75rem;font-weight:750;white-space:nowrap}
+.status::before{content:"";width:.42rem;height:.42rem;border-radius:50%;background:currentColor}
+.review{color:var(--warn);background:var(--warn-soft)}
+.planned{color:var(--accent);background:var(--accent-soft)}
+.active{color:var(--warn);background:var(--warn-soft)}
+.done{color:var(--good);background:var(--good-soft)}
+.blocked{color:var(--danger);background:var(--danger-soft)}
+nav{position:sticky;top:.7rem;z-index:2;max-width:74rem;margin:1rem auto;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+nav ul{display:flex;gap:.4rem .95rem;list-style:none;margin:0;padding:0;overflow-x:auto}
+nav li{margin:0;white-space:nowrap}
+nav a{color:var(--muted);font-size:.84rem;font-weight:650;text-decoration:none}
+nav a:hover{color:var(--accent)}
+.decision-grid{grid-template-columns:1.2fr .8fr;margin-top:1rem}
+.decision{padding:1rem}
+.decision.primary{background:var(--accent-soft);border-color:var(--accent)}
+.decision strong{display:block;font-size:1.18rem;margin:.15rem 0 .35rem}
+.decision p,.impact p{color:var(--muted)}
+.decision-request{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1.15rem;padding:.9rem 1rem;border:2px solid var(--accent);border-radius:11px;background:var(--surface)}
+.decision-request strong{font-size:1.08rem}
+.decision-request a{white-space:nowrap;font-weight:750}
+.decision-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:.75rem}
+.decision-fact strong{display:block;margin-top:.18rem}
+.confidence{display:flex;align-items:center;gap:.45rem}
+.confidence::before{content:"";width:.55rem;height:.55rem;border-radius:50%;background:var(--muted)}
+.confidence.high::before{background:var(--good)}
+.confidence.medium::before{background:var(--warn)}
+.confidence.low::before{background:var(--danger)}
+.callout{border-left:4px solid var(--accent);border-radius:8px;background:var(--accent-soft);padding:.85rem 1rem;margin-top:1rem}
+.callout.warning{border-color:var(--warn);background:var(--warn-soft)}
+.stat-grid{grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));margin:.8rem 0}
+.stat strong{display:block;font-size:1.08rem;margin-top:.2rem}
+.next-action{display:flex;gap:.7rem;align-items:flex-start;margin-top:.8rem}
+.next-action strong{white-space:nowrap}
+.impact-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.impact{padding:1rem}
+.impact h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.no-change{color:var(--good);font-size:.75rem;font-weight:750;text-transform:uppercase}
+.option-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.option{position:relative;padding:1rem;display:flex;flex-direction:column}
+.option.recommended{border:2px solid var(--accent);background:var(--accent-soft)}
+.option-tag{align-self:flex-start;border-radius:999px;padding:.12rem .48rem;background:var(--accent-solid);color:var(--on-accent);font-size:.7rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.option h3{margin:.6rem 0 .25rem}
+.option>p{color:var(--muted)}
+.option dl{display:grid;grid-template-columns:5.6rem 1fr;gap:.35rem .6rem;margin:.7rem 0 1rem}
+.option dd{font-weight:600}
+.choose-when{margin-top:auto;padding-top:.65rem;border-top:1px solid var(--line);color:var(--text)!important}
+.scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.out{border-left:3px solid var(--danger);padding-left:1rem}
+.diagram-card{margin:1rem 0 0;padding:1rem;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.figure-heading{display:flex;justify-content:space-between;align-items:start;gap:1rem;margin-bottom:.75rem}
+.figure-heading p{color:var(--muted);max-width:68ch}
+.diagram{display:block;width:100%;height:auto;min-height:15rem;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.diagram .node-box{fill:var(--surface-2);stroke:var(--line);stroke-width:2}
+.diagram .node-box.focus{fill:var(--accent-soft);stroke:var(--accent);stroke-width:3}
+.diagram .node-title{fill:var(--text);font:700 16px ui-sans-serif,system-ui,sans-serif}
+.diagram .node-copy{fill:var(--muted);font:13px ui-sans-serif,system-ui,sans-serif}
+.diagram .edge{fill:none;stroke:var(--muted);stroke-width:2.5}
+.diagram .edge.risk{stroke:var(--danger);stroke-dasharray:7 6}
+.diagram .flow{stroke-dasharray:10 7;animation:flow 1.4s linear 2}
+.diagram-key{display:flex;flex-wrap:wrap;gap:.45rem 1rem;list-style:none;padding:0;margin:.7rem 0 0;color:var(--muted);font-size:.84rem}
+.diagram-key li{display:flex;align-items:center;gap:.35rem;margin:0}
+.key-line{width:1.7rem;border-top:3px solid var(--muted)}
+.key-line.risk{border-color:var(--danger);border-top-style:dashed}
+.timeline{display:flex;list-style:none;padding:0;margin:1rem 0;counter-reset:step}
+.timeline li{position:relative;flex:1;min-width:0;margin:0;padding:2.6rem .8rem .8rem;border:1px solid var(--line);background:var(--surface)}
+.timeline li:first-child{border-radius:10px 0 0 10px}
+.timeline li:last-child{border-radius:0 10px 10px 0}
+.timeline li::before{counter-increment:step;content:counter(step);position:absolute;top:.65rem;left:.8rem;width:1.45rem;height:1.45rem;display:grid;place-items:center;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:.75rem;font-weight:800}
+.timeline li+li{border-left:0}
+.timeline strong,.timeline span{display:block}
+.timeline span{color:var(--muted);font-size:.84rem;margin-top:.25rem}
+.timeline .critical{box-shadow:inset 0 3px 0 var(--warn)}
+figcaption{margin-top:.75rem;color:var(--text);font-weight:650}
+@keyframes flow{to{stroke-dashoffset:-34}}
+table{border-collapse:separate;border-spacing:0;width:100%;max-width:100%;display:block;overflow-x:auto;margin:.65rem 0}
+thead,tbody{display:table;width:100%;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:.62rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--surface-2);color:var(--muted);font-size:.73rem;letter-spacing:.05em;text-transform:uppercase}
+tr:last-child td{border-bottom:0}
+code{background:var(--code);border-radius:4px;padding:.1rem .32rem;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:.8rem 1rem;overflow-x:auto;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+details{border-top:1px solid var(--line);margin-top:.9rem;padding-top:.8rem}
+summary{cursor:pointer;color:var(--accent);font-weight:700}
+summary::marker{color:var(--accent)}
+.phase-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.25rem 1.4rem;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.phase-number{color:var(--muted);font-size:.76rem;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.phase-header h3{font-size:1.2rem;margin:.12rem 0 0}
+.phase-body{padding:1.3rem 1.4rem}
+.phase-facts{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:1rem}
+.fact{padding:.7rem .8rem}
+.fact strong{display:block;margin-top:.18rem}
+.plain-impact{font-size:1.02rem;margin:.85rem 0 1rem}
+.change-list td:first-child{width:30%}
+.gate{border:1px solid var(--good);background:var(--good-soft);border-radius:9px;padding:.85rem 1rem;margin:1rem 0}
+.gate h4{color:var(--good)}
+.triptych{grid-template-columns:repeat(3,minmax(0,1fr))}
+.triptych article{padding:.85rem}
+.execution-record{background:var(--surface-2);border-radius:9px;padding:0 .9rem .8rem}
+.execution-record dl{display:grid;grid-template-columns:9rem 1fr;gap:.45rem .8rem;margin:.75rem 0 0}
+.execution-record dd{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}
+.risk-high{color:var(--danger);font-weight:750}
+.risk-med{color:var(--warn);font-weight:750}
+.checks{list-style:none;padding:0}
+.checks li{position:relative;padding-left:1.55rem}
+.checks li::before{content:"□";position:absolute;left:.1rem;color:var(--accent);font-weight:800}
+.guardrails{border-left:4px solid var(--danger)}
+footer{max-width:74rem;margin:1rem auto 0;color:var(--muted);font-size:.8rem;text-align:center}
+@media(max-width:760px){
+  main{padding:1rem .75rem 3rem}
+  header,section{padding:1.15rem}
+  .meta,.stat-grid,.decision-grid,.decision-facts,.option-grid,.impact-grid,.scope-grid,.phase-facts,.triptych{grid-template-columns:1fr}
+  .decision-request,.figure-heading{align-items:flex-start;flex-direction:column}
+  .diagram-card{overflow-x:auto}
+  .diagram{min-width:46rem}
+  .timeline{flex-direction:column}
+  .timeline li{width:100%;padding:1rem 1rem 1rem 3rem}
+  .timeline li:first-child{border-radius:10px 10px 0 0}
+  .timeline li:last-child{border-radius:0 0 10px 10px}
+  .timeline li+li{border-left:1px solid var(--line);border-top:0}
+  .timeline li::before{top:.9rem;left:.85rem}
+  nav{top:0;margin:.6rem .75rem;border-radius:9px}
+  .phase-header{padding:1rem;flex-direction:column}
+  .phase-body{padding:1rem}
+  .execution-record dl{grid-template-columns:1fr;gap:.1rem}
+  thead,tbody{min-width:42rem}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.diagram .flow{animation:none}}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f5f5f5;--text:#111;--muted:#555;--line:#ccc;--shadow:none}
+  body{font-size:10pt}
+  main{max-width:none;padding:0}
+  nav{display:none}
+  header,section,.phase{box-shadow:none;break-inside:avoid}
+  .phase{break-before:page}
+  details{display:block}
+  details>*{display:block}
+  summary{display:none}
+  a{color:inherit;text-decoration:none}
+  .diagram .flow{animation:none}
+}
+.pending{color:var(--muted);background:var(--surface-2)}
+</style>
+</head>
+<body>
+<main>
+<header id="summary"><p class="eyebrow">Plan de cambio · Tamaño M</p><h1>La familia de Steam en Deseados</h1><p class="lede">Un deseado y la ficha de un juego dirán «En tu familia de Steam · Ana» cuando un miembro de la familia de Steam del usuario tenga el juego y se lo pueda prestar. Vale para un deseo de cualquier tienda y para un deseo manual. Así el usuario no compra lo que ya puede jugar.</p>
+<dl class="meta"><div><dt>Repositorio</dt><dd><code>gamelibrarymanager</code></dd></div><div><dt>Rama examinada</dt><dd><code>claude/steam-family-wishlist-shared-4807ee</code></dd></div><div><dt>Actualizado</dt><dd>2026-10-15</dd></div><div><dt>Estado</dt><dd><span class="status done">Finalizado · verificado en la aplicación real</span></dd></div></dl>
+<div class="decision-request"><div><span class="label">Decisión solicitada</span><strong>Aprobar el alcance y las tres fases, reducirlo o detenerlo</strong></div><a href="#options">Comparar caminos</a></div>
+<div class="decision-grid"><article class="decision primary"><span class="label">Recomendación</span><strong>La biblioteca de la familia es una caché, como Luna</strong><p>La familia no da copias al usuario: da una lista de juegos de otras personas que hoy le pueden prestar. Se guarda aparte, se sustituye entera en cada sincronización y se cruza con las fichas al leer, por appid, por IGDB y por título exacto. No toca <code>store_entry</code> ni <code>user_state</code>.</p></article><article class="decision"><span class="label">Coste principal</span><strong>Una sesión de la tienda de Steam</strong><p>La API de la familia no acepta la clave de API: el usuario lo comprobó con su clave el 2026-10-15. Hace falta el token de una sesión iniciada en la tienda, y esa sesión se queda en el perfil del webview de la aplicación, como en un navegador.</p></article></div>
+<div class="decision-facts"><article class="decision-fact"><span class="label">Esfuerzo</span><strong>Medio-alto</strong></article><article class="decision-fact"><span class="label">Riesgo</span><strong>Medio</strong></article><article class="decision-fact"><span class="label">Reversibilidad</span><strong>Total: se borran una caché y las cookies de Steam</strong></article><article class="decision-fact"><span class="label">Confianza</span><strong class="confidence medium">Media: endpoints vivos, respuesta real por capturar</strong></article></div>
+<aside class="callout"><strong>Origen.</strong> Conversación del 2026-10-15. El usuario pide marcar en Deseados los juegos que tiene algún miembro de su familia de Steam, aunque el deseo sea de otra tienda. Al elegir cómo se obtiene el token, el usuario acepta reabrir «Steam va por clave propia» del plan <code>0001</code>, solo para leer la familia; la aprobación de este plan lo confirma. <strong>Aprobado el 2026-10-15</strong> («aprobado, implementa del tirón»): las tres fases se escribieron en una sesión, y cada una se cierra con su control de producción. El resto de Steam sigue con la clave. El usuario decide además que la sincronización incluya la familia y que la sesión de Steam se quede en el webview.</aside>
+</header>
+<nav aria-label="Contenido"><ul><li><a href="#execution-status">Estado</a></li><li><a href="#evidence">Evidencia</a></li><li><a href="#options">Caminos</a></li><li><a href="#impact">Impacto</a></li><li><a href="#scope">Alcance</a></li><li><a href="#decisions">Decisiones</a></li><li><a href="#phases">Fases</a></li><li><a href="#risks">Riesgos</a></li><li><a href="#verification">Verificación</a></li></ul></nav>
+
+<section id="execution-status"><p class="eyebrow">Documento vivo</p><h2>Estado de ejecución</h2><div class="stat-grid"><article class="stat"><span class="label">Documento</span><strong>Aprobado 2026-10-15</strong></article><article class="stat"><span class="label">Avance</span><strong>3 de 3 fases</strong></article><article class="stat"><span class="label">Fase activa o bloqueada</span><strong>Ninguna</strong></article><article class="stat"><span class="label">Decisiones abiertas</span><strong>0</strong></article><article class="stat"><span class="label">Última actualización</span><strong>2026-10-15</strong></article></div>
+<table><thead><tr><th>Fase</th><th>Estado</th><th>Producción al cerrar</th></tr></thead><tbody><tr><td><a href="#phase-1">1. Lector y caché</a></td><td><span class="status done">done</span></td><td>Esquema aditivo; comportamiento actual.</td></tr><tr><td><a href="#phase-2">2. Sesión, sincronización y cruce</a></td><td><span class="status done">done</span></td><td>Backend completo; sin controles visibles.</td></tr><tr><td><a href="#phase-3">3. Interfaz</a></td><td><span class="status done">done</span></td><td>Función completa para el usuario.</td></tr></tbody></table>
+<details><summary>Protocolo de cada sesión de implementación</summary><ol><li>Leer el HTML completo. Examinar la evidencia de todas las fases <code>done</code>.</li><li>Comparar el estado registrado con el worktree actual. Elegir la primera fase no terminada. No saltar una fase activa o bloqueada.</li><li>Antes de cambiar archivos, marcar esa fase <code>in_progress</code> y registrar hora y sesión. Solo una fase puede estar activa.</li><li>Conservar inmutable la especificación aprobada. Anotar archivos y símbolos reales, comprobaciones resumidas, commit o cambio, desviaciones, nuevas decisiones, riesgos y siguiente acción en el registro.</li><li>Una referencia factual se puede corregir si se registra la corrección. Detenerse para pedir dirección si cambia alcance, contrato, riesgo, límite de fase o resultado.</li><li>Marcar <code>done</code> solo con evidencia del control de producción. Si no pasa, marcar <code>blocked</code>, causa, alternativas probadas y decisión necesaria. No comenzar fase posterior.</li></ol></details></section>
+
+<section id="evidence"><p class="eyebrow">Examen del 2026-10-15</p><h2>Lo que responde Steam hoy</h2>
+<p>Se siguió <a href="../../../docs/connectors/verify-unofficial-endpoints.md">la convención de los endpoints no oficiales</a>. <code>IFamilyGroupsService</code> está en <code>api.steampowered.com</code>, pero Valve no lo documenta. Hay dos implementaciones de referencia mantenidas: Lutris, <code>lutris/services/steamfamily.py</code> (GPLv3, último cambio <code>192e214d</code> del 2026-06-21), y Hydra, <code>src/main/services/steam-integration/</code> (<code>steam-web-api.ts</code>, <code>steam-family-library.ts</code>, <code>steam-store-session-config.ts</code>). La forma de la respuesta está en <code>SteamTracking/Protobufs</code>, <code>webui/service_familygroups.proto</code>.</p>
+<table><thead><tr><th>Prueba</th><th>Resultado</th></tr></thead><tbody>
+<tr><td><code>GET api.steampowered.com/IFamilyGroupsService/GetFamilyGroupForUser/v1/</code> sin credencial</td><td><strong>401</strong>, «Please verify your key= parameter». Está vivo y pide credencial.</td></tr>
+<tr><td><code>GetSharedLibraryApps/v1/?family_groupid=1</code> sin credencial</td><td><strong>401</strong>. Está vivo.</td></tr>
+<tr><td><code>GetFamilyGroupForUser</code> con una <code>key=</code> inventada y con <code>access_token=invalid</code></td><td><strong>401</strong> en los dos casos.</td></tr>
+<tr><td>La clave real del usuario, leída del llavero en su terminal (la clave no pasó por la sesión de trabajo): <code>ISteamUser/GetPlayerSummaries/v2/</code> y <code>GetFamilyGroupForUser</code> con su SteamID</td><td><code>GetPlayerSummaries</code>: <strong>200</strong>. <code>GetFamilyGroupForUser</code>: <strong>401</strong>. <strong>La clave es válida y el servicio de la familia no la acepta.</strong></td></tr>
+<tr><td><code>GET store.steampowered.com/pointssummary/ajaxgetasyncconfig</code> sin sesión</td><td><strong>200</strong>, <code>{"success":1,"data":[]}</code>. Con sesión, Lutris lee de ahí <code>data.webapi_token</code>.</td></tr>
+<tr><td>Lutris</td><td>Login en <code>store.steampowered.com/login/?redir=/about</code>. Después pide <code>ajaxgetasyncconfig</code> con las cookies de la sesión y manda el token como <code>access_token</code>, con <code>steamid</code>, a <code>GetFamilyGroupForUser</code> (lee <code>family_groupid</code> e <code>is_not_member_of_any_group</code>) y a <code>GetSharedLibraryApps</code>. Si la llamada falla, pide otro token con las mismas cookies.</td></tr>
+<tr><td>Hydra</td><td>Los mismos endpoints con <code>access_token</code>, y <code>include_own=0</code>, <code>include_excluded=0</code>, <code>include_free=0</code>, <code>include_non_games=0</code>, <code>language=english</code>. Descarta los juegos con <code>exclude_reason ≠ 0</code> y con <code>app_type ≠ 1</code>. Lee el token de una página de la tienda abierta en una partición de sesión persistente.</td></tr>
+<tr><td><code>CFamilyGroups_GetSharedLibraryApps_Response_SharedApp</code></td><td><code>appid</code>, <code>owner_steamids</code> (lista de <code>fixed64</code>), <code>name</code>, <code>sort_as</code>, <code>capsule_filename</code>, <code>img_icon_hash</code>, <code>exclude_reason</code>, <code>rt_time_acquired</code>, <code>rt_last_played</code>, <code>rt_playtime</code>, <code>app_type</code>, <code>content_descriptors</code>.</td></tr>
+<tr><td>Tauri 2.11.5 (<code>Cargo.lock</code>)</td><td>Tiene <code>WebviewWindowBuilder::visible</code>, <code>WebviewWindow::cookies_for_url</code>, <code>delete_cookie</code> y <code>clear_all_browsing_data</code>. Las ventanas de login de GOG y Epic no son de incógnito: comparten el perfil del webview de la aplicación.</td></tr>
+</tbody></table>
+<aside class="callout warning"><strong>Por confirmar en la fase 1.</strong> 1) Una respuesta real de los dos endpoints con el token del usuario: si <code>owner_steamids</code> y <code>family_groupid</code> llegan como texto o como número, y el fixture recortado. 2) Cuánto dura <code>webapi_token</code> (el <code>exp</code> del JWT). 3) Si <code>login/?redir=pointssummary/ajaxgetasyncconfig</code> vuelve a la página del token. Si no, <code>redir=/about</code> y la ventana navega después a la página del token, como Lutris. 4) Que una ventana oculta de WebKitGTK carga la página, y que la sesión sigue después de reiniciar la aplicación. 5) Que <code>delete_cookie</code> quita la sesión de Steam sin tocar la de GOG ni la de Epic.</aside>
+<aside class="callout"><strong>Resultado de la prueba real (2026-10-15).</strong> Con la cuenta del usuario, en <code>bun run tauri dev</code> sobre una copia de su biblioteca y con un registro temporal de las páginas de la ventana, que se retiró después. 1) La respuesta real se lee: 510 juegos, el grupo como texto, dos dueños y los dos con nombre. 2) El token dura unas 24 horas: le quedaban 1446 minutos al leerlo. 3) Tras el login, <code>redir=pointssummary%2Fajaxgetasyncconfig</code> vuelve directamente a la página del token. 4) La ventana oculta carga la página y no se ve. Tras un reinicio real del proceso, la sincronización leyó el token sin login. 5) Desactivar quita <code>steamLoginSecure</code> y <code>steamRefresh_steam</code> del perfil del webview, y al activar de nuevo Steam pide login. Ese perfil de prueba no tenía sesión de GOG ni de Epic, y esas tiendas no usan cookies para sincronizar: sus tokens están en el llavero.</aside>
+</section>
+
+<section id="options"><p class="eyebrow">Comparación</p><h2>Caminos considerados</h2><div class="option-grid">
+<article class="option recommended"><span class="option-tag">Recomendado</span><h3>Caché de la familia, cruce al leer</h3><p>Una tabla con los juegos que la familia puede prestar, sustituida entera en cada sincronización. La lectura cruza cada ficha por appid, por IGDB y por título exacto.</p><dl><dt>Esfuerzo</dt><dd>Medio-alto</dd><dt>Riesgo</dt><dd>Medio</dd><dt>Reversión</dt><dd>Borrar la tabla y las cookies</dd><dt>Renuncia</dt><dd>Una sesión de Steam en el webview</dd></dl><p class="choose-when">El usuario lo eligió: la sincronización trae la familia, y un deseo nuevo se marca sin otra consulta.</p></article>
+<article class="option"><h3>Copias prestadas en <code>store_entry</code></h3><p>Un tipo de copia nuevo de Steam para los juegos de la familia.</p><dl><dt>Esfuerzo</dt><dd>Grande</dd><dt>Riesgo</dt><dd>Alto</dd><dt>Reversión</dt><dd>Copias que desaparecen</dd><dt>Renuncia</dt><dd>La biblioteca miente</dd></dl><p class="choose-when">Descartado: un juego prestado no es del usuario, y cuando el dueño sale de la familia la biblioteca cambiaría sola. Es el motivo que el plan <code>0008</code> dio para Luna.</p></article>
+<article class="option"><h3><code>GetOwnedGames</code> de cada miembro</h3><p>El usuario escribe los SteamID de su familia y la aplicación lee sus bibliotecas con la clave de API.</p><dl><dt>Esfuerzo</dt><dd>Medio</dd><dt>Riesgo</dt><dd>Alto en datos</dd><dt>Reversión</dt><dd>Borrar la tabla</dd><dt>Renuncia</dt><dd>Marcas falsas</dd></dl><p class="choose-when">Descartado: solo funciona con perfiles públicos y cuenta juegos que no se pueden prestar. Una marca falsa hace que el usuario no compre algo que no puede jugar.</p></article>
+</div></section>
+
+<section id="impact"><p class="eyebrow">Consecuencias</p><h2>Qué cambia</h2><div class="impact-grid">
+<article class="impact"><h3>Comportamiento</h3><p>Con la familia activada, cada deseado y cada ficha que un miembro puede prestar muestra «En tu familia de Steam» con los nombres de los dueños y un enlace a la página del juego en Steam. La sincronización tiene una etapa más. Sin activarla, nada cambia.</p></article>
+<article class="impact"><h3>Datos y contratos</h3><p>La migración <code>0011</code> añade dos tablas: <code>steam_family</code> (el ajuste, una fila) y <code>steam_family_app</code> (la caché). <code>LibraryRow</code> gana <code>steam_family</code> y <code>SyncReport</code> gana <code>family</code>, los dos opcionales. La exportación no lleva la familia.</p></article>
+<article class="impact"><h3>Operación</h3><p>En cada sincronización: una ventana oculta que carga una página de la tienda, dos peticiones a <code>IFamilyGroupsService</code> y una a <code>GetPlayerSummaries</code>. Si Steam pide login, la ventana aparece; si el usuario la cierra, la familia se salta y la sincronización sigue.</p></article>
+<article class="impact"><h3>Desarrollo</h3><p>Un módulo nuevo <code>crates/connectors/src/steam/family.rs</code>. La lista cerrada de cachés pasa de cuatro tablas a cinco. Es la primera ventana de login que no conecta una tienda, y la convención de los scripts se aplica igual.</p></article>
+</div>
+<figure class="diagram-card" aria-labelledby="flow-heading flow-caption"><div class="figure-heading"><div><span class="label">Flujo de datos · Izquierda a derecha</span><h3 id="flow-heading">La familia y la ficha solo se juntan al leer</h3></div><p>Ver <a href="#phase-2">fase 2</a>.</p></div><svg class="diagram" viewBox="0 0 900 250" role="img" aria-labelledby="svg-title svg-desc"><title id="svg-title">La familia llega a una caché y se cruza con las fichas al leer</title><desc id="svg-desc">De izquierda a derecha: una ventana oculta con la sesión de Steam da un token. Con el token, la API de la familia llena steam_family_app. El pase de IGDB añade el igdb_id a esa caché. La lectura de la biblioteca cruza la caché con cada ficha por appid, por IGDB y por título, y produce LibraryRow con steam_family.</desc>
+<rect class="node-box" x="10" y="30" width="200" height="80" rx="10"/><text class="node-title" x="30" y="62">Sesión de Steam</text><text class="node-copy" x="30" y="86">ventana oculta · webview</text>
+<rect class="node-box" x="240" y="30" width="200" height="80" rx="10"/><text class="node-title" x="260" y="62">API de la familia</text><text class="node-copy" x="260" y="86">token solo en memoria</text>
+<rect class="node-box focus" x="470" y="30" width="200" height="80" rx="10"/><text class="node-title" x="490" y="62">steam_family_app</text><text class="node-copy" x="490" y="86">caché sustituida entera</text>
+<rect class="node-box" x="470" y="150" width="200" height="80" rx="10"/><text class="node-title" x="490" y="182">Pase de IGDB</text><text class="node-copy" x="490" y="206">appid → igdb_id</text>
+<rect class="node-box focus" x="700" y="90" width="190" height="80" rx="10"/><text class="node-title" x="720" y="122">LibraryRow</text><text class="node-copy" x="720" y="146">appid → IGDB → título</text>
+<path class="edge flow" d="M210 70 H240"/><path class="edge" d="M440 70 H470"/><path class="edge" d="M570 150 V110"/><path class="edge" d="M670 70 C690 70 680 130 700 130"/>
+</svg><figcaption id="flow-caption">Ninguna escritura de la familia llega a <code>game</code>, <code>store_entry</code> ni <code>user_state</code>, y el token no se escribe en ningún sitio.</figcaption></figure>
+</section>
+
+<section id="scope"><p class="eyebrow">Límites</p><h2>Alcance para aprobación</h2><div class="scope-grid"><article><h3>Incluido</h3><ul><li>Activar y desactivar «Familia de Steam» en Utilidades. Activar abre el login de Steam. Desactivar borra la caché y las cookies de Steam del webview.</li><li>Una etapa <code>family</code> en la sincronización, después de las cuentas de Steam, con un fallo propio.</li><li>Solo los juegos que un miembro puede prestar (<code>exclude_reason = 0</code>), solo juegos, y nunca los del usuario.</li><li>La marca en Deseados y en la ficha, con los nombres de los dueños y el enlace a la página de Steam del juego.</li><li>El cruce de los appid de la familia con IGDB en el pase de identidad, si IGDB está configurado.</li></ul></article><article class="out"><h3>Fuera</h3><ul><li>Pedir prestado, instalar o lanzar un juego. Las solicitudes de compra y el tiempo de juego de la familia.</li><li>La lista de deseos de los otros miembros.</li><li>Marcas en la tabla y el muro de la biblioteca, en «Hoy», y filtros nuevos.</li><li>Guardar la sesión o el token en el llavero, o leer cookies desde Rust.</li><li>Usar la sesión de la tienda para algo que no sea la familia. El resto de Steam sigue con la clave.</li></ul></article></div></section>
+
+<section id="change"><p class="eyebrow">Origen y destino</p><h2>Qué debe pasar a ser cierto</h2><table><thead><tr><th>Resultado</th><th>Hoy</th><th>Después</th><th>Movimiento</th></tr></thead><tbody>
+<tr><td>Credencial</td><td>Solo la clave de API.</td><td>Además, una sesión de la tienda en el webview, opcional y solo para la familia.</td><td><code>src-tauri/src/commands/steam_family.rs</code>.</td></tr>
+<tr><td>Fuente</td><td>No existe.</td><td><code>SteamConnector::family_group(token)</code> y <code>shared_apps(token, group)</code>.</td><td>Módulo nuevo <code>crates/connectors/src/steam/family.rs</code>.</td></tr>
+<tr><td>Caché</td><td>No existe.</td><td>El ajuste y los juegos guardados; sustitución completa que conserva el <code>igdb_id</code> de los appid que siguen.</td><td>Migración <code>0011</code> y <code>SteamFamilyRepository</code>.</td></tr>
+<tr><td>Sincronización</td><td>Las cuentas de las tiendas.</td><td>Una etapa <code>family</code> más, con fallo propio.</td><td><code>src-tauri/src/sync.rs</code> (<code>FamilyTokenSource</code>).</td></tr>
+<tr><td>Cruce</td><td>No existe.</td><td>Una ficha está en la familia por su appid de Steam, por su <code>igdb_id</code> o por un título normalizado exacto.</td><td>Función pura en <code>crates/domain/src/family.rs</code> (<code>FamilyIndex</code>).</td></tr>
+<tr><td>Interfaz</td><td>Sin familia.</td><td>Interruptor, marca y una línea en el informe de la sincronización.</td><td><code>UtilityPanel.tsx</code>, <code>Wishlist.tsx</code>, <code>GameDetail.tsx</code>, <code>App.tsx</code>.</td></tr>
+</tbody></table></section>
+
+<section id="decisions"><p class="eyebrow">Decisiones cerradas al aprobar</p><h2>No volver a debatirlas</h2><table><thead><tr><th>Pregunta</th><th>Decisión</th><th>Alternativa descartada y motivo</th></tr></thead><tbody>
+<tr><td>¿Reabrir «Steam va por clave propia» del plan <code>0001</code>?</td><td>Sí, solo para leer la familia. El resto de Steam sigue con la clave.</td><td>Mantenerla: el 2026-10-15 la clave real del usuario recibe 401 de la API de la familia, y no hay otro camino.</td></tr>
+<tr><td>Modelo</td><td>Disponibilidad: una caché, como Luna.</td><td>Copias prestadas: un juego prestado no es del usuario, y desaparece cuando el dueño sale de la familia.</td></tr>
+<tr><td>Cuándo se actualiza</td><td>En la sincronización, en una etapa propia después de las cuentas de Steam (decisión del usuario, 2026-10-15). Su fallo no es un fallo de la cuenta de Steam.</td><td>Un botón propio, como Luna y los precios: el usuario prefiere que la sincronización traiga la familia. Además es Steam, no un tercero.</td></tr>
+<tr><td>Sesión</td><td>Se queda en el perfil del webview de la aplicación (decisión del usuario). Una ventana oculta lee el token. Si Steam pide login, la ventana aparece.</td><td>Solo el token en el llavero: la familia deja de actualizarse cuando caduca. El token de refresco en el llavero: una sesión web completa de Steam en el llavero y un flujo de renovación no oficial.</td></tr>
+<tr><td>Token</td><td>Se lee en una sola página (<code>ajaxgetasyncconfig</code>) con un script sin lógica. Vive en memoria durante la sincronización y no se guarda.</td><td>Leer las cookies desde Rust, como Lutris: la aplicación manejaría la sesión de Steam.</td></tr>
+<tr><td>Qué juegos</td><td><code>exclude_reason = 0</code>, solo juegos, y sin los del usuario.</td><td>Incluir los excluidos: una marca falsa.</td></tr>
+<tr><td>Cruce</td><td>Al leer, en este orden: el appid de una copia de Steam de la ficha, el <code>igdb_id</code>, y el título normalizado exacto con <code>domain::normalize</code>.</td><td>Similitud: un falso «En tu familia» hace no comprar algo que no se puede jugar. Solo el título: un deseo de GOG con otro nombre no se marcaría.</td></tr>
+<tr><td>IGDB</td><td>El pase de identidad traduce los appid de la familia a <code>igdb_id</code>. La sincronización no llama a IGDB. Sustituir la caché conserva el <code>igdb_id</code> de los appid que siguen.</td><td>IGDB dentro de la sincronización: un tercero no puede parar la sincronización.</td></tr>
+<tr><td>Interruptor</td><td>Activada si hay una fila en <code>steam_family</code>. Desactivar borra la fila, la caché y las cookies de los dominios de Steam. Sin cuenta de Steam, o con el conector de Steam apagado, la etapa se salta.</td><td>Una fila en <code>connector_state</code>: esa tabla es de las tiendas y sus copias.</td></tr>
+<tr><td>Nombres de los dueños</td><td><code>GetPlayerSummaries</code> con la clave del usuario en cada sincronización. Se guardan en la caché con cada juego.</td><td>Guardar solo el SteamID: la marca no diría quién tiene el juego.</td></tr>
+<tr><td>Crate</td><td><code>crates/connectors/src/steam/family.rs</code>: es Steam, con una sesión del usuario.</td><td><code>crates/metadata</code>: es para los proveedores que no son tiendas del usuario.</td></tr>
+<tr><td>Exportación</td><td>No lleva la familia.</td><td>Exportarla: es dato de Steam y de otras personas, y caduca. Lo mismo pasa con Luna.</td></tr>
+<tr><td>Desconectar Steam</td><td>Desactiva la familia: borra la fila, la caché y las cookies.</td><td>Dejarla: marcas de una cuenta que ya no está conectada.</td></tr>
+</tbody></table></section>
+
+<section id="phases"><p class="eyebrow">Ejecución</p><h2>Fases aptas para producción</h2>
+
+<article class="phase" id="phase-1"><div class="phase-header"><div><span class="phase-number">Fase 1 de 3</span><h3>Lector y caché</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Esquema 0010</strong></div><div class="fact"><span class="label">Depende de</span><strong>Aprobación</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno</strong></div><div class="fact"><span class="label">Producción</span><strong>Comportamiento actual</strong></div></div>
+<p class="plain-impact">La aplicación sabe leer la familia de Steam con un token y guardarla, pero todavía no consigue el token ni usa la lista.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td>Examen manual con el usuario</td><td>El usuario saca su token de su navegador y pide los dos endpoints en su terminal. El token no entra en el repositorio ni en la sesión de trabajo. Se responden los cinco puntos «Por confirmar» de la <a href="#evidence">evidencia</a>. En el fixture, los SteamID y los nombres de los miembros se cambian por valores inventados.</td></tr>
+<tr><td><code>crates/domain/src/family.rs</code></td><td><code>FamilyApp</code> (<code>app_id</code>, <code>title</code>, <code>owners: Vec&lt;FamilyOwner&gt;</code>, <code>igdb_id</code>), <code>FamilyOwner</code> (<code>steam_id</code>, <code>name</code>), <code>FamilyGroup</code> (<code>Member(id)</code> o <code>NotMember</code>) y <code>FamilyMark</code> (<code>app_id</code>, <code>owners</code>).</td></tr>
+<tr><td><code>crates/connectors/src/steam/family.rs</code>, <code>parse.rs</code></td><td><code>SteamConnector::family_group(token)</code> y <code>shared_apps(token, group, own_steam_id)</code> con <code>include_own=false</code>, <code>include_excluded=false</code>, <code>include_non_games=false</code> y <code>language=english</code>. El parser descarta <code>exclude_reason ≠ 0</code> y <code>app_type ≠ 1</code>, y quita el SteamID del usuario de los dueños. <code>player_names(key, ids)</code> usa <code>GetPlayerSummaries</code>. El <code>//!</code> recoge el examen con fecha.</td></tr>
+<tr><td><code>migrations/0011_steam_family.up.sql</code>, <code>.down.sql</code></td><td><code>steam_family</code> (una fila: <code>family_groupid</code>, <code>refreshed_at</code>, <code>last_error</code>) y <code>steam_family_app</code> (<code>app_id</code> PK, <code>title</code>, <code>owners</code> en JSON, <code>igdb_id</code> opcional, <code>captured_at</code>). <code>STRICT</code>. El comentario explica por qué es la quinta tabla de la excepción de la caché.</td></tr>
+<tr><td><code>crates/storage/src/repositories/steam_family.rs</code></td><td><code>settings</code>, <code>enable</code>, <code>disable</code> (borra la fila y la caché), <code>replace_apps</code> (una transacción que conserva el <code>igdb_id</code> de los appid que siguen), <code>set_igdb_ids</code> y <code>apps</code>.</td></tr>
+<tr><td><code>crates/connectors/tests/steam_family.rs</code> + <code>fixtures/</code></td><td>Fixtures recortados de la respuesta real: un juego prestable, uno excluido, uno que no es un juego, uno con dos dueños, y la respuesta «sin familia». La cabecera del archivo dice de dónde vienen.</td></tr>
+<tr><td><code>crates/storage/tests/steam_family.rs</code></td><td>Migración up y down. Sustituir quita lo que salió y conserva el <code>igdb_id</code> de lo que sigue. No toca <code>game</code>, <code>store_entry</code> ni <code>user_state</code>.</td></tr>
+<tr><td><code>docs/storage/prices-are-a-cache-that-is-replaced.md</code>, <code>AGENTS.md</code>, <code>NOTICE</code></td><td>La lista cerrada pasa de cuatro tablas a cinco, con el motivo. <code>NOTICE</code> registra Lutris y Hydra como origen del conocimiento, sin código copiado.</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Las comprobaciones de CI pasan. La migración se aplica sobre una base 0010 con copia <code>VACUUM INTO</code>. La aplicación abre igual que antes. Los cinco puntos «Por confirmar» tienen respuesta en el registro.</p></div><details open><summary>Registro de ejecución · fase 1</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-15, rama <code>claude/steam-family-wishlist-shared-4807ee</code>. El usuario pidió las tres fases seguidas; se escribieron en orden y se comprobaron juntas.</dd>
+<dt>Archivos</dt><dd><code>crates/domain/src/family.rs</code> (<code>FamilyGroup</code>, <code>FamilyOwner</code>, <code>FamilyApp</code>, <code>FamilyMark</code>, <code>FamilyIndex</code>); <code>crates/connectors/src/steam/family.rs</code> (<code>TOKEN_PAGE</code>, <code>LOGIN_PAGE</code>, <code>StoreToken</code>, <code>TokenPage</code>, <code>SteamConnector::{is_token_page, is_store_page_after_login, token_from_page, family_group, shared_apps, player_names}</code>, <code>parse_family_group</code>, <code>parse_shared_apps</code>, <code>parse_player_names</code>); <code>crates/connectors/Cargo.toml</code> (<code>base64</code> 0.22, ya en <code>Cargo.lock</code>); <code>migrations/0011_steam_family.{up,down}.sql</code>; <code>crates/storage/src/repositories/steam_family.rs</code> (<code>SteamFamilyRepository::{settings, enable, disable, replace, record_error, apps, missing_igdb, set_igdb_ids}</code>, <code>SteamFamilySettings</code>); <code>crates/connectors/tests/steam_family.rs</code> + <code>fixtures/steam_family_*.json</code>; <code>crates/storage/tests/steam_family.rs</code>; <code>docs/storage/prices-are-a-cache-that-is-replaced.md</code>; <code>AGENTS.md</code>; <code>NOTICE</code>.</dd>
+<dt>Desviaciones</dt><dd>1) <strong>Los fixtures no son respuestas grabadas.</strong> Se escribieron con los campos de <code>service_familygroups.proto</code> y la forma JSON de la Web API (64 bits como texto); la cabecera del test lo dice. El examen manual con el token del usuario pasa a la prueba <code>live</code> de la fase 2 y a la prueba en la aplicación real. 2) <code>StoreToken</code> lee <code>sub</code> y <code>exp</code> del JWT (sin verificar la firma: eso lo hace Steam). <code>sub</code> sirve para rechazar una sesión de otra cuenta; <code>exp</code> responde al punto 2. 3) <code>player_names</code> recibe la <code>StoreSession</code> y no la clave: la credencial sigue opaca. 4) La marca de la biblioteca (<code>mark_family</code> en <code>library.rs</code>) se escribió en esta fase junto al resto de <code>storage</code>; el plan la ponía en la fase 2. 5) <code>one_query.rs</code> cuenta ahora 3 sentencias: la biblioteca, Luna y la familia.</dd>
+<dt>Comprobaciones</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code> (240 pasan, 0 fallan, 5 ignoradas), <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (200), <code>bun run build</code> y <code>bun run visual</code> («All correct»): todo correcto.</dd>
+<dt>Control de producción</dt><dd>Copia de la biblioteca real (versión 10, 1030 fichas) con <code>VACUUM INTO</code> en un <code>XDG_DATA_HOME</code> temporal. <code>bun run tauri dev</code>: aplica 0011, deja <code>library.db.bak-11</code>, crea <code>steam_family</code> y <code>steam_family_app</code>, y la ventana abre. Los cinco puntos «Por confirmar» tienen respuesta: ver <a href="#evidence">Evidencia</a>. La biblioteca real del usuario no se tocó: sigue en la versión 10.</dd>
+</dl></div></details></div></article>
+
+<article class="phase" id="phase-2"><div class="phase-header"><div><span class="phase-number">Fase 2 de 3</span><h3>Sesión, sincronización y cruce</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 1 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Lector y caché</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Ninguno</strong></div><div class="fact"><span class="label">Producción</span><strong>Comportamiento actual</strong></div></div>
+<p class="plain-impact">Con la familia activada, la sincronización trae la lista y la lectura marca las fichas. Todavía no hay un control para activarla.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td><code>src-tauri/src/commands/steam_family.rs</code></td><td>La ventana <code>steam-family</code>, oculta, carga <code>ajaxgetasyncconfig</code>. El script <code>READ_BODY</code> solo corre en esa dirección. Si <code>data</code> llega vacío, la ventana va al login de Steam y se muestra. Hay tres salidas (<code>Token</code>, <code>Unreadable</code>, <code>Closed</code>) y se resuelve una sola vez. Los comandos <code>enable_steam_family</code> (login visible, lee el grupo, guarda la fila) y <code>disable_steam_family</code> (borra la fila, la caché y las cookies de los dominios de Steam con <code>cookies_for_url</code> y <code>delete_cookie</code>).</td></tr>
+<tr><td><code>src-tauri/src/sync.rs</code></td><td>El trait <code>FamilyTokenSource</code>, que <code>sync_stores</code> recibe; en las pruebas es un token fijo. Una etapa <code>family</code> después de las cuentas. Corre solo con la familia activada, el conector de Steam encendido y una cuenta de Steam. Un fallo va a <code>SyncReport.family</code> y a <code>steam_family.last_error</code>, nunca a <code>failures</code> de la cuenta de Steam. Cancelar la sincronización cierra la ventana.</td></tr>
+<tr><td><code>src-tauri/src/identity.rs</code></td><td>Después de cruzar las copias, los appid de la familia sin <code>igdb_id</code> van a <code>by_external_ids(ExternalSource::Steam, …)</code> y a <code>set_igdb_ids</code>.</td></tr>
+<tr><td><code>crates/domain/src/family.rs</code></td><td><code>FamilyIndex::find(app_ids, igdb_id, titles)</code>: appid, luego IGDB, luego título normalizado exacto. Un título que se normaliza a nada no cruza.</td></tr>
+<tr><td><code>crates/storage/src/repositories/library.rs</code></td><td><code>mark_family</code>, como <code>mark_luna</code>: una consulta más, sea cual sea el tamaño de la biblioteca. <code>LibraryRow</code> gana <code>steam_family</code> (no se escribe si falta) y los campos <code>#[serde(skip)]</code> <code>steam_app_ids</code> e <code>igdb_id</code>.</td></tr>
+<tr><td><code>src-tauri/src/commands/export.rs</code>, <code>commands/mod.rs</code></td><td>La exportación quita <code>steam_family</code>. <code>disconnect_account_for</code> desactiva la familia cuando la cuenta es de Steam.</td></tr>
+<tr><td><code>src-tauri/tests/steam_family.rs</code>, <code>src-tauri/tests/live_steam_family.rs</code></td><td>Con wiremock: un fallo de la familia no falla la cuenta de Steam; se salta con el conector apagado; una ficha de GOG se marca por IGDB y una manual por título; la exportación no la lleva; desconectar Steam la borra. La prueba <code>live</code>, <code>#[ignore]</code> como <code>live_time_to_beat.rs</code>, lee la familia real con la clave del llavero y un token de la variable <code>STEAM_WEBAPI_TOKEN</code>, y no imprime ningún secreto.</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Las comprobaciones de CI pasan. La prueba <code>live</code> pasa con el token del usuario. La ventana <code>steam-family</code> no está en <code>capabilities/default.json</code>, y una aserción nueva en <code>src-tauri/tests/capabilities.rs</code> lo asegura. Sin la familia activada, la sincronización hace exactamente lo mismo que antes.</p></div><details open><summary>Registro de ejecución · fase 2</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-15, rama <code>claude/steam-family-wishlist-shared-4807ee</code>. El usuario pidió las tres fases seguidas; se escribieron en orden y se comprobaron juntas.</dd>
+<dt>Archivos</dt><dd><code>src-tauri/src/family.rs</code> (<code>FamilyTokenSource</code>, <code>FixedToken</code>, <code>FamilyOutcome</code>, <code>sync_family</code>, <code>enable</code>, <code>disable</code>); <code>src-tauri/src/commands/steam_family.rs</code> (ventana <code>steam-family</code>, <code>WebviewTokens</code>, <code>request_token</code>, <code>forget_steam_session</code>, comandos <code>steam_family_settings</code>, <code>enable_steam_family</code>, <code>disable_steam_family</code>); <code>src-tauri/src/sync.rs</code> (<code>SyncReport.family</code>, <code>sync_all</code> con la etapa después de <code>sync_stores</code>); <code>src-tauri/src/state.rs</code> (<code>AppState.steam</code>); <code>src-tauri/src/identity.rs</code> (<code>family_identities</code>, <code>IdentityReport.family_joined</code>); <code>src-tauri/src/commands/mod.rs</code> (<code>disconnect_account</code> y <code>disconnect_account_for</code>); <code>src-tauri/src/commands/export.rs</code>; <code>src-tauri/src/lib.rs</code>; <code>src-tauri/Cargo.toml</code> (<code>tokio</code> con <code>time</code>, <code>async-trait</code>); <code>crates/storage/src/repositories/library.rs</code>; <code>src-tauri/tests/steam_family.rs</code> (13 pruebas); <code>src-tauri/tests/live_steam_family.rs</code>; <code>src-tauri/tests/capabilities.rs</code> (<code>only_the_main_window_gets_the_commands</code>).</dd>
+<dt>Desviaciones</dt><dd>1) El caso de uso vive en <code>src-tauri/src/family.rs</code>, como <code>luna.rs</code>, y <code>sync_all</code> lo llama después de <code>sync_stores</code>: <code>sync_stores</code> no cambia y sus pruebas tampoco. 2) <code>AppState.steam</code> es una segunda instancia de <code>SteamConnector</code>: la familia no es parte del contrato <code>StoreConnector</code>. 3) <code>FamilyMark</code> lleva <code>url</code>, construida en <code>storage</code> como la de Luna, para que la prueba de capabilities la cubra (<code>store.steampowered.com/app/*</code>). 4) La ventana oculta espera como mucho 30 s; mientras muestra el login, espera al usuario. Cancelar la sincronización la cierra. Si el login termina en otra página de la tienda, la ventana vuelve sola a la página del token. 5) Activar lee la familia antes de guardar nada; si la primera lectura falla, la desactiva de nuevo. 6) Una sesión de otra cuenta (<code>sub</code> distinto) se rechaza antes de preguntar a Steam. 7) La prueba <code>live</code> lee el token de <code>STEAM_WEBAPI_TOKEN</code> y la clave del llavero, y no imprime secretos.</dd>
+<dt>Comprobaciones</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code> (240 pasan, 0 fallan, 5 ignoradas), <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (200), <code>bun run build</code> y <code>bun run visual</code> («All correct»): todo correcto.</dd>
+<dt>Control de producción</dt><dd>Sin la familia activada, la sincronización no pide token (prueba <code>the_family_is_not_asked_when_it_is_switched_off</code>). La ventana <code>steam-family</code> no está en <code>capabilities/default.json</code> (prueba nueva). La lectura real se hizo desde la aplicación y no con la prueba <code>live</code>, que queda para diagnosticar. Registro de la ventana al activar: página del token «sin sesión», login, página del token, token, cierre. Al sincronizar tras el reinicio: página del token, token, cierre, sin login. Una sincronización completa de las tres tiendas más la familia terminó sin errores de conector: Steam 23:28:31, GOG 23:28:49, Epic 23:30:09 y la familia 23:30:10, con 510 juegos.</dd>
+</dl></div></details></div></article>
+
+<article class="phase" id="phase-3"><div class="phase-header"><div><span class="phase-number">Fase 3 de 3</span><h3>Interfaz</h3></div><span class="status done">done</span></div><div class="phase-body"><div class="phase-facts"><div class="fact"><span class="label">Inicio</span><strong>Fase 2 done</strong></div><div class="fact"><span class="label">Depende de</span><strong>Backend completo</strong></div><div class="fact"><span class="label">Efecto visible</span><strong>Función completa</strong></div><div class="fact"><span class="label">Producción</span><strong>Familia usable</strong></div></div>
+<p class="plain-impact">El usuario activa la familia en Utilidades, sincroniza, y ve en Deseados quién le puede prestar cada juego.</p>
+<h4>Cambios exactos</h4><table class="change-list"><thead><tr><th>Archivo y símbolo</th><th>Cambio</th></tr></thead><tbody>
+<tr><td><code>src/lib/api.ts</code></td><td>Los tipos <code>LibraryRow.steam_family</code> y <code>SyncReport.family</code>, y los comandos nuevos.</td></tr>
+<tr><td><code>src/features/shell/UtilityPanel.tsx</code></td><td>La sección «Steam Family»: activar (abre el login), el estado (familia o «sin familia», número de juegos, última actualización, último error) y desactivar. El texto dice que la sesión de Steam se queda en la aplicación, como en un navegador, que solo sirve para leer la familia, y que desactivar la borra.</td></tr>
+<tr><td><code>src/features/wishlist/Wishlist.tsx</code>, <code>src/features/game/GameDetail.tsx</code></td><td>Un componente <code>FamilyMark</code>: «In your Steam family · Ana, Luis», con enlace a <code>store.steampowered.com/app/&lt;appid&gt;</code>; la capability ya tiene ese patrón. Deseados cuenta cuántos juegos están en la familia, como cuenta los de Luna.</td></tr>
+<tr><td><code>src/App.tsx</code></td><td>El informe de la sincronización dice cuántos juegos trajo la familia, o por qué se saltó.</td></tr>
+<tr><td><code>src/App.test.tsx</code>, pruebas de Deseados, <code>test/visual/</code></td><td>La marca con uno y con varios dueños, la ausencia de marca con la familia desactivada, el informe con la familia saltada, y la marca en ancho estrecho. Se mide la estructura.</td></tr>
+<tr><td><code>README.md</code>, <code>AGENTS.md</code></td><td>Un párrafo sobre Steam Family y la sesión de la tienda. La línea del plan <code>0010</code>.</td></tr>
+</tbody></table>
+<div class="gate"><h4>Control de producción</h4><p>Todas las comprobaciones de <a href="#verification">verificación</a> pasan y <code>bun run tauri dev</code> abre la ventana. En el escritorio del usuario: se activa con la cuenta real, se sincroniza, y un deseo de GOG, de Epic o manual que tiene un miembro sale marcado. Después de reiniciar, la sincronización no pide login. Cerrar el login durante la sincronización no para las tiendas. Desactivar quita las marcas, y al activar de nuevo Steam pide login otra vez.</p></div><details open><summary>Registro de ejecución · fase 3</summary><div class="execution-record"><dl>
+<dt>Sesión</dt><dd>2026-10-15, rama <code>claude/steam-family-wishlist-shared-4807ee</code>. El usuario pidió las tres fases seguidas; se escribieron en orden y se comprobaron juntas.</dd>
+<dt>Archivos</dt><dd><code>src/lib/api.ts</code> (<code>FamilyOutcome</code>, <code>FamilyMark</code>, <code>SteamFamilySettings</code>, <code>SteamFamilyView</code>, <code>SyncReport.family</code>, <code>IdentityReport.family_joined</code>, <code>steamFamilySettings</code>, <code>enableSteamFamily</code>, <code>disableSteamFamily</code>); <code>src/features/game/FamilyLink.tsx</code>; <code>src/features/wishlist/family.ts</code> (<code>familyLabel</code>) y <code>family.test.ts</code>; <code>src/features/wishlist/Wishlist.tsx</code>; <code>src/features/game/GameDetail.tsx</code>; <code>src/features/shell/UtilityPanel.tsx</code> (<code>SteamFamilyRow</code>); <code>src/features/shell/ActivityStrip.tsx</code>; <code>src/App.tsx</code>; <code>src/styles.css</code> (<code>.family-mark</code> con los tokens de <code>.luna-mark</code>); <code>src/App.test.tsx</code> (8 pruebas de Steam Family); <code>ActivityStrip.test.tsx</code>, <code>AppShell.test.tsx</code>; <code>test/visual/harness.ts</code>, <code>test/visual/look.ts</code>; <code>README.md</code>.</dd>
+<dt>Desviaciones</dt><dd>1) No hay botón «Actualizar familia»: la sincronización la lee (decisión del usuario). 2) El texto de la marca es «Steam Family · Ana, Luis ↗», y «Steam Family ↗» cuando Steam no dio los nombres. 3) La fila apagada dice «Switched off: …» y no «Off: …», para no chocar con el texto de Luna en las pruebas. 4) En el arnés visual, el deseo de título largo lleva también la marca de la familia, y el contraste se mide en las dos marcas: 5,39:1 en claro y 5,64:1 en oscuro.</dd>
+<dt>Comprobaciones</dt><dd><code>cargo fmt --all --check</code>, <code>cargo clippy --all-targets --workspace -- -D warnings</code>, <code>cargo test --workspace</code> (240 pasan, 0 fallan, 5 ignoradas), <code>bunx tsc --noEmit</code>, <code>bun run lint</code>, <code>bun test</code> (200), <code>bun run build</code> y <code>bun run visual</code> («All correct»): todo correcto.</dd>
+<dt>Control de producción</dt><dd>Con la cuenta real: activar pidió login y leyó la familia; la sincronización tras un reinicio no pidió login; desactivar pidió confirmación, dejó la fila apagada y quitó la sesión. Contadas con el mismo <code>LibraryRepository::all</code> de la aplicación, sobre una copia: 181 de 1030 fichas llevan la marca, y 2 de ellas son deseos, los dos de Steam y cruzados por appid. Ningún deseo de GOG, de Epic ni manual cruzó: el pase de IGDB todavía no había unido los juegos de la familia (0 de 510 con <code>igdb_id</code>), y por título exacto no coincidió ninguno. El cruce por IGDB solo está probado con las pruebas automáticas. No se probó a cerrar el login durante una sincronización con la cuenta real; la prueba <code>a_closed_sign_in_skips_the_family_and_keeps_the_last_list</code> lo cubre.</dd>
+<dt>Riesgos restantes</dt><dd>1) Una vez, activar terminó como «sign in closed» y no se sabe por qué: la ventana se cerró antes del token. En los intentos con registro, el flujo terminó bien siempre que la ventana se dejó abierta. 2) El usuario dijo que la primera activación dio 312 juegos. Ese dato no quedó guardado, y todas las lecturas que se pudieron comprobar dieron 510. Si Steam da a veces una lista corta, la sincronización quita marcas hasta la siguiente. 3) La marca sale también en la ficha de un juego que el usuario ya tiene (179 fichas): no engaña, pero no aporta. Si molesta, se quita en otro cambio.</dd>
+</dl></div></details></div></article>
+</section>
+
+<section id="risks"><p class="eyebrow">Fallos posibles</p><h2>Riesgos y respuesta</h2><table><thead><tr><th>Riesgo</th><th>Nivel</th><th>Respuesta</th></tr></thead><tbody>
+<tr><td>Steam cambia <code>IFamilyGroupsService</code> o <code>ajaxgetasyncconfig</code>. Ninguno de los dos está documentado.</td><td class="risk-high">Alto</td><td>El fallo se queda en la etapa <code>family</code>: la lista anterior sigue y las tiendas no lo notan. El <code>//!</code> con fecha guía la reparación, y el usuario puede desactivar la familia.</td></tr>
+<tr><td>La sesión de Steam queda en disco en el perfil del webview, sin cifrar, y una sesión web puede gastar la cartera de Steam.</td><td class="risk-med">Medio</td><td>Es opcional y el texto de Utilidades lo dice. Rust no lee cookies. La ventana no tiene capability y el script solo corre en la página del token. Desactivar la familia y desconectar Steam borran las cookies de Steam.</td></tr>
+<tr><td>La ventana oculta no carga en WebKitGTK o Wayland, o se ve un instante.</td><td class="risk-med">Medio</td><td>Se prueba en las fases 1 y 2 en el escritorio del usuario. Si falla, una ventana pequeña visible que se cierra sola, registrada como desviación.</td></tr>
+<tr><td>La sincronización espera mientras la ventana de login está abierta.</td><td class="risk-med">Medio</td><td>Solo cuando Steam pide login. Cancelar la sincronización cierra la ventana, y cerrar la ventana salta la familia.</td></tr>
+<tr><td>Una marca falsa por un título exacto igual: un remake o una edición.</td><td class="risk-med">Medio</td><td>El appid y el IGDB van antes que el título. El título es igualdad exacta, y <code>normalize</code> ya conserva «remastered» y «remake».</td></tr>
+<tr><td>Steam da una lista más corta en una lectura (el usuario vio 312 una vez; los datos guardados fueron siempre 510).</td><td class="risk-med">Medio</td><td>La sustitución completa quitaría marcas hasta la siguiente sincronización. No se ha reproducido. Si se repite, la respuesta es no sustituir cuando la lista cae de golpe, con una decisión nueva en el plan.</td></tr>
+<tr><td>Datos de otras personas (nombres y juegos de los miembros) en la base local.</td><td>Bajo</td><td>Solo en local. La exportación no los lleva, y desactivar los borra.</td></tr>
+</tbody></table></section>
+
+<section id="verification"><p class="eyebrow">Evidencia final</p><h2>Cómo comprobar el resultado</h2><h3>Comandos</h3><pre><code>cargo fmt --all --check
+cargo clippy --all-targets --workspace -- -D warnings
+cargo test --workspace
+bunx tsc --noEmit &amp;&amp; bun run lint &amp;&amp; bun test
+bun run build &amp;&amp; bun run visual
+bun run tauri dev
+STEAM_WEBAPI_TOKEN=… cargo test -p gamelibrarymanager --test live_steam_family -- --ignored</code></pre>
+<h3>Criterios</h3><ul class="checks"><li>Sin la familia activada, la aplicación hace exactamente lo mismo que antes.</li><li>Con la familia activada, un deseo de cualquier tienda o manual de un juego que un miembro puede prestar sale marcado con el nombre del dueño después de sincronizar.</li><li>Un juego que no se puede prestar no sale marcado.</li><li>Cerrar la ventana de login durante la sincronización no para Steam, GOG ni Epic.</li><li>Desactivar quita las marcas y la sesión de Steam, y deja la biblioteca, las notas y los estados igual.</li><li>La exportación JSON y CSV no cambia.</li></ul></section>
+
+<section class="guardrails"><p class="eyebrow">Límites</p><h2>No hacer</h2><ul><li>No guardar el token ni las cookies de Steam en el llavero, en SQLite ni en un log.</li><li>No leer cookies desde Rust, no ejecutar scripts fuera de la página del token y no dar capability a la ventana <code>steam-family</code>.</li><li>No usar la sesión de la tienda para nada que no sea <code>IFamilyGroupsService</code>.</li><li>No crear <code>store_entry</code>, <code>store_account</code> ni filas de <code>connector_state</code> para la familia.</li><li>No escribir en <code>game</code> ni en <code>user_state</code> desde la familia.</li><li>No llamar a IGDB desde la sincronización.</li><li>No cruzar por similitud ni con un umbral.</li></ul></section>
+</main>
+<footer>Plan 0010 · gamelibrarymanager · 2026-10-15</footer>
+</body>
+</html>

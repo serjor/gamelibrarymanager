@@ -56,6 +56,23 @@ honesty, although no licence makes that necessary:
   launcher. That pair is published in legendary. This program does **not** carry
   it inside: the user supplies it when they connect their account.
 
+  The Steam family (crates/connectors/src/steam/family.rs)
+  Valve does not document the service of the families. The endpoints, the
+  token of the store session that they want, and the fields to filter were
+  found in Lutris (GPLv3) and in Hydra (MIT), and were examined by hand on
+  2026-10-15:
+    - https://github.com/lutris/lutris (lutris/services/steamfamily.py)
+      Copyright (c) Lutris contributors
+    - https://github.com/hydralauncher/hydra
+      (src/main/services/steam-integration/)
+      Copyright (c) Hydra contributors
+  From there come three facts: that `IFamilyGroupsService` wants the
+  `webapi_token` of `pointssummary/ajaxgetasyncconfig` and not the API key, that
+  a game with an `exclude_reason` other than 0 is in the list and cannot be
+  lent, and that an `app_type` other than 1 is not a game. The fields of the
+  answer come from SteamTracking/Protobufs. No code has been copied: the
+  implementation belongs to this project and is in Rust.
+
 Fonts
 -----
 The skins can use these font families. All of them are under the SIL Open Font

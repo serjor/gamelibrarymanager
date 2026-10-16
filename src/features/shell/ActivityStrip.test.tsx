@@ -17,6 +17,7 @@ const report: SyncReport = {
   failures: [{ store: "epic", account: "account", reason: "expired credentials" }],
   skipped: [],
   cancelled: false,
+  family: null,
 };
 
 const noActivityProps = {
@@ -72,6 +73,7 @@ describe("ActivityStrip", () => {
           failures: [],
           skipped: [],
           cancelled: false,
+          family: null,
         }}
       />,
     );
@@ -102,6 +104,7 @@ describe("ActivityStrip", () => {
           failures: [],
           skipped: [],
           cancelled: true,
+          family: null,
         }}
         stoppedPass="The work made so far is kept."
       />,

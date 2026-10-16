@@ -11,6 +11,7 @@ import type {
   PriceRow,
   ReviewItem,
   StateUpdate,
+  SteamFamilySettings,
   SyncReport,
   TimeToBeat,
   WishTarget,
@@ -46,6 +47,7 @@ const state = {
     failures: [],
     skipped: [],
     cancelled: false,
+    family: null,
   } as SyncReport,
   syncError: null as string | null,
   matchingStopped: null as string | null,
@@ -64,6 +66,11 @@ const state = {
   lunaError: null as string | null,
   /** The countries with which Luna was switched on. */
   lunaCountries: [] as string[],
+  /** `null` is the Steam family switched off. */
+  steamFamily: null as SteamFamilySettings | null,
+  /** How many times the family was switched on and off. */
+  familyEnables: 0,
+  familyDisables: 0,
 };
 
 /**
@@ -143,6 +150,17 @@ mock.module("./lib/api", () => ({
       state.luna = { ...state.luna!, refreshed_at: NOW };
       return Promise.resolve({ games: 89, territory: "ES" });
     },
+    steamFamilySettings: () => Promise.resolve({ settings: state.steamFamily }),
+    enableSteamFamily: () => {
+      state.familyEnables += 1;
+      state.steamFamily = { family_groupid: "1234567890123456789", refreshed_at: NOW, last_error: null, games: 42 };
+      return Promise.resolve({ outcome: "updated", games: 42 });
+    },
+    disableSteamFamily: () => {
+      state.familyDisables += 1;
+      state.steamFamily = null;
+      return Promise.resolve();
+    },
     reviewQueue: () => Promise.resolve(state.queue),
     syncNow: () =>
       state.syncError === null
@@ -156,6 +174,7 @@ mock.module("./lib/api", () => ({
         cancelled: false,
         stopped: state.matchingStopped,
         timed: 0,
+        family_joined: 0,
       }),
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
@@ -430,6 +449,7 @@ describe("App", () => {
       failures: [],
       skipped: [],
       cancelled: false,
+      family: null,
     };
     state.syncError = null;
     state.exportPath = null;
@@ -442,6 +462,141 @@ describe("App", () => {
     state.lunaRequests = 0;
     state.lunaError = null;
     state.lunaCountries = [];
+    state.steamFamily = null;
+    state.familyEnables = 0;
+    state.familyDisables = 0;
+  });
+
+  describe("Steam Family", () => {
+    const lent = (title: string, owners: string[]) =>
+      row({
+        title,
+        sort_title: title.toLowerCase(),
+        owned_stores: [],
+        wishlist_stores: ["gog"],
+        steam_family: { app_id: "1145360", title, owners, url: "https://store.steampowered.com/app/1145360" },
+      });
+
+    it("with the family off there is no mark and no count", async () => {
+      state.accounts = [steamAccount];
+      state.rows = WISHES;
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      await screen.findByText("Blasphemous");
+      expect(screen.queryByRole("button", { name: /can lend you/ })).toBeNull();
+      expect(screen.queryByText(/in your Steam family/)).toBeNull();
+    });
+
+    it("marks a wish of another store that a member owns, with the owner", async () => {
+      state.accounts = [steamAccount];
+      state.steamFamily = { family_groupid: "1234567890123456789", refreshed_at: NOW, last_error: null, games: 42 };
+      state.rows = [...WISHES, lent("Hades", ["Ana", "Luis"])];
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      const marks = await screen.findAllByRole("button", { name: /can lend you/ });
+      expect(marks.map((mark) => mark.getAttribute("aria-label"))).toEqual([
+        "Ana, Luis can lend you Hades with Steam Family",
+      ]);
+      expect(marks[0]!.textContent).toBe("Steam Family · Ana, Luis ↗");
+      expect(screen.getByText(/1 in your Steam family/)).toBeDefined();
+      // On the wishlist, and not only in Utilities: the date of the marks is
+      // read where the marks are.
+      const wishlist = screen.getByText(/1 in your Steam family/).closest(".wishlist") as HTMLElement;
+      expect(within(wishlist).getByText(/42 games that your family can lend/)).toBeDefined();
+    });
+
+    it("a mark with no names still says that the family can lend the game", async () => {
+      state.accounts = [steamAccount];
+      state.steamFamily = { family_groupid: "1234567890123456789", refreshed_at: NOW, last_error: null, games: 1 };
+      state.rows = [lent("Hades", [])];
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /^Wishlist/ }));
+
+      const mark = await screen.findByRole("button", { name: "Your Steam family can lend you Hades" });
+      expect(mark.textContent).toBe("Steam Family ↗");
+    });
+
+    it("Utilities switches the family on and says where the session stays", async () => {
+      state.accounts = [steamAccount];
+      render(<App />);
+      const dialog = within(await openUtilities());
+
+      expect(dialog.getByText(/Steam does not accept the API key here/)).toBeDefined();
+      expect(dialog.getByText(/The session stays in this application/)).toBeDefined();
+      fireEvent.click(dialog.getByRole("button", { name: "Switch Steam Family on" }));
+
+      await waitFor(() => expect(state.familyEnables).toBe(1));
+      expect(await dialog.findByText(/42 games that your family can lend/)).toBeDefined();
+      expect(dialog.getByRole("button", { name: "Switch Steam Family off" })).toBeDefined();
+    });
+
+    it("with no Steam account the family cannot be switched on", async () => {
+      state.accounts = [gogAccount];
+      render(<App />);
+      const dialog = within(await openUtilities());
+
+      expect(dialog.getByText(/Connect Steam first/)).toBeDefined();
+      const button = dialog.getByRole("button", { name: "Switch Steam Family on" }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+    });
+
+    it("switching the family off asks first, and then removes it", async () => {
+      state.accounts = [steamAccount];
+      state.steamFamily = { family_groupid: "1234567890123456789", refreshed_at: NOW, last_error: null, games: 42 };
+      const confirm = window.confirm;
+      window.confirm = () => true;
+      try {
+        render(<App />);
+        const dialog = within(await openUtilities());
+        fireEvent.click(await dialog.findByRole("button", { name: "Switch Steam Family off" }));
+
+        await waitFor(() => expect(state.familyDisables).toBe(1));
+        expect(await dialog.findByRole("button", { name: "Switch Steam Family on" })).toBeDefined();
+      } finally {
+        window.confirm = confirm;
+      }
+    });
+
+    it("a synchronisation that skips the family says why and keeps the store counts", async () => {
+      state.accounts = [steamAccount];
+      state.syncResult = {
+        owned: 4,
+        wishlist: 2,
+        removed: 0,
+        failures: [],
+        skipped: [],
+        cancelled: false,
+        family: { outcome: "skipped", reason: "the Steam sign in was closed: the family was not updated" },
+      };
+      render(<App />);
+      await openUtilities();
+      fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+
+      expect(await screen.findByText("Synchronisation completed with warnings")).toBeDefined();
+      expect(screen.getByText(/4 owned copies and 2 wished-for copies/)).toBeDefined();
+      expect(screen.getByText(/Steam Family was not updated: the Steam sign in was closed/)).toBeDefined();
+    });
+
+    it("a synchronisation that read the family says how many games it can lend", async () => {
+      state.accounts = [steamAccount];
+      state.syncResult = {
+        owned: 4,
+        wishlist: 2,
+        removed: 0,
+        failures: [],
+        skipped: [],
+        cancelled: false,
+        family: { outcome: "updated", games: 42 },
+      };
+      render(<App />);
+      await openUtilities();
+      fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+
+      expect(await screen.findByText("Synchronisation complete")).toBeDefined();
+      expect(screen.getByText(/your Steam family can lend 42 games/)).toBeDefined();
+    });
   });
 
   describe("Luna", () => {
@@ -548,7 +703,7 @@ describe("App", () => {
 
   it("a completed synchronisation reports success and its counts", async () => {
     state.accounts = [steamAccount];
-    state.syncResult = { owned: 4, wishlist: 2, removed: 0, failures: [], skipped: [], cancelled: false };
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, failures: [], skipped: [], cancelled: false, family: null };
     render(<App />);
     await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
@@ -558,7 +713,7 @@ describe("App", () => {
 
   it("a cancelled synchronisation says that saved work is kept", async () => {
     state.accounts = [steamAccount];
-    state.syncResult = { owned: 2, wishlist: 1, removed: 0, failures: [], skipped: [], cancelled: true };
+    state.syncResult = { owned: 2, wishlist: 1, removed: 0, failures: [], skipped: [], cancelled: true, family: null };
     render(<App />);
     await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));

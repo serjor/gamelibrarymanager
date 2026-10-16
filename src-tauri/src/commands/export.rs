@@ -45,10 +45,13 @@ pub async fn export_library_for(
     format: ExportFormat,
 ) -> Result<(), AppError> {
     let mut rows = LibraryRepository(db).all().await?;
-    // Luna is data of Amazon that expires next month, not data of the library.
-    // The file that the user takes out is the same with Luna on or off.
+    // Luna is data of Amazon that expires next month, and the family is data
+    // of Steam and of other persons that expires when a member leaves. Neither
+    // is data of the library: the file that the user takes out is the same
+    // with them on or off.
     for row in &mut rows {
         row.luna = None;
+        row.steam_family = None;
     }
     let content = match format {
         ExportFormat::Json => {

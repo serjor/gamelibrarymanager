@@ -957,8 +957,10 @@ button.link {
    of a status badge and the colour of the accent, not the green of the price:
    on the wishlist the all-time low is the only value in that colour, and a
    second green would compete with it. It is a button because it opens the page
-   of the game on Luna. */
-.luna-mark {
+   of the game on Luna. "Steam Family" says the same kind of thing — you can
+   play it without buying it — and so it has the same shape. */
+.luna-mark,
+.family-mark {
   display: inline-block;
   margin-top: var(--e-1);
   padding: 0 var(--e-2);
@@ -974,9 +976,16 @@ button.link {
   cursor: pointer;
 }
 
-.luna-mark:hover {
+.luna-mark:hover,
+.family-mark:hover {
   border-color: var(--accent-hover);
   color: var(--accent-hover);
+}
+
+/* The two marks can share a title cell: the family one goes beside Luna and
+   not under it. */
+.luna-mark + .family-mark {
+  margin-left: var(--e-1);
 }
 
 /* At the bottom while the selection stays: if you must search for it, nobody

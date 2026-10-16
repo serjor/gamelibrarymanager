@@ -3,6 +3,7 @@ import { api, errorMessage, type LibraryRow, type PlayStatus } from "../../lib/a
 import { STATUSES, STATUS_LABEL } from "../../lib/status";
 import { isNoLongerInStore } from "../library/filters";
 import { GameArtwork } from "./GameArtwork";
+import { FamilyLink } from "./FamilyLink";
 import { LunaLink } from "./LunaLink";
 import { DURATIONS, formatDuration, submissionsLabel } from "./timeToBeat";
 
@@ -128,8 +129,10 @@ export function GameDetail({
       </p>
 
       {/* Before the purchase and before the status: you can play it today with
-          Prime. Nothing appears when the game is not on Luna. */}
+          Prime, or a member of your Steam family can lend it. Nothing appears
+          when neither is true. */}
       <LunaLink row={row} onError={setError} />
+      <FamilyLink row={row} onError={setError} />
 
       {/* The summary comes from IGDB, thus it is absent exactly in the records
           that came from the title of the store. To say that is better than an

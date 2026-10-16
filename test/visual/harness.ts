@@ -33,6 +33,7 @@ import type {
   LibrarySummary,
   PriceRow,
   ReviewItem,
+  SteamFamilyView,
   UserSkins,
 } from "../../src/lib/api";
 import {
@@ -62,6 +63,7 @@ export interface Answers {
   library: LibraryRow[];
   prices: PriceRow[];
   luna_settings: LunaView;
+  steam_family_settings: SteamFamilyView;
   list_user_skins: UserSkins;
 }
 
@@ -194,8 +196,9 @@ export function exampleWishlist(): { library: LibraryRow[]; prices: PriceRow[] }
     game({ title: "Hollow Knight: Silksong", owned_stores: [], wishlist_stores: ["steam"] }),
     game({ title: "Blasphemous II", owned_stores: [], wishlist_stores: ["gog", "steam"] }),
     game({ title: "Baldur's Gate 3", owned_stores: ["gog"], wishlist_stores: ["steam"] }),
-    // The long title also carries the Luna mark: the layout checks of the
-    // wishlist measure the cell where the two compete for the width.
+    // The long title also carries the Luna mark and the family mark: the
+    // layout checks of the wishlist measure the cell where the three compete
+    // for the width.
     game({
       title: "A wished-for game with a very long title that does not fit in its column",
       owned_stores: [],
@@ -203,6 +206,12 @@ export function exampleWishlist(): { library: LibraryRow[]; prices: PriceRow[] }
       luna: {
         title: "A wished-for game with a very long title",
         url: "https://luna.amazon.es/game/a-long-title/B000000000",
+      },
+      steam_family: {
+        app_id: "1145360",
+        title: "A wished-for game with a very long title",
+        owners: ["Ana", "Luis"],
+        url: "https://store.steampowered.com/app/1145360",
       },
     }),
     game({ title: "A game that nobody sells", owned_stores: [], wishlist_stores: ["gog"] }),
@@ -256,6 +265,7 @@ function defaultAnswers(library: LibraryRow[]): Answers {
     library,
     prices: [],
     luna_settings: { settings: null, countries: ["ES"] },
+    steam_family_settings: { settings: null },
     list_user_skins: { dir: "/home/user/.local/share/com.serjor.gamelibrarymanager/skins", files: [] },
   };
 }

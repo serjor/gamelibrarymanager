@@ -70,9 +70,12 @@ describe("AppShell", () => {
           onDisconnect: () => {},
           onToggleConnector: () => {},
           luna: { settings: null, countries: ["ES"] },
+          steamFamily: { settings: null },
           onLunaCountry: () => {},
           onLunaRefresh: () => {},
           onLunaDisable: () => {},
+          onFamilyEnable: () => {},
+          onFamilyDisable: () => {},
         }}
       >
         <p>Library content</p>

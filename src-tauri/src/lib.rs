@@ -1,5 +1,6 @@
 mod commands;
 mod error;
+mod family;
 mod identity;
 mod luna;
 mod prices;
@@ -21,6 +22,10 @@ pub mod testing {
         export::export_library_for, save_states, summary,
     };
     pub use crate::error::AppError;
+    pub use crate::family::{
+        FamilyOutcome, FamilyTokenSource, FixedToken, disable as disable_family,
+        enable as enable_family, sync_family,
+    };
     pub use crate::identity::{IdentityReport, refresh_time_to_beat, resolve, resolve_local};
     pub use crate::luna::{
         LunaReport, disable as disable_luna, enable as enable_luna, refresh as refresh_luna,
@@ -81,6 +86,9 @@ pub fn run() {
             commands::luna::set_luna_country,
             commands::luna::disable_luna,
             commands::luna::refresh_luna,
+            commands::steam_family::steam_family_settings,
+            commands::steam_family::enable_steam_family,
+            commands::steam_family::disable_steam_family,
             commands::manual_wish::search_manual_wish_games,
             commands::manual_wish::add_manual_wish,
             commands::manual_wish::update_manual_wish,
