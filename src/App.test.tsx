@@ -44,6 +44,7 @@ const state = {
     owned: 0,
     wishlist: 0,
     removed: 0,
+    unmatched: 0,
     failures: [],
     skipped: [],
     cancelled: false,
@@ -51,6 +52,8 @@ const state = {
   } as SyncReport,
   syncError: null as string | null,
   matchingStopped: null as string | null,
+  /** How many times the matching ran. A synchronisation runs it one time. */
+  matchRuns: 0,
   exportPath: null as string | null,
   exports: [] as [string, "json" | "csv"][],
   wishTargets: [] as WishTarget[],
@@ -166,8 +169,9 @@ mock.module("./lib/api", () => ({
       state.syncError === null
         ? Promise.resolve(state.syncResult)
         : Promise.reject(state.syncError),
-    resolveIdentities: () =>
-      Promise.resolve({
+    resolveIdentities: () => {
+      state.matchRuns += 1;
+      return Promise.resolve({
         linked: 0,
         review: 0,
         unknown: 0,
@@ -175,7 +179,8 @@ mock.module("./lib/api", () => ({
         stopped: state.matchingStopped,
         timed: 0,
         family_joined: 0,
-      }),
+      });
+    },
     unlockSecrets: () => Promise.resolve(),
     connectSteam: () => Promise.resolve("id"),
     connectGog: () => Promise.resolve("id"),
@@ -442,10 +447,12 @@ describe("App", () => {
     state.confirmed = [];
     state.priceRequests = 0;
     state.matchingStopped = null;
+    state.matchRuns = 0;
     state.syncResult = {
       owned: 0,
       wishlist: 0,
       removed: 0,
+      unmatched: 0,
       failures: [],
       skipped: [],
       cancelled: false,
@@ -565,6 +572,7 @@ describe("App", () => {
         owned: 4,
         wishlist: 2,
         removed: 0,
+        unmatched: 0,
         failures: [],
         skipped: [],
         cancelled: false,
@@ -585,6 +593,7 @@ describe("App", () => {
         owned: 4,
         wishlist: 2,
         removed: 0,
+        unmatched: 0,
         failures: [],
         skipped: [],
         cancelled: false,
@@ -703,7 +712,7 @@ describe("App", () => {
 
   it("a completed synchronisation reports success and its counts", async () => {
     state.accounts = [steamAccount];
-    state.syncResult = { owned: 4, wishlist: 2, removed: 0, failures: [], skipped: [], cancelled: false, family: null };
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, unmatched: 0, failures: [], skipped: [], cancelled: false, family: null };
     render(<App />);
     await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
@@ -711,9 +720,58 @@ describe("App", () => {
     expect(screen.getByText(/4 owned copies and 2 wished-for copies/)).toBeDefined();
   });
 
+  it("a synchronisation runs the matching after it, so that the new copies appear", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, unmatched: 2, failures: [], skipped: [], cancelled: false, family: null };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    await waitFor(() => expect(state.matchRuns).toBe(1));
+    // The matching ran to the end: no copy waits, and no notice says so.
+    await waitFor(() => {
+      expect(screen.getByText("Synchronisation complete")).toBeDefined();
+      expect(document.querySelector(".activity-unmatched")).toBeNull();
+    });
+  });
+
+  it("a matching that stops after a synchronisation leaves the notice and the button", async () => {
+    state.accounts = [steamAccount];
+    state.matchingStopped = "the request limit is reached";
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, unmatched: 2, failures: [], skipped: [], cancelled: false, family: null };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText(/The matching stopped/)).toBeDefined();
+    expect(document.querySelector(".activity-unmatched")?.textContent).toContain(
+      "2 new copies have no record yet",
+    );
+  });
+
+  it("a cancelled synchronisation does not start the matching", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 2, wishlist: 1, removed: 0, unmatched: 1, failures: [], skipped: [], cancelled: true, family: null };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    expect(await screen.findByText("Pass stopped")).toBeDefined();
+    expect(state.matchRuns).toBe(0);
+  });
+
+  it("a finished synchronisation report goes when the user dismisses it", async () => {
+    state.accounts = [steamAccount];
+    state.syncResult = { owned: 4, wishlist: 2, removed: 0, unmatched: 0, failures: [], skipped: [], cancelled: false, family: null };
+    render(<App />);
+    await openUtilities();
+    fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));
+    await waitFor(() => expect(state.matchRuns).toBe(1));
+    fireEvent.click(await screen.findByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText("Synchronisation complete")).toBeNull();
+    expect(document.querySelector(".activity-strip")).toBeNull();
+  });
+
   it("a cancelled synchronisation says that saved work is kept", async () => {
     state.accounts = [steamAccount];
-    state.syncResult = { owned: 2, wishlist: 1, removed: 0, failures: [], skipped: [], cancelled: true, family: null };
+    state.syncResult = { owned: 2, wishlist: 1, removed: 0, unmatched: 0, failures: [], skipped: [], cancelled: true, family: null };
     render(<App />);
     await openUtilities();
     fireEvent.click(await screen.findByRole("button", { name: "Synchronise" }));

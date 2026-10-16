@@ -25,6 +25,11 @@ export interface SyncReport {
   owned: number;
   wishlist: number;
   removed: number;
+  /**
+   * The copies that this synchronisation saw for the first time and that have
+   * no record yet. The library shows records: they appear after "Match".
+   */
+  unmatched: number;
   failures: SyncFailure[];
   /** The stores left out because their connector is switched off. */
   skipped: string[];

@@ -17,6 +17,19 @@ export interface ActivityStripProps {
   exportedPath: string | null;
   storeName: (store: string) => string;
   onCancel: () => void;
+  /**
+   * The new copies of the report that still have no record: the matching after
+   * the synchronisation did not run to the end. Zero hides the notice.
+   */
+  unmatched: number;
+  /** Runs the matching, for the copies that the synchronisation left with no record. */
+  onMatch: () => void;
+  /**
+   * Clears what the last operation left: its report, its error, a stopped pass
+   * and the path of an export. The problems of a provider stay, because they
+   * come from the connector and not from the last operation.
+   */
+  onDismiss: () => void;
 }
 
 function operationLabel(operation: string): string {
@@ -59,6 +72,19 @@ function reportSummary(report: SyncReport): string {
   );
 }
 
+/**
+ * The synchronisation writes copies, and the library shows records: a new copy
+ * stays out of the library until the matching gives it one. The matching runs
+ * after each synchronisation; when it does not run to the end, this notice
+ * says why a wish that the store has is not on screen.
+ */
+function unmatchedNotice(count: number): string {
+  return count === 1
+    ? "1 new copy has no record yet, and the library does not show it until you match it."
+    : String(count) +
+        " new copies have no record yet, and the library does not show them until you match them.";
+}
+
 /** The part of the summary that the stage of the family gives, when it ended. */
 function familySummary(family: FamilyOutcome | null): string {
   switch (family?.outcome) {
@@ -80,6 +106,9 @@ export function ActivityStrip({
   exportedPath,
   storeName,
   onCancel,
+  unmatched,
+  onMatch,
+  onDismiss,
 }: ActivityStripProps) {
   const failures = report?.failures ?? [];
   const skipped = report?.skipped ?? [];
@@ -107,6 +136,13 @@ export function ActivityStrip({
     exportedPath !== null;
 
   if (!hasActivity) return null;
+
+  // What the last operation left can go; a provider problem stays until the
+  // provider answers again, because to hide it would hide a library that does
+  // not grow.
+  const canDismiss =
+    operation === null &&
+    (error !== null || hasReport || passStopped !== null || exportedPath !== null);
 
   const activityState =
     operation !== null
@@ -171,6 +207,14 @@ export function ActivityStrip({
               : "Synchronisation complete"}
           </strong>
           <span>{reportSummary(report)}</span>
+          {unmatched > 0 && (
+            <span className="activity-unmatched">
+              {unmatchedNotice(unmatched)}{" "}
+              <button type="button" className="link" onClick={onMatch}>
+                Match
+              </button>
+            </span>
+          )}
         </div>
       )}
 
@@ -230,6 +274,12 @@ export function ActivityStrip({
           <strong>Export complete</strong>
           <span className="export-path">Written to {exportedPath}</span>
         </div>
+      )}
+
+      {canDismiss && (
+        <button type="button" className="link activity-dismiss" onClick={onDismiss}>
+          Dismiss
+        </button>
       )}
     </section>
   );

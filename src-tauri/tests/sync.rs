@@ -75,6 +75,10 @@ async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_da
         .expect("the first synchronisation");
     assert_eq!(first.owned, 3);
     assert_eq!(first.wishlist, 2);
+    assert_eq!(
+        first.unmatched, 5,
+        "every copy of a first synchronisation waits for the matching"
+    );
 
     let entries = StoreEntryRepository(&db);
     let after_the_first = entries.active(EntryKind::Owned).await.expect("list");
@@ -99,6 +103,10 @@ async fn a_second_synchronisation_does_not_duplicate_and_leaves_no_key_in_the_da
     assert_eq!(
         second.removed, 0,
         "nothing goes away between two equal synchronisations"
+    );
+    assert_eq!(
+        second.unmatched, 0,
+        "a copy seen before is not new, and the report does not count it again"
     );
 
     // And the important part: the key is not in the database.

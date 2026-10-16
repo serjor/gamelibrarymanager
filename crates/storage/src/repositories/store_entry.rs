@@ -15,12 +15,17 @@ impl StoreEntryRepository<'_> {
     /// Writes what the store said. It is idempotent, and that is deliberate: a
     /// second synchronisation updates, it never duplicates, and `first_seen_at`
     /// does not change.
-    pub async fn upsert_many(&self, entries: &[StoreEntry]) -> Result<()> {
+    ///
+    /// It gives back how many of the entries are new. A new entry has no record
+    /// yet — only the matching makes records — and the synchronisation tells the
+    /// user so, because the library shows records and not copies.
+    pub async fn upsert_many(&self, entries: &[StoreEntry]) -> Result<u64> {
         let now = OffsetDateTime::now_utc();
         let mut tx = self.0.pool().begin().await?;
+        let mut new = 0;
 
         for entry in entries {
-            sqlx::query(
+            let row = sqlx::query(
                 "INSERT INTO store_entry
                      (id, account_id, store, store_app_id, kind, title, playtime_minutes,
                       acquired_at, cover_url, store_url, raw, first_seen_at, updated_at)
@@ -33,7 +38,8 @@ impl StoreEntryRepository<'_> {
                      store_url        = excluded.store_url,
                      raw              = excluded.raw,
                      updated_at       = excluded.updated_at,
-                     deleted_at       = NULL",
+                     deleted_at       = NULL
+                 RETURNING first_seen_at = updated_at AS new",
             )
             .bind(entry_id_to_text(entry.id))
             .bind(account_id_to_text(entry.account_id))
@@ -48,12 +54,17 @@ impl StoreEntryRepository<'_> {
             .bind(entry.raw.to_string())
             .bind(now)
             .bind(now)
-            .execute(&mut *tx)
+            .fetch_one(&mut *tx)
             .await?;
+            // An insert writes `now` in the two columns. An update moves only
+            // `updated_at`, and the copy keeps the moment it was first seen.
+            if row.get::<bool, _>("new") {
+                new += 1;
+            }
         }
 
         tx.commit().await?;
-        Ok(())
+        Ok(new)
     }
 
     /// How many identifiers go in each `INSERT` into the temporary table.
